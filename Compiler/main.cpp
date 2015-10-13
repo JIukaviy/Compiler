@@ -4,8 +4,9 @@
 #include <string>
 #include <vector>
 #include "lexeme_analyzer.h"
+#include "parser.h"
 
-#define TEST
+//#define TEST
 
 using namespace std;
 
@@ -25,14 +26,10 @@ int main(int argc, char** argv) {
 	ifstream fin("data.txt");
 #endif
 	lexeme_analyzer_t la(fin);
+	parser_t parser(&la);
 	try {
-		while (!la.eof())
-#ifdef TEST
-			fout
-#else
-			cout
-#endif
-			<< la.next() << endl;
+		parser.parse();
+		parser.print(cout);
 	} catch (EOFReached) {
 
 	} catch (LexemeAnalyzeError& e) {

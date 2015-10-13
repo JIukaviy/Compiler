@@ -5,17 +5,7 @@
 
 using namespace std;
 
-enum TOKEN_TYPE {
-	TT_IDENTIFIER,
-	TT_OPERATOR,
-	TT_INTEGER,
-	TT_REAL,
-	TT_CHAR,
-	TT_STRING,
-	TT_SEPARATOR
-};
-
-enum AUTOMATON_STATES {
+enum AUTOMATON_STATE {
 	AS_START,
 
 	AS_SPACE,
@@ -23,18 +13,13 @@ enum AUTOMATON_STATES {
 	AS_NEW_LINE,
 
 	AS_NUMBER,
-	AS_REAL1,
-	AS_REAL2,
-	AS_REAL3,
-	AS_REAL4,
-	AS_REAL5,
+	AS_DOUBLE_FRACT_START,
+	AS_DOUBLE_FRACT,
+	AS_DOUBLE_EXP_START,
+	AS_DOUBLE_EXP,
+	AS_DOUBLE_EXP_AFTER_SIGN,
 
-	AS_REAL_OR_OP,
-
-	AS_HEX1,
-	AS_HEX2,
-
-	AS_WORD,
+	AS_IDENTIFIER,
 
 	AS_STRING1,
 	AS_STRING2,
@@ -44,27 +29,69 @@ enum AUTOMATON_STATES {
 	AS_CHAR3,
 	AS_CHAR4,
 
-	AS_OPERATOR1,
-	AS_OPERATOR2,
-	AS_OPERATOR3,
-	AS_OPERATOR4,
-	AS_OPERATOR5,
-	AS_OPERATOR6,
-	AS_OPERATOR7,
-	AS_OPERATOR8,
-	AS_OPERATOR9,
-	AS_OPERATOR10,
+	AS_OP_ADD_OR_ASSIGN_ADD,
+	AS_OP_SUB_OR_ASSIGN_SUB,
+	AS_OP_MUL_OR_ASSIGN_MUL,
+	AS_OP_DIV_OR_ASSIGN_DIV,
+	AS_OP_XOR_OR_ASSIGN_XOR,
+	AS_OP_L_OR_LE,
+	AS_OP_G_OR_GE,
 
 	AS_END_REACHED,
 
-	AS_END_IDENTIFIER,
-	AS_END_OPERATOR,
-	AS_END_SEPARATOR,
+	AS_END_INTEGER,
+	AS_END_DOUBLE,
 	AS_END_CHAR,
 	AS_END_STRING,
-	AS_END_INTEGER,
-	AS_END_REAL,
-	AS_END_HEX,
+	AS_END_IDENTIFIER,
+
+	AS_END_SEMICOLON,
+	AS_END_BRACE_OPEN,
+	AS_END_BRACE_CLOSE,
+	AS_END_COLON,
+	AS_END_QUESTION_MARK,
+	AS_END_COMMA,
+
+	AS_END_OP_BRACKET_OPEN,
+	AS_END_OP_BRACKET_CLOSE,
+	AS_END_OP_SQR_BRACKET_OPEN,
+	AS_END_OP_SQR_BRACKET_CLOSE,
+	AS_END_OP_ASSIGN,
+	AS_END_OP_DOT,
+	AS_END_OP_PTR,
+	AS_END_OP_NOT,
+	AS_END_OP_INC,
+	AS_END_OP_DEC,
+	AS_END_OP_LEFT,
+	AS_END_OP_LEFT_ASSIGN,
+	AS_END_OP_RIGHT,
+	AS_END_OP_RIGHT_ASSIGN,
+	AS_END_OP_L,
+	AS_END_OP_LE,
+	AS_END_OP_G,
+	AS_END_OP_GE,
+	AS_END_OP_EQ,
+	AS_END_OP_NE,
+	AS_END_OP_AND,
+	AS_END_OP_OR,
+	AS_END_OP_MUL,
+	AS_END_OP_MUL_ASSIGN,
+	AS_END_OP_DIV,
+	AS_END_OP_DIV_ASSIGN,
+	AS_END_OP_ADD,
+	AS_END_OP_ADD_ASSIGN,
+	AS_END_OP_SUB,
+	AS_END_OP_SUB_ASSIGN,
+	AS_END_OP_MOD,
+	AS_END_OP_MOD_ASSIGN,
+	AS_END_OP_XOR,
+	AS_END_OP_XOR_ASSIGN,
+	AS_END_OP_BIT_AND,
+	AS_END_OP_BIT_AND_ASSIGN,
+	AS_END_OP_BIT_OR,
+	AS_END_OP_BIT_OR_ASSIGN,
+	AS_END_OP_BIT_NOT,
+	AS_END_OP_BIT_NOT_ASSIGN,
 
 	AS_ERR_BAD_NL,
 	AS_ERR_BAD_EOF,
@@ -90,11 +117,11 @@ enum AUTOMATON_CARRET_COMMAND {
 };
 
 struct automaton_commands_t {
-	AUTOMATON_STATES state;
+	AUTOMATON_STATE state;
 	AUTOMATON_CARRET_COMMAND carret_command;
 
-	automaton_commands_t(AUTOMATON_STATES s, AUTOMATON_CARRET_COMMAND cc) : state(s), carret_command(cc) {};
-	automaton_commands_t(AUTOMATON_STATES s) : state(s), carret_command(ACC_NEXT) {};
+	automaton_commands_t(AUTOMATON_STATE s, AUTOMATON_CARRET_COMMAND cc) : state(s), carret_command(cc) {};
+	automaton_commands_t(AUTOMATON_STATE s) : state(s), carret_command(ACC_NEXT) {};
 	automaton_commands_t() : state(AS_ERR_BAD_CHAR), carret_command(ACC_STOP) {};
 };
 
@@ -219,16 +246,19 @@ protected:
 	int rem_line = -1;
 	int rem_col = -1;
 	string curr_str;
+	token_t prev_token;
+	token_t curr_token;
 	bool eof_reached = false;
 
-	AUTOMATON_STATES state;
+	AUTOMATON_STATE state;
 
-	void throw_exception(AUTOMATON_STATES);
+	void throw_exception(AUTOMATON_STATE);
 	void add_char();
 	void next_char();
+	void skip_spaces();
 public:
 	lexeme_analyzer_t(istream& os_);
-	token_container_t next();
-	token_container_t get();
+	token_t next();
+	token_t get();
 	bool eof();
 };

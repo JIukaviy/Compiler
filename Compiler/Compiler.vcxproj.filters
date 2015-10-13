@@ -24,12 +24,18 @@
     <ClCompile Include="lexeme_analyzer.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="parser.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="lexeme_analyzer.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="parser.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

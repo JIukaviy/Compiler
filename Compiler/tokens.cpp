@@ -28,3 +28,80 @@ ostream& operator<<(ostream& os, token_container_t& e) {
 	e.token->print_out(os);
 	return os;
 }
+
+token_t::token_t(int line_, int column_, TOKEN token_) {
+	line = line_;
+	column = column_;
+	token = token_;
+}
+
+char* token_t::copy_str(char* str) {
+	int strl;
+	strl = strlen(str);
+	char* new_str = new char[strl + 1];
+	memcpy(new_str, str, strl + 1);
+	return new_str;
+}
+
+token_t& token_t::operator=(const token_t& e) {
+	line = e.line;
+	column = e.column;
+	token = e.token;
+	value = e.value;
+
+	if (token == T_STRING || token == T_IDENTIFIER) {
+		value.str = copy_str(e.value.str);
+	}
+
+	return *this;
+}
+
+token_t::token_t(int line_, int column_, TOKEN token_, value_t value_) {
+	line = line_;
+	column = column_;
+	token = token_;
+	value = value_;
+
+	if (token == T_STRING || token == T_IDENTIFIER) {
+		value.str = copy_str(value_.str);
+	}
+}
+
+token_t::token_t(token_t& e) {
+	*this = e;
+}
+
+token_t::token_t() {
+	line = -1;
+	column = -1;
+	token = T_EMPTY;
+}
+
+token_t::~token_t() {
+	if (token == T_STRING || token == T_IDENTIFIER) {
+		delete value.str;
+	}
+}
+
+bool token_t::operator==(const TOKEN& token_) const {
+	return token == token_;
+}
+
+bool token_t::operator!=(const TOKEN& token_) const {
+	return token != token_;
+}
+
+TOKEN token_t::get_token_code() {
+	return token;
+}
+
+ostream& operator<<(ostream& os, const token_t& e) {
+	switch (e.token) {
+		case T_IDENTIFIER: os << "ident: " << e.value.str; break;
+		case T_STRING: os << "string: " << e.value.str; break;
+		case T_INTEGER: os << "int: " << e.value.i; break;
+		case T_DOUBLE: os << "double: " << e.value.d; break;
+		case T_CHAR: os << "char: " << e.value.ch; break;
+	}
+	return os;
+}
