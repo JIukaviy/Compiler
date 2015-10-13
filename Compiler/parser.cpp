@@ -5,11 +5,11 @@ parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {}
 node_bin_op_t::node_bin_op_t(node_t* left_, node_t* right_, token_t op_) : left(left_), right(right_), op(op_) {}
 
 void node_bin_op_t::print(ostream& os, int level) {
-	os << "left_start, level :" << level << " of binop " << op.get_token_code() << endl;
+	os << "level: " << level << " left start of binop " << op << endl;
 	left->print(os, level + 1);
-	os << "left_ended, right_start " << endl;
+	os << "level: " << level << " left_ended, right_start of binop " << op << endl;
 	right->print(os, level + 1);
-	os << "right_ended" << endl;
+	os << "level: " << level << " right_ended of binop " << op << endl;
 }
 
 node_var_t::node_var_t(token_t variable_) : variable(variable_) {}
@@ -26,7 +26,7 @@ void node_const_t::print(ostream& os, int level) {
 
 void node_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
-	os << "level: " << level << " unop: " << op.get_token_code() << endl;
+	os << "level: " << level << " unop: " << op << endl;
 }
 
 node_t* parser_t::expression() {

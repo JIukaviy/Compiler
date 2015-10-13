@@ -127,6 +127,14 @@
     <ClInclude Include="lexeme_analyzer.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="tokens.h" />
+    <ClInclude Include="token_char.h" />
+    <ClInclude Include="token_double.h" />
+    <ClInclude Include="token_identifier.h" />
+    <ClInclude Include="token_integer.h" />
+    <ClInclude Include="token_keyword.h" />
+    <ClInclude Include="token_operator.h" />
+    <ClInclude Include="token_register.h" />
+    <ClInclude Include="token_string.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

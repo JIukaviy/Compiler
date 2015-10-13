@@ -25,6 +25,8 @@ int main(int argc, char** argv) {
 #else
 	ifstream fin("data.txt");
 #endif
+	lexeme_analyzer_init();
+	tokens_init();
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {

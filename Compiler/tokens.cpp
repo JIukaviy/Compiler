@@ -1,5 +1,8 @@
 #include "tokens.h"
 #include <sstream>
+#include <map>
+
+map<TOKEN, string> token_names;
 
 token_base_t::token_base_t(int line_, int column_, string str_) {
 	line = line_;
@@ -91,17 +94,32 @@ bool token_t::operator!=(const TOKEN& token_) const {
 	return token != token_;
 }
 
-TOKEN token_t::get_token_code() {
+TOKEN token_t::get_token_code() const {
 	return token;
 }
 
+string token_t::get_name() const {
+	return token_names[token];
+}
+
+void tokens_init() {
+#define register_token(incode_name, printed_name, func_name) token_names[T_##incode_name] = string(printed_name);
+#define TOKEN_LIST
+#define TOKEN_NAME_REGISTRATION
+#include "token_register.h"
+#undef TOKEN_NAME_REGISTRATION
+#undef TOKEN_LIST
+#undef register_token
+}
+
 ostream& operator<<(ostream& os, const token_t& e) {
+	os << e.get_name() << ' ';
 	switch (e.token) {
-		case T_IDENTIFIER: os << "ident: " << e.value.str; break;
-		case T_STRING: os << "string: " << e.value.str; break;
-		case T_INTEGER: os << "int: " << e.value.i; break;
-		case T_DOUBLE: os << "double: " << e.value.d; break;
-		case T_CHAR: os << "char: " << e.value.ch; break;
+		case T_IDENTIFIER: os << e.value.str; break;
+		case T_STRING: os << e.value.str; break;
+		case T_INTEGER: os << e.value.i; break;
+		case T_DOUBLE: os << e.value.d; break;
+		case T_CHAR: os << e.value.ch; break;
 	}
 	return os;
 }

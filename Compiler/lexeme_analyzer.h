@@ -5,6 +5,12 @@
 
 using namespace std;
 
+#define register_token(incode_name, printed_name, func_name) AS_END_##incode_name,
+#define AUTOMATON_STATE_DECLARATION
+#define TOKEN_LIST
+
+void lexeme_analyzer_init();
+
 enum AUTOMATON_STATE {
 	AS_START,
 
@@ -39,59 +45,7 @@ enum AUTOMATON_STATE {
 
 	AS_END_REACHED,
 
-	AS_END_INTEGER,
-	AS_END_DOUBLE,
-	AS_END_CHAR,
-	AS_END_STRING,
-	AS_END_IDENTIFIER,
-
-	AS_END_SEMICOLON,
-	AS_END_BRACE_OPEN,
-	AS_END_BRACE_CLOSE,
-	AS_END_COLON,
-	AS_END_QUESTION_MARK,
-	AS_END_COMMA,
-
-	AS_END_OP_BRACKET_OPEN,
-	AS_END_OP_BRACKET_CLOSE,
-	AS_END_OP_SQR_BRACKET_OPEN,
-	AS_END_OP_SQR_BRACKET_CLOSE,
-	AS_END_OP_ASSIGN,
-	AS_END_OP_DOT,
-	AS_END_OP_PTR,
-	AS_END_OP_NOT,
-	AS_END_OP_INC,
-	AS_END_OP_DEC,
-	AS_END_OP_LEFT,
-	AS_END_OP_LEFT_ASSIGN,
-	AS_END_OP_RIGHT,
-	AS_END_OP_RIGHT_ASSIGN,
-	AS_END_OP_L,
-	AS_END_OP_LE,
-	AS_END_OP_G,
-	AS_END_OP_GE,
-	AS_END_OP_EQ,
-	AS_END_OP_NE,
-	AS_END_OP_AND,
-	AS_END_OP_OR,
-	AS_END_OP_MUL,
-	AS_END_OP_MUL_ASSIGN,
-	AS_END_OP_DIV,
-	AS_END_OP_DIV_ASSIGN,
-	AS_END_OP_ADD,
-	AS_END_OP_ADD_ASSIGN,
-	AS_END_OP_SUB,
-	AS_END_OP_SUB_ASSIGN,
-	AS_END_OP_MOD,
-	AS_END_OP_MOD_ASSIGN,
-	AS_END_OP_XOR,
-	AS_END_OP_XOR_ASSIGN,
-	AS_END_OP_BIT_AND,
-	AS_END_OP_BIT_AND_ASSIGN,
-	AS_END_OP_BIT_OR,
-	AS_END_OP_BIT_OR_ASSIGN,
-	AS_END_OP_BIT_NOT,
-	AS_END_OP_BIT_NOT_ASSIGN,
+#include "token_register.h"
 
 	AS_ERR_BAD_NL,
 	AS_ERR_BAD_EOF,
@@ -105,6 +59,10 @@ enum AUTOMATON_STATE {
 	AS_ERR_CHAR_TS, // המכזום בûעü סטלגמכ
 	AS_ERR_CHAR_TL  // במכüרו מהםמדמ סטלגמכא
 };
+
+#undef TOKEN_LIST
+#undef AUTOMATON_STATE_DECLARATION
+#undef register_token
 
 enum AUTOMATON_CARRET_COMMAND {
 	ACC_SKIP,
@@ -138,11 +96,11 @@ public:
 	LexemeAnalyzeError() : line(-1), column(-1) { error = error_str(); };
 	LexemeAnalyzeError(int line_, int column_) : line(line_), column(column_) { error = error_str(); }
 
-	friend ostream& operator<<(ostream& os, const LexemeAnalyzeError& e) {
+	friend ostream& operator<<(ostream& is, const LexemeAnalyzeError& e) {
 		if (e.line >= 0)
-			os << e.line << '\t' << e.column << '\t';
-		os << e.error << endl;
-		return os;
+			is << e.line << '\t' << e.column << '\t';
+		is << e.error << endl;
+		return is;
 	}
 };
 
@@ -238,7 +196,7 @@ public:
 
 class lexeme_analyzer_t {
 protected:
-	istream* os;
+	istream* is;
 	unsigned char cc = 0;
 	int line = 1;
 	int column = 0;
@@ -257,7 +215,7 @@ protected:
 	void next_char();
 	void skip_spaces();
 public:
-	lexeme_analyzer_t(istream& os_);
+	lexeme_analyzer_t(istream& is_);
 	token_t next();
 	token_t get();
 	bool eof();
