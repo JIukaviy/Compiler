@@ -27,7 +27,7 @@ map<AUTOMATON_STATE, TOKEN> state_to_token;
 #include "token_register.h"
 #undef TOKEN_FUNC
 
-map<AUTOMATON_STATE, token_t(*)(string, AUTOMATON_STATE, int, int)> token_getters;
+map<AUTOMATON_STATE, token_container_t(*)(string, AUTOMATON_STATE, int, int)> token_getters;
 
 lexeme_analyzer_t::lexeme_analyzer_t(istream& is_) {
 	is = &is_;
@@ -87,7 +87,7 @@ void lexeme_analyzer_t::skip_spaces() {
 	}
 }
 
-token_t lexeme_analyzer_t::next() {
+token_container_t lexeme_analyzer_t::next() {
 	state = AS_START;
 	curr_str.clear();
 	int start_line;
@@ -126,7 +126,7 @@ token_t lexeme_analyzer_t::next() {
 	return curr_token;
 }
 
-token_t lexeme_analyzer_t::get() {
+token_container_t lexeme_analyzer_t::get() {
 	return curr_token;
 }
 

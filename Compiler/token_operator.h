@@ -1,6 +1,6 @@
 #ifdef TOKEN_FUNC
-token_t token_without_value(string str, AUTOMATON_STATE state, int line, int column) {
-	return token_t(line, column, state_to_token[state]);
+token_container_t token_without_value(string str, AUTOMATON_STATE state, int line, int column) {
+	return token_container_t(new token_t(line, column, state_to_token[state]));
 }
 #endif
 

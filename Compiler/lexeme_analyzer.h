@@ -45,6 +45,7 @@ enum AUTOMATON_STATE {
 
 	AS_END_REACHED,
 
+
 #include "token_register.h"
 
 	AS_ERR_BAD_NL,
@@ -204,8 +205,8 @@ protected:
 	int rem_line = -1;
 	int rem_col = -1;
 	string curr_str;
-	token_t prev_token;
-	token_t curr_token;
+	token_container_t prev_token;
+	token_container_t curr_token;
 	bool eof_reached = false;
 
 	AUTOMATON_STATE state;
@@ -216,7 +217,7 @@ protected:
 	void skip_spaces();
 public:
 	lexeme_analyzer_t(istream& is_);
-	token_t next();
-	token_t get();
+	token_container_t next();
+	token_container_t get();
 	bool eof();
 };

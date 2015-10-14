@@ -15,29 +15,29 @@ public:
 class node_bin_op_t: public node_t {
 	node_t* left;
 	node_t* right;
-	token_t op;
+	token_container_t op;
 public:
-	node_bin_op_t(node_t* left_, node_t* right_, token_t op);
+	node_bin_op_t(node_t* left_, node_t* right_, token_container_t op);
 	void print(ostream&, int) override;
 };
 
 class node_const_t : public node_t {
-	token_t constant;
+	token_container_t constant;
 public:
-	node_const_t(token_t constant_);
+	node_const_t(token_container_t constant_);
 	void print(ostream&, int) override;
 };
 
 class node_var_t : public node_t {
-	token_t variable;
+	token_container_t variable;
 public:
-	node_var_t(token_t variable_);
+	node_var_t(token_container_t variable_);
 	void print(ostream&, int) override;
 };
 
 class node_un_op_t: public node_t {
 	node_t* expr;
-	token_t op;
+	token_container_t op;
 public:
 	void print(ostream&, int) override;
 };
@@ -49,14 +49,14 @@ public:
 
 class node_func_t : public node_t {
 	node_t* func;
-	vector<token_t> args;
+	vector<token_container_t> args;
 public:
 	void print(ostream&, int) override;
 };
 
 class node_struct_access_t : public node_t {
 	node_t* expr;
-	token_t ident;
+	token_container_t ident;
 public:
 	void print(ostream&, int) override;
 };

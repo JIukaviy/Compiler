@@ -2,7 +2,7 @@
 
 parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {}
 
-node_bin_op_t::node_bin_op_t(node_t* left_, node_t* right_, token_t op_) : left(left_), right(right_), op(op_) {}
+node_bin_op_t::node_bin_op_t(node_t* left_, node_t* right_, token_container_t op_) : left(left_), right(right_), op(op_) {}
 
 void node_bin_op_t::print(ostream& os, int level) {
 	os << "level: " << level << " left start of binop " << op << endl;
@@ -12,13 +12,13 @@ void node_bin_op_t::print(ostream& os, int level) {
 	os << "level: " << level << " right_ended of binop " << op << endl;
 }
 
-node_var_t::node_var_t(token_t variable_) : variable(variable_) {}
+node_var_t::node_var_t(token_container_t variable_) : variable(variable_) {}
 
 void node_var_t::print(ostream& os, int level) {
 	os << "level: " << level <<  " variable: " << variable << endl;
 }
 
-node_const_t::node_const_t(token_t constant_) : constant(constant_) {}
+node_const_t::node_const_t(token_container_t constant_) : constant(constant_) {}
 
 void node_const_t::print(ostream& os, int level) {
 	os << "level: " << level << " constant: " << constant << endl;
@@ -31,7 +31,7 @@ void node_un_op_t::print(ostream& os, int level) {
 
 node_t* parser_t::expression() {
 	node_t* left = term();
-	token_t op = la->get();
+	token_container_t op = la->get();
 	if (op == T_OP_ADD || op == T_OP_SUB) {
 		if (la->eof())
 			throw; // пока просто заглушки
@@ -43,7 +43,7 @@ node_t* parser_t::expression() {
 
 node_t* parser_t::term() {
 	node_t* left = factor();
-	token_t op = la->get();
+	token_container_t op = la->get();
 	if (op == T_OP_MUL || op == T_OP_DIV) {
 		if (la->eof())
 			throw;
@@ -54,7 +54,7 @@ node_t* parser_t::term() {
 }
 
 node_t* parser_t::factor() {
-	token_t t = la->get();
+	token_container_t t = la->get();
 	if (!la->eof())
 		la->next();
 	if (t == T_IDENTIFIER)
@@ -66,7 +66,8 @@ node_t* parser_t::factor() {
 		if (la->get() != T_OP_BRACKET_CLOSE)
 			throw;
 		else
-			la->next();
+			if(!la->eof())
+				la->next();
 		return l;
 	} else
 		throw;
@@ -77,7 +78,7 @@ void parser_t::parse() {
 	try {
 		root = expression();
 	} catch (...) {
-
+		cerr << "Error appeared";
 	}
 }
 

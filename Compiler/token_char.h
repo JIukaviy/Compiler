@@ -1,8 +1,6 @@
 #ifdef TOKEN_FUNC
-token_t token_char(string str, AUTOMATON_STATE state, int line, int column) {
-	value_t value;
-	value.ch = str[1];
-	return token_t(line, column, T_CHAR, value);
+token_container_t token_char(string str, AUTOMATON_STATE state, int line, int column) {
+	return token_container_t(new token_with_value_t<char>(line, column, T_CHAR, str[1]));
 }
 #endif
 
