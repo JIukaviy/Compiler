@@ -27,7 +27,7 @@ map<AUTOMATON_STATE, TOKEN> state_to_token;
 #include "token_register.h"
 #undef TOKEN_FUNC
 
-map<AUTOMATON_STATE, token_container_t(*)(string, AUTOMATON_STATE, int, int)> token_getters;
+map<AUTOMATON_STATE, token_ptr_t(*)(string, AUTOMATON_STATE, int, int)> token_getters;
 
 lexeme_analyzer_t::lexeme_analyzer_t(istream& is_) {
 	is = &is_;
@@ -48,7 +48,7 @@ void lexeme_analyzer_t::next_char() {
 		column = 4 * n;
 	}
 	if (cc == '\n') {
-		column = 1;
+		column = 0;
 		line++;
 	}
 	cc = is->get();
@@ -87,7 +87,9 @@ void lexeme_analyzer_t::skip_spaces() {
 	}
 }
 
-token_container_t lexeme_analyzer_t::next() {
+token_ptr_t lexeme_analyzer_t::next() {
+	if (eof())
+		return curr_token = token_ptr_t(new token_t);
 	state = AS_START;
 	curr_str.clear();
 	int start_line;
@@ -126,8 +128,38 @@ token_container_t lexeme_analyzer_t::next() {
 	return curr_token;
 }
 
-token_container_t lexeme_analyzer_t::get() {
+token_ptr_t lexeme_analyzer_t::get() {
 	return curr_token;
+}
+
+token_ptr_t lexeme_analyzer_t::require(TOKEN first, ...) {
+	if (get() == T_EMPTY)
+		throw UnexpectedEOF();
+	if (!get()->is(&first))
+		throw UnexpectedToken(get(), first);
+	token_ptr_t t = get();
+	next();
+	return t;
+}
+
+token_ptr_t lexeme_analyzer_t::require(token_ptr_t op, TOKEN first, ...) {
+	if (get() == T_EMPTY)
+		throw UnexpectedEOF();
+	if (!get()->is(&first))
+		throw UnexpectedToken(op, get(), first);
+	token_ptr_t t = get();
+	next();
+	return t;
+}
+
+token_ptr_t lexeme_analyzer_t::require(set<TOKEN>& tokens) {
+	if (get() == T_EMPTY)
+		throw UnexpectedEOF();
+	if (tokens.find(get()->get_token_id()) != tokens.end())
+		throw UnexpectedToken(get(), tokens);
+	token_ptr_t t = get();
+	next();
+	return t;
 }
 
 void lexeme_analyzer_init() {
@@ -184,7 +216,7 @@ void lexeme_analyzer_init() {
 	fill(is_digit(i), AS_START, AS_NUMBER);
 	fill(is_digit(i), AS_NUMBER, AS_NUMBER);
 	fill(!is_digit(i), AS_NUMBER, AS_END_INTEGER, ACC_STOP);
-	set('.', AS_NUMBER, AS_DOUBLE_FRACT);
+	set('.', AS_NUMBER, AS_DOUBLE_FRACT_START);
 	//-------------------REAL-----------------------
 	fill(is_digit(i), AS_DOUBLE_FRACT_START, AS_DOUBLE_FRACT);
 	fill(!is_digit(i), AS_DOUBLE_FRACT_START, AS_ERR_NO_FRACT, ACC_STOP);
@@ -202,44 +234,78 @@ void lexeme_analyzer_init() {
 	fill(!is_digit(i), AS_DOUBLE_EXP_AFTER_SIGN, AS_ERR_NO_EXP, ACC_STOP);
 
 	//------------------OPERATORS/SEPARATORS---------------
-	set('=', AS_START, AS_END_OP_ASSIGN);
+	set('=', AS_START, AS_OP_ASSIGN__EQ);
+	fill(true, AS_OP_ASSIGN__EQ, AS_END_OP_ASSIGN, ACC_STOP);
+	set('=', AS_OP_ASSIGN__EQ, AS_END_OP_EQ);
 
-	set('+', AS_START, AS_OP_ADD_OR_ASSIGN_ADD);
-	fill(i != '+', AS_OP_ADD_OR_ASSIGN_ADD, AS_END_OP_ADD, ACC_STOP);
-	set('=', AS_OP_ADD_OR_ASSIGN_ADD, AS_END_OP_ADD_ASSIGN);
+	set('!', AS_START, AS_OP_NOT__NEQ);
+	fill(true, AS_OP_NOT__NEQ, AS_END_OP_NOT, ACC_STOP);
+	set('=', AS_OP_NOT__NEQ, AS_END_OP_NEQ);
 
-	set('-', AS_START, AS_OP_SUB_OR_ASSIGN_SUB);
-	fill(i != '-', AS_OP_SUB_OR_ASSIGN_SUB, AS_END_OP_SUB, ACC_STOP);
-	set('=', AS_OP_SUB_OR_ASSIGN_SUB, AS_END_OP_SUB_ASSIGN);
+	set('+', AS_START, AS_OP_ADD__ADD_ASSIGN__INC);
+	fill(true, AS_OP_ADD__ADD_ASSIGN__INC, AS_END_OP_ADD, ACC_STOP);
+	set('=', AS_OP_ADD__ADD_ASSIGN__INC, AS_END_OP_ADD_ASSIGN);
+	set('+', AS_OP_ADD__ADD_ASSIGN__INC, AS_END_OP_INC);
 
-	set('*', AS_START, AS_OP_MUL_OR_ASSIGN_MUL);
-	fill(i != '*', AS_OP_MUL_OR_ASSIGN_MUL, AS_END_OP_MUL, ACC_STOP);
-	set('=', AS_OP_MUL_OR_ASSIGN_MUL, AS_END_OP_MUL_ASSIGN);
+	set('-', AS_START, AS_OP_SUB__SUB_ASSIGN__ARROW__DEC);
+	fill(true, AS_OP_SUB__SUB_ASSIGN__ARROW__DEC, AS_END_OP_SUB, ACC_STOP);
+	set('=', AS_OP_SUB__SUB_ASSIGN__ARROW__DEC, AS_END_OP_SUB_ASSIGN);
+	set('>', AS_OP_SUB__SUB_ASSIGN__ARROW__DEC, AS_END_OP_ARROW);
+	set('-', AS_OP_SUB__SUB_ASSIGN__ARROW__DEC, AS_END_OP_DEC);
 
-	set('/', AS_START, AS_OP_DIV_OR_ASSIGN_DIV);
-	fill(i != '/', AS_OP_DIV_OR_ASSIGN_DIV, AS_END_OP_DIV, ACC_STOP);
-	set('=', AS_OP_DIV_OR_ASSIGN_DIV, AS_END_OP_DIV_ASSIGN);
+	set('*', AS_START, AS_OP_MUL__MUL__ASSIGN);
+	fill(true, AS_OP_MUL__MUL__ASSIGN, AS_END_OP_MUL, ACC_STOP);
+	set('=', AS_OP_MUL__MUL__ASSIGN, AS_END_OP_MUL_ASSIGN);
 
-	set('^', AS_START, AS_OP_XOR_OR_ASSIGN_XOR);
-	fill(i != '^', AS_OP_XOR_OR_ASSIGN_XOR, AS_END_OP_XOR, ACC_STOP);
-	set('=', AS_OP_XOR_OR_ASSIGN_XOR, AS_END_OP_XOR_ASSIGN);
+	set('/', AS_START, AS_OP_DIV__DIV_ASSIGN);
+	fill(true, AS_OP_DIV__DIV_ASSIGN, AS_END_OP_DIV, ACC_STOP);
+	set('=', AS_OP_DIV__DIV_ASSIGN, AS_END_OP_DIV_ASSIGN);
 
-	set('<', AS_START, AS_OP_L_OR_LE);
-	fill(i != '<', AS_OP_L_OR_LE, AS_END_OP_L, ACC_STOP);
-	set('=', AS_OP_L_OR_LE, AS_END_OP_LE);
+	set('^', AS_START, AS_OP_XOR__XOR_ASSIGN);
+	fill(true, AS_OP_XOR__XOR_ASSIGN, AS_END_OP_XOR, ACC_STOP);
+	set('=', AS_OP_XOR__XOR_ASSIGN, AS_END_OP_XOR_ASSIGN);
 
-	set('>', AS_START, AS_OP_G_OR_GE);
-	fill(i != '>', AS_OP_G_OR_GE, AS_END_OP_G, ACC_STOP);
-	set('=', AS_OP_G_OR_GE, AS_END_OP_GE);
+	set('%', AS_START, AS_OP_MOD__MOD_ASSIGN);
+	fill(true, AS_OP_MOD__MOD_ASSIGN, AS_END_OP_MOD, ACC_STOP);
+	set('=', AS_OP_MOD__MOD_ASSIGN, AS_END_OP_MOD_ASSIGN);
 
+	set('|', AS_START, AS_OP_BIT_OR__OR__BIT_OR_ASSIGN);
+	fill(true, AS_OP_BIT_OR__OR__BIT_OR_ASSIGN, AS_END_OP_BIT_OR, ACC_STOP);
+	set('=', AS_OP_BIT_OR__OR__BIT_OR_ASSIGN, AS_END_OP_BIT_OR_ASSIGN);
+	set('|', AS_OP_BIT_OR__OR__BIT_OR_ASSIGN, AS_END_OP_OR);
+
+	set('&', AS_START, AS_OP_BIT_AND__AND__BIT_AND_ASSIGN);
+	fill(true, AS_OP_BIT_AND__AND__BIT_AND_ASSIGN, AS_END_OP_BIT_AND, ACC_STOP);
+	set('=', AS_OP_BIT_AND__AND__BIT_AND_ASSIGN, AS_END_OP_BIT_AND_ASSIGN);
+	set('&', AS_OP_BIT_AND__AND__BIT_AND_ASSIGN, AS_END_OP_AND);
+
+	set('~', AS_START, AS_END_OP_BIT_NOT);
+
+	set('<', AS_START, AS_OP_L__LE__LEFT);
+	fill(true, AS_OP_L__LE__LEFT, AS_END_OP_L, ACC_STOP);
+	set('=', AS_OP_L__LE__LEFT, AS_END_OP_LE);
+	set('<', AS_OP_L__LE__LEFT, AS_OP_LEFT__LEFT_ASSIGN);
+	fill(true, AS_OP_LEFT__LEFT_ASSIGN, AS_END_OP_LEFT, ACC_STOP);
+	set('=', AS_OP_LEFT__LEFT_ASSIGN, AS_END_OP_LEFT_ASSIGN);
+
+	set('>', AS_START, AS_OP_G__GE__RIGHT);
+	fill(true, AS_OP_G__GE__RIGHT, AS_END_OP_G, ACC_STOP);
+	set('=', AS_OP_G__GE__RIGHT, AS_END_OP_GE);
+	set('>', AS_OP_G__GE__RIGHT, AS_OP_RIGHT__RIGHT_ASSIGN);
+	fill(true, AS_OP_RIGHT__RIGHT_ASSIGN, AS_END_OP_RIGHT, ACC_STOP);
+	set('=', AS_OP_RIGHT__RIGHT_ASSIGN, AS_END_OP_RIGHT_ASSIGN);
+
+	set('?', AS_START, AS_END_QUESTION_MARK);
 	set(':', AS_START, AS_END_COLON);
 
 	set('.', AS_START, AS_END_OP_DOT);
 
-	set('(', AS_START, AS_END_OP_BRACKET_OPEN);
-	set(')', AS_START, AS_END_OP_BRACKET_CLOSE);
-	set('[', AS_START, AS_END_OP_SQR_BRACKET_OPEN);
-	set(']', AS_START, AS_END_OP_SQR_BRACKET_CLOSE);
+	set('{', AS_START, AS_END_BRACE_OPEN);
+	set('}', AS_START, AS_END_BRACE_CLOSE);
+	set('(', AS_START, AS_END_BRACKET_OPEN);
+	set(')', AS_START, AS_END_BRACKET_CLOSE);
+	set('[', AS_START, AS_END_SQR_BRACKET_OPEN);
+	set(']', AS_START, AS_END_SQR_BRACKET_CLOSE);
 	set(';', AS_START, AS_END_SEMICOLON);
 	set(',', AS_START, AS_END_COMMA);
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <ostream>
 #include <memory>
+#include <set>
 
 using namespace std;
 
@@ -35,22 +36,33 @@ class token_t {
 	TOKEN token;
 	int line;
 	int column;
-	char* copy_str(char*);
 public:
 	token_t(int line_, int column_, TOKEN token_);
-	token_t(token_t&);
 	token_t();
 	bool operator==(const TOKEN&) const;
 	bool operator!=(const TOKEN&) const;
+	operator TOKEN();
 	virtual void print(ostream& os) const;
+	virtual void print_pos(ostream& os) const;
+	virtual void short_print(ostream& os) const;
 	string get_name() const;
+	bool is(TOKEN *first);
+	bool is(TOKEN first, ...);
+	bool is(set<TOKEN>&);
+	static bool is(TOKEN token, set<TOKEN>&);
+	//static bool is(TOKEN token, TOKEN first, ...);
+	static bool is(TOKEN token, TOKEN *first);
+	static string get_name_by_id(TOKEN token_id);
+	int get_line();
+	int get_column();
 	TOKEN get_token_id() const;
 };
 
-class token_container_t : public shared_ptr<token_t> {
+class token_ptr_t : public shared_ptr<token_t> {
 public:
 	using shared_ptr<token_t>::shared_ptr;
-	friend ostream& operator<<(ostream& os, token_container_t& e);
+	friend ostream& operator<<(ostream& os, const token_ptr_t& e);
+	operator TOKEN();
 	bool operator==(const TOKEN&) const;
 	bool operator!=(const TOKEN&) const;
 };
@@ -62,13 +74,24 @@ protected:
 public:
 	token_with_value_t(int line_, int column_, TOKEN token_, T value_);
 	void print(ostream& os) const override;
+	virtual void short_print(ostream& os) const;
 	T& get_value() const;
 };
 
 template<typename T>
 void token_with_value_t<T>::print(ostream& os) const {
 	token_t::print(os);
-	os << " token value: " << value;
+	os << ", value: " << value;
+}
+
+template<typename T>
+void token_with_value_t<T>::short_print(ostream & os) const {
+	os << value;
+}
+
+template<typename T>
+inline T & token_with_value_t<T>::get_value() const {
+	return value;
 }
 
 template<typename T>

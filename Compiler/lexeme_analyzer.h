@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include "tokens.h"
+#include <set>
+#include <sstream>
 
 using namespace std;
 
@@ -35,16 +37,22 @@ enum AUTOMATON_STATE {
 	AS_CHAR3,
 	AS_CHAR4,
 
-	AS_OP_ADD_OR_ASSIGN_ADD,
-	AS_OP_SUB_OR_ASSIGN_SUB,
-	AS_OP_MUL_OR_ASSIGN_MUL,
-	AS_OP_DIV_OR_ASSIGN_DIV,
-	AS_OP_XOR_OR_ASSIGN_XOR,
-	AS_OP_L_OR_LE,
-	AS_OP_G_OR_GE,
+	AS_OP_ASSIGN__EQ,
+	AS_OP_NOT__NEQ,
+	AS_OP_ADD__ADD_ASSIGN__INC,
+	AS_OP_SUB__SUB_ASSIGN__ARROW__DEC,
+	AS_OP_MUL__MUL__ASSIGN,
+	AS_OP_DIV__DIV_ASSIGN,
+	AS_OP_XOR__XOR_ASSIGN,
+	AS_OP_L__LE__LEFT,
+	AS_OP_LEFT__LEFT_ASSIGN,
+	AS_OP_G__GE__RIGHT,
+	AS_OP_RIGHT__RIGHT_ASSIGN,
+	AS_OP_MOD__MOD_ASSIGN,
+	AS_OP_BIT_OR__OR__BIT_OR_ASSIGN,
+	AS_OP_BIT_AND__AND__BIT_AND_ASSIGN,
 
 	AS_END_REACHED,
-
 
 #include "token_register.h"
 
@@ -96,6 +104,7 @@ public:
 
 	LexemeAnalyzeError() : line(-1), column(-1) { error = error_str(); };
 	LexemeAnalyzeError(int line_, int column_) : line(line_), column(column_) { error = error_str(); }
+	LexemeAnalyzeError(int line_, int column_, char* what) : line(line_), column(column_), error(what) {};
 
 	friend ostream& operator<<(ostream& is, const LexemeAnalyzeError& e) {
 		if (e.line >= 0)
@@ -106,13 +115,9 @@ public:
 };
 
 class BadNewLine : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "BadNL";
-	}
 public:
-	BadNewLine(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	BadNewLine() : LexemeAnalyzeError() { error = error_str(); }
+	using LexemeAnalyzeError::LexemeAnalyzeError;
+	BadNewLine(int line_, int column_) : LexemeAnalyzeError(line_, column_, "Unexpected new line") {}
 };
 
 class BadEOF : public LexemeAnalyzeError {
@@ -195,6 +200,112 @@ public:
 	EOFReached() : LexemeAnalyzeError() { error = error_str(); }
 };
 
+class SyntaxError {
+protected:
+	stringstream err;
+	token_ptr_t token;
+	virtual void make_str() {};
+public:
+	SyntaxError(string what) : err(what) {};
+	SyntaxError(string what, token_ptr_t token) : err(what), token(token) {};
+	SyntaxError() : err("Unexpected error") {};
+
+	friend ostream& operator<<(ostream& os, SyntaxError& e) {
+		e.make_str();
+		if (e.token)
+			e.token->print_pos(os);
+		os << e.err.str();
+		return os;
+	};
+
+};
+
+class UnexpectedToken : public SyntaxError {
+public:
+	token_ptr_t op;
+	token_ptr_t actually;
+	set<TOKEN> expected_tokens;
+	TOKEN expected_token;
+
+	UnexpectedToken() : SyntaxError("Unexpected token") {};
+	UnexpectedToken(token_ptr_t actually, TOKEN expected) : actually(actually), expected_token(expected) {};
+	UnexpectedToken(token_ptr_t op, token_ptr_t actually, TOKEN expected) : op(op), actually(actually), expected_token(expected) {};
+	UnexpectedToken(token_ptr_t actually) : actually(actually), expected_token(T_EMPTY) {};
+	UnexpectedToken(token_ptr_t actually, const set<TOKEN>& expected) : actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
+	UnexpectedToken(token_ptr_t op, token_ptr_t actually, const set<TOKEN>& expected) : op(op), actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
+
+	void make_str() override {
+		if (op) {
+			op->print_pos(err);
+			err << "Operator \"" << op->get_name() << "\" ";
+		} 
+		if (expected_token != T_EMPTY || expected_tokens.size() != 0)
+			err << "Instead of the \"" << actually->get_name() << '\"' << endl;
+		else {
+			if (op)
+				err << "was not expecting \"" << actually->get_name() << '\"' << endl;
+			else
+				err << "Token \"" << actually->get_name() << "\" is not expected";
+			return;
+		}
+		err << "was expecting ";
+		if (expected_token != T_EMPTY)
+			err << '\"' << token_t::get_name_by_id(expected_token) << '\"' << endl;
+		else {
+			err << "one of these tokens: " << endl;
+			for (auto i = expected_tokens.begin(); i != expected_tokens.end(); ++i)
+				err << " \"" << token_t::get_name_by_id(*i) << " \"\n" << endl;
+		}
+	}
+
+	/*UnexpectedToken(const set<TOKEN>& expected) {
+		err << "One of these tokens is expected: \n";
+		for (auto i = expected.begin(); i != expected.end(); ++i)
+			err << " \"" + token_t::get_name_by_id(*i) << " \"\n";
+	};*/
+};
+
+class UnexpectedEOF : public SyntaxError {
+public:
+	UnexpectedEOF() : SyntaxError("Unexpected end of file"){};
+};
+
+class ExpressionIsExpected : public SyntaxError {
+public:
+	ExpressionIsExpected() : SyntaxError("Expression is expected") {};
+	ExpressionIsExpected(token_ptr_t token) {
+		token->print_pos(err);
+		err << "Operator: \"" << token->get_name() << "\" expecting expression" << endl;
+	};
+};
+
+/*class TokenIsExpected : public SyntaxError {
+public:
+	TokenIsExpected(TOKEN expected) {
+		err = "Token \"" + token_t::get_name_by_id(expected) + "\" is expected";
+	};
+	TokenIsExpected(const set<TOKEN>& expected) {
+		err = "Token \"" + token_t::get_name_by_id(expected) + "\" is expected";
+	};
+};*/
+
+class CloseBracketExpected : public SyntaxError {
+public:
+	CloseBracketExpected() : SyntaxError("Close bracket is expected") {};
+};
+
+class InvalidCombinationOfSpecifiers : public SyntaxError {
+public:
+	InvalidCombinationOfSpecifiers(token_ptr_t token) : SyntaxError("Invalid combination of specifiers", token) {};
+	InvalidCombinationOfSpecifiers() : SyntaxError("Invalid combination of specifiers") {};
+};
+
+class InvalidIncompleteType : public SyntaxError {
+public:
+	InvalidIncompleteType(token_ptr_t token) : SyntaxError("Invalid incomplete type", token) {};
+	InvalidIncompleteType() : SyntaxError("Invalid incomplete type") {};
+};
+
 class lexeme_analyzer_t {
 protected:
 	istream* is;
@@ -205,8 +316,8 @@ protected:
 	int rem_line = -1;
 	int rem_col = -1;
 	string curr_str;
-	token_container_t prev_token;
-	token_container_t curr_token;
+	token_ptr_t prev_token;
+	token_ptr_t curr_token;
 	bool eof_reached = false;
 
 	AUTOMATON_STATE state;
@@ -217,7 +328,10 @@ protected:
 	void skip_spaces();
 public:
 	lexeme_analyzer_t(istream& is_);
-	token_container_t next();
-	token_container_t get();
+	token_ptr_t next();
+	token_ptr_t get();
+	token_ptr_t require(TOKEN first, ...);
+	token_ptr_t require(token_ptr_t op, TOKEN first, ...);
+	token_ptr_t require(set<TOKEN>&);
 	bool eof();
 };

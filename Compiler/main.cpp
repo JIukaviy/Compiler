@@ -6,46 +6,51 @@
 #include "lexeme_analyzer.h"
 #include "parser.h"
 
-//#define TEST
-
 using namespace std;
 
 int main(int argc, char** argv) {
-#ifdef TEST
-	if (argc != 2) {
-		cout << "Enter file name" << endl;
-		return 1;
-	}
-	ifstream fin(argv[1]);
-
-	if (!fin)
-		cout << "File \"" << argv[1] << "\" not found" << endl;
-
-	ofstream fout("output.txt");
-#else
-	ifstream fin("data.txt");
-#endif
-	lexeme_analyzer_init();
 	tokens_init();
+	lexeme_analyzer_init();
+	parser_init();
+	if (argc == 3) {
+		ifstream fin(argv[2]);
+		if (!fin) {
+			cerr << "Can't open file" << endl;
+			return 1;
+		}
+		ofstream fout("output.txt");
+		lexeme_analyzer_t la(fin);
+		parser_t parser(&la);
+		if (argv[1][0] == 'l') {
+			try {
+				while (!la.eof())
+					fout << la.next() << endl;
+			} catch (LexemeAnalyzeError& e) {
+				fout << e;
+			}
+		} else if (argv[1][0] == 's') {
+			try {
+				parser.print_expr(fout);
+			} catch (LexemeAnalyzeError& e) {
+				fout << e;
+			} catch (SyntaxError& e) {
+				fout << e;
+			}
+		} 
+		return 0;
+	}
+	ifstream fin("data.txt");
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {
-		parser.parse();
-		parser.print(cout);
-	} catch (EOFReached) {
-
+		parser.print_decl(cout);
 	} catch (LexemeAnalyzeError& e) {
-#ifdef TEST
-		fout
-#else
-		cout
-#endif
-		<< e;
+		cerr << "Lexeme analyzer error: " << e << endl;
+	} catch (SyntaxError& e) {
+		cerr << "Parse error: " << e << endl;
 	}
 
-#ifndef TEST
 	system("pause");
-#endif
-
+		
 	return 0;
 }
