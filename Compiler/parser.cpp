@@ -21,9 +21,17 @@ expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_) :
 										throw ExpressionIsExpected(op); \
 								}*/
 
+void node_t::flat_print(ostream& os) {
+	print(os);
+}
+
 void print_level(ostream& os, int level) {
 	for (int i = 0; i < level; i++)
 		os << '\t';
+}
+
+void expr_t::print(ostream& os) {
+	print(os, 0);
 }
 
 void expr_bin_op_t::print(ostream& os, int level) {
@@ -32,6 +40,12 @@ void expr_bin_op_t::print(ostream& os, int level) {
 	op->short_print(os);
 	os << endl;
 	right->print(os, level + 1);
+}
+
+void expr_bin_op_t::flat_print(ostream& os) {
+	left->flat_print(os);
+	op->short_print(os);
+	right->flat_print(os);
 }
 
 void expr_tern_op_t::print(ostream& os, int level) {
@@ -44,11 +58,22 @@ void expr_tern_op_t::print(ostream& os, int level) {
 	right->print(os, level + 1);
 }
 
+void expr_tern_op_t::flat_print(ostream& os) {
+	left->flat_print(os);
+	os << " ? " << endl;
+	middle->flat_print(os);
+	os << " : " << endl;
+	right->flat_print(os);
+}
 
 void expr_var_t::print(ostream& os, int level) {
 	print_level(os, level);
 	variable->short_print(os);
 	os << endl;
+}
+
+void expr_var_t::flat_print(ostream& os) {
+	variable->short_print(os);
 }
 
 void expr_const_t::print(ostream& os, int level) {
@@ -57,11 +82,20 @@ void expr_const_t::print(ostream& os, int level) {
 	os << endl;
 }
 
+void expr_const_t::flat_print(ostream& os) {
+	constant->short_print(os);
+}
+
 void expr_un_op_t::print(ostream& os, int level) {
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
 	expr->print(os, level + 1);
+}
+
+void expr_un_op_t::flat_print(ostream& os) {
+	op->short_print(os);
+	expr->flat_print(os);
 }
 
 void expr_prefix_un_op_t::print(ostream& os, int level) {
@@ -72,6 +106,11 @@ void expr_prefix_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
 }
 
+void expr_prefix_un_op_t::flat_print(ostream& os) {
+	op->short_print(os);
+	expr->flat_print(os);
+}
+
 void expr_postfix_un_op_t::print(ostream& os, int level) {
 	print_level(os, level);
 	os << "postfix ";
@@ -80,11 +119,23 @@ void expr_postfix_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
 }
 
+void expr_postfix_un_op_t::flat_print(ostream& os) {
+	expr->print(os);
+	op->short_print(os);
+}
+
 void expr_arr_index_t::print(ostream& os, int level) {
 	left->print(os, level + 1);
 	print_level(os, level);
 	os << "[]" << endl;
 	right->print(os, level + 1);
+}
+
+void expr_arr_index_t::flat_print(ostream& os) {
+	left->flat_print(os);
+	os << "[";
+	right->flat_print(os);
+	os << "]";
 }
 
 void expr_struct_access_t::print(ostream& os, int level) {
@@ -97,6 +148,12 @@ void expr_struct_access_t::print(ostream& os, int level) {
 	os << endl;
 }
 
+void expr_struct_access_t::flat_print(ostream& os) {
+	expr->flat_print(os);
+	op->short_print(os);
+	ident->short_print(os);
+}
+
 void expr_func_t::print(ostream &os, int level) {
 	func->print(os, level + 1);
 	print_level(os, level);
@@ -105,7 +162,28 @@ void expr_func_t::print(ostream &os, int level) {
 		args[i]->print(os, level + 1);
 }
 
+void expr_func_t::flat_print(ostream &os) {
+	func->flat_print(os);
+	os << "(";
+	for (int i = 0; i < args.size(); i++) {
+		args[i]->print(os);
+		if (i != args.size() - 1)
+			os << ", ";
+	}
+	os << ")";
+}
+
+void node_str_literal::print(ostream& os) {
+	os << '"';
+	str->short_print(os);
+	os << '"';
+}
+
 type_chain_t::type_chain_t() : last(0), first(0) {}
+node_str_literal::node_str_literal(token_ptr_t str) : str(str) {}
+decl_raw_t::decl_raw_t() : type(0) {}
+decl_raw_t::decl_raw_t(token_ptr_t ident, type_t* type) : identifier(ident), type(type) {}
+decl_raw_t::decl_raw_t(type_chain_t chain) : type(chain.first), identifier(chain.identifier) {}
 
 void type_chain_t::update(base_updatable_type_t* e) {
 	if (e)
@@ -207,7 +285,7 @@ void decl_array_t::print(ostream & os) {
 	type_t::print(os);
 	os << "array[";
 	if (size)
-		size->print(os, 0);
+		size->flat_print(os);
 	os << "] with elems: ";
 	type->print(os);
 }
@@ -337,17 +415,14 @@ expr_t* parser_t::factor() {
 }
 
 //set<TOKEN> type_specifiers;
-
-#define in_set(set_name, key) (set_name.find(key) != set_name.end())
+//#define in_set(set_name, key) (set_name.find(key) != set_name.end())
 
 symbol_t* parser_t::parse_declaration() {
+	return nullptr;
+}
+
+decl_raw_t parser_t::declaration() {
 	map<TOKEN, bool> curr_specs;
-	/*bool met_typedef = false;
-	bool met_const = false;
-	bool met_int = false;
-	bool met_double = false;
-	bool met_char = false;
-	bool met_void = false;*/
 	while (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, T_EMPTY)) {
 		if (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_EMPTY)) {
 			if (curr_specs[la->get()])
@@ -358,42 +433,6 @@ symbol_t* parser_t::parse_declaration() {
 		}
 		curr_specs[la->get()] = true;
 		la->next();
-		/*switch (la->get()->get_token_id()) {
-			case T_KWRD_TYPEDEF: {
-				if (met_typedef)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_typedef = true;
-			} break;
-			case T_KWRD_CONST: {
-				if (met_const)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_const = true;
-			} break;
-			case T_KWRD_INT: {
-				if (met_int || met_double || met_char || met_void)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_const = true;
-			} break;
-			case T_KWRD_DOUBLE: {
-				if (met_int || met_double || met_char || met_void)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_const = true;
-			} break;
-			case T_KWRD_CHAR: {
-				if (met_int || met_double || met_char || met_void)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_const = true;
-			} break;
-			case T_KWRD_VOID: {
-				if (met_int || met_double || met_char || met_void)
-					InvalidCombinationOfSpecifiers(la->get());
-				met_const = true;
-			} break;
-		}*/
-		/*if (in_set(curr_specs, la->get()->get_token_id()))
-			curr_specs.insert(la->get()->get_token_id());
-		else
-			throw InvalidCombinationOfSpecifiers(la->get());*/
 	}
 	type_t* type = 0;
 	if (curr_specs[T_KWRD_INT])
@@ -405,7 +444,9 @@ symbol_t* parser_t::parse_declaration() {
 	else if (curr_specs[T_KWRD_VOID])
 		type = new type_void_t();
 
+
 	type_chain_t chain = declarator();
+	decl_raw_t res(chain);
 	bool is_ptr = false;
 	if (chain) {
 		is_ptr = typeid(decl_ptr_t) == typeid(*chain.last);
@@ -413,15 +454,14 @@ symbol_t* parser_t::parse_declaration() {
 		if (is_ptr)
 			type->set_is_const(curr_specs[T_KWRD_CONST]);
 		type = chain.last;
-		sym_table.insert(chain.first);
-	}
-	if (!is_ptr) 
-		type->set_is_const(curr_specs[T_KWRD_CONST]);
-	if (!chain) {
-		sym_table.insert(type);
-		return type;
 	} else
-		return chain.first;
+		res.type = type;
+	if (!is_ptr)
+		type->set_is_const(curr_specs[T_KWRD_CONST]);
+
+	res.init_list = parse_initializer_list();
+
+	return res;
 }
 
 type_chain_t parser_t::declarator() {
@@ -479,6 +519,31 @@ type_chain_t parser_t::func_arr_decl() {
 	return dcl;
 }
 
+vector<node_t*> parser_t::parse_initializer_list() {
+	vector<node_t*> res;
+	if (la->get() == T_OP_ASSIGN) {
+		if (la->next() == T_BRACE_OPEN) {
+			do {
+				if (la->next() == T_BRACE_CLOSE)
+					break;
+				res.push_back(parse_initializer());
+			} while (la->get() == T_COMMA);
+			la->require(T_BRACE_CLOSE, T_EMPTY);
+		} else
+			res.push_back(parse_initializer());
+	}
+	return res;
+}
+
+node_t* parser_t::parse_initializer() {
+	if (la->get() == T_STRING) {
+		node_t* res = new node_str_literal(la->get());
+		la->next();
+		return res;
+	} else
+		return parse_expr();
+}
+
 expr_t* parser_t::parse_expr() {
 	return right_associated_bin_op();
 }
@@ -486,13 +551,30 @@ expr_t* parser_t::parse_expr() {
 void parser_t::print_expr(ostream& os) {
 	la->next();
 	if (la->get() != T_EMPTY)
-		parse_expr()->print(os, 0);
+		parse_expr()->print(os);
 }
 
 void parser_t::print_decl(ostream& os) {
 	la->next();
-	if (la->get() != T_EMPTY)
-		parse_declaration()->print(os);
+	if (la->get() != T_EMPTY) {
+		decl_raw_t res = declaration();
+		if (res.identifier)
+			res.identifier->short_print(os);
+		else
+			os << "abstract declaration";
+		os << ": ";
+		res.type->print(os);
+
+		if (!res.init_list.empty()) {
+			os << "with initializer: {";
+			for (int i = 0; i < res.init_list.size(); i++) {
+				res.init_list[i]->flat_print(os);
+				if (i != res.init_list.size() - 1)
+					os << ", ";
+			}
+			os << "}";
+		}
+	}
 	os << endl;
 }
 

@@ -36,7 +36,15 @@ int main(int argc, char** argv) {
 			} catch (SyntaxError& e) {
 				fout << e;
 			}
-		} 
+		} else if (argv[1][0] == 't') {
+			try {
+				parser.print_decl(fout);
+			} catch (LexemeAnalyzeError& e) {
+				fout << e;
+			} catch (SyntaxError& e) {
+				fout << e;
+			}
+		}
 		return 0;
 	}
 	ifstream fin("data.txt");
