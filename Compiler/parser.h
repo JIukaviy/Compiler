@@ -135,88 +135,95 @@ public:
 	virtual int get_size() = 0;
 };
 
-class base_updatable_type_t : public virtual type_t {
+class updatable_sym_t : public virtual type_t {
 public:
-	base_updatable_type_t(bool is_const = 0);
-	virtual void add_info(type_t* symbol) = 0;
+	updatable_sym_t(bool is_const = 0);
+	virtual void set_element_type(type_t* symbol, token_ptr_t token) = 0;		// токен необходим для вывода позиции в коде в случае ошибки
 };
 
-template <typename T>
-class updatable_type_t : public virtual base_updatable_type_t {
+/*template <typename T>
+class updatable_sym_t : public virtual updatable_sym_t {
 protected:
 	T* type;
 public:
-	using base_updatable_type_t::base_updatable_type_t;
-	void add_info(type_t* symbol) override {
+	using updatable_sym_t::updatable_sym_t;
+	void set_element_type(type_t* symbol) override {
 		if (!symbol)
 			return;
 		type = dynamic_cast<T*>(symbol);
 		if (!type)
 			throw InvalidIncompleteType();
 	}
-};
+};*/
 
-class sym_var_t : public updatable_type_t<type_with_size_t> {
+class sym_var_t : public updatable_sym_t {
 protected:
 	token_ptr_t identifier;
 	vector<expr_t*> init_values;
+	type_t* type;
 public:
 	sym_var_t(token_ptr_t identifier);
 	void print(ostream& os) override;
+	void set_element_type(type_t* symbol, token_ptr_t token) override;
 };
 
-class type_void_t : public type_t {
+class sym_type_void_t : public type_t {
 public:
 	void print(ostream& os) override;
 	bool completed() override;
 };
 
-class type_int_t : public type_with_size_t {
+class sym_type_int_t : public type_with_size_t {
 public:
 	void print(ostream& os) override;
 	int get_size() override;
 };
 
-class type_char_t : public type_with_size_t {
+class sym_type_char_t : public type_with_size_t {
 public:
 	void print(ostream& os) override;
 	int get_size() override;
 };
 
-class type_double_t : public type_with_size_t {
+class sym_type_double_t : public type_with_size_t {
 public:
 	void print(ostream& os) override;
 	int get_size() override;
 };
 
-class decl_ptr_t : public updatable_type_t<type_t>, public type_with_size_t {
+class sym_type_ptr_t : public updatable_sym_t, public type_with_size_t {
+	type_t* type;
 public:
 	//using type_with_size_t::type_with_size_t;
-	decl_ptr_t(bool is_const = 0);
+	sym_type_ptr_t(bool is_const = 0);
+	void set_element_type(type_t* type, token_ptr_t token) override;
 	void print(ostream& os) override;
 	int get_size() override;
 };
 
-class decl_array_t : public updatable_type_t<type_with_size_t>, public type_with_size_t {
+class sym_type_array_t : public updatable_sym_t, public type_with_size_t {
 protected:
 	expr_t* size;
+	type_with_size_t* elem_type;
 public:
-	decl_array_t(expr_t* size = nullptr, bool is_const = false);
-	void add_info(type_t* type) override;
+	sym_type_array_t(expr_t* size = nullptr, bool is_const = false);
+	void set_element_type(type_t* type, token_ptr_t token) override;
 	void print(ostream& os) override;
 	bool completed() override;
 	int get_size() override;
 };
 
-class decl_func_t : public updatable_type_t<type_t> {
+class sym_type_func_t : public updatable_sym_t {
 protected:
 	vector<type_t*> args;
+	type_t* ret_type;
 public:
-	decl_func_t(vector<type_t*>& args, bool is_const = false);
+	sym_type_func_t(vector<type_t*>& args, bool is_const = false);
+	void set_element_type(type_t* type, token_ptr_t token) override;
 	void print(ostream& os) override {};
 };
 
-class type_alias_t : public type_t {
+class sym_type_alias_t : public type_t {
 protected:
 	type_t* type;
 public:
@@ -225,10 +232,11 @@ public:
 
 struct type_chain_t {
 	type_chain_t();
-	base_updatable_type_t* first;
-	base_updatable_type_t* last;
+	updatable_sym_t* first;
+	updatable_sym_t* last;
+	token_ptr_t last_token;
 	token_ptr_t identifier;
-	void update(base_updatable_type_t*);
+	void update(updatable_sym_t*);
 	void update(token_ptr_t);
 	void update(type_chain_t);
 	operator bool();
@@ -236,6 +244,7 @@ struct type_chain_t {
 
 struct decl_raw_t {
 	token_ptr_t identifier;
+	token_ptr_t type_def; //token_ptr_t необходим для вывода места в коде где он встретился, в случае ошибки.
 	type_t* type;
 	vector<node_t*> init_list;
 	decl_raw_t();

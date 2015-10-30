@@ -32,6 +32,13 @@ union value_t {
 	char* str;
 };
 
+/*struct token_pos {
+	int line;
+	int column;
+	token_pos();
+	token_pos(int line, int column);
+};*/
+
 class token_t {
 	TOKEN token;
 	int line;
