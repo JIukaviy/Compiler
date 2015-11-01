@@ -8,3 +8,5 @@ public:
 	virtual void print(ostream&) = 0;
 	virtual void flat_print(ostream&);
 };
+
+void print_level(ostream& os, int level);

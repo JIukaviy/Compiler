@@ -9,11 +9,6 @@ expr_var_t::expr_var_t(token_ptr_t variable_) : variable(variable_) {}
 expr_const_t::expr_const_t(token_ptr_t constant_) : constant(constant_) {}
 expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_) : left(left_), middle(middle_), right(right_) {}
 
-void print_level(ostream& os, int level) {
-	for (int i = 0; i < level; i++)
-		os << '\t';
-}
-
 void expr_t::print(ostream& os) {
 	print(os, 0);
 }
@@ -104,7 +99,7 @@ void expr_postfix_un_op_t::print(ostream& os, int level) {
 }
 
 void expr_postfix_un_op_t::flat_print(ostream& os) {
-	expr->print(os);
+	expr->flat_print(os);
 	op->short_print(os);
 }
 
@@ -150,7 +145,7 @@ void expr_func_t::flat_print(ostream &os) {
 	func->flat_print(os);
 	os << "(";
 	for (int i = 0; i < args.size(); i++) {
-		args[i]->print(os);
+		args[i]->flat_print(os);
 		if (i != args.size() - 1)
 			os << ", ";
 	}

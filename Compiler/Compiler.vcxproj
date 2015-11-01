@@ -123,6 +123,7 @@
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="parser_base_node.cpp" />
     <ClCompile Include="parser_expression_node.cpp" />
+    <ClCompile Include="parser_statement_node.cpp" />
     <ClCompile Include="parser_symbol_node.cpp" />
     <ClCompile Include="tokens.cpp" />
   </ItemGroup>
@@ -132,6 +133,7 @@
     <ClInclude Include="parser.h" />
     <ClInclude Include="parser_base_node.h" />
     <ClInclude Include="parser_expression_node.h" />
+    <ClInclude Include="parser_statement_node.h" />
     <ClInclude Include="parser_symbol_node.h" />
     <ClInclude Include="tokens.h" />
     <ClInclude Include="token_char.h" />

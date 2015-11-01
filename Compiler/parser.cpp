@@ -68,6 +68,12 @@ symbol_t* sym_table_t::get(symbol_t* s) {
 
 set<TOKEN> operators[16];
 
+//-------------------EXPRESSION_PARSER-------------------------------------------
+
+expr_t* parser_t::parse_expr() {
+	return right_associated_bin_op();
+}
+
 expr_t* parser_t::right_associated_bin_op() {
 	expr_t* left = tern_op();
 	token_ptr_t op = la->get();
@@ -84,7 +90,7 @@ expr_t* parser_t::tern_op() {
 	if (op == T_QUESTION_MARK) {
 		la->next();
 		expr_t* middle = tern_op();
-		la->require(op, T_COLON, T_EMPTY);
+		la->require(op, T_COLON, 0);
 		try_parse(return new expr_tern_op_t(left, middle, right_associated_bin_op()));
 	} else
 		return left;
@@ -116,9 +122,9 @@ expr_t* parser_t::parser_t::postfix_op() {
 	expr_t* left = factor();
 	token_ptr_t op = la->get();
 
-	while (op->is(T_OP_INC, T_OP_DEC, T_BRACKET_OPEN, T_OP_DOT, T_OP_ARROW, T_SQR_BRACKET_OPEN, T_EMPTY)) {
+	while (op->is(T_OP_INC, T_OP_DEC, T_BRACKET_OPEN, T_OP_DOT, T_OP_ARROW, T_SQR_BRACKET_OPEN, 0)) {
 		la->next();
-		if (op->is(T_OP_INC, T_OP_DEC, T_EMPTY)) {
+		if (op->is(T_OP_INC, T_OP_DEC, 0)) {
 			left = new expr_postfix_un_op_t(left, op);
 		} else if (op == T_BRACKET_OPEN) {
 			vector<expr_t*> args;
@@ -133,14 +139,14 @@ expr_t* parser_t::parser_t::postfix_op() {
 				else 
 					break;
 			}
-			la->require(T_BRACKET_CLOSE, T_EMPTY);
+			la->require(T_BRACKET_CLOSE, 0);
 			left = new expr_func_t(left, args);
-		} else if (op->is(T_OP_DOT, T_OP_ARROW, T_EMPTY)) {
+		} else if (op->is(T_OP_DOT, T_OP_ARROW, 0)) {
 			token_ptr_t member = la->require(op, T_IDENTIFIER, T_EMPTY);
 			left = new expr_struct_access_t(left, op, member);
 		} else if (op == T_SQR_BRACKET_OPEN) {
 			expr_t* index = right_associated_bin_op();
-			la->require(op, T_SQR_BRACKET_CLOSE, T_EMPTY);
+			la->require(op, T_SQR_BRACKET_CLOSE, 0);
 			left = new expr_arr_index_t(left, index);
 		}
 		op = la->get();
@@ -153,11 +159,11 @@ expr_t* parser_t::factor() {
 	la->next();
 	if (t == T_IDENTIFIER)
 		return new expr_var_t(t);
-	else if (t == T_INTEGER || t == T_DOUBLE)
+	else if (t == T_INTEGER || t == T_DOUBLE || t == T_STRING)
 		return new expr_const_t(t);
 	else if (t == T_BRACKET_OPEN) {
 		expr_t* l = right_associated_bin_op();
-		la->require(T_BRACKET_CLOSE, T_EMPTY);
+		la->require(T_BRACKET_CLOSE, 0);
 		return l;
 	} else if (t == T_EMPTY)
 		throw UnexpectedEOF();
@@ -167,6 +173,8 @@ expr_t* parser_t::factor() {
 
 //set<TOKEN> type_specifiers;
 //#define in_set(set_name, key) (set_name.find(key) != set_name.end())
+
+//-------------------DECLARATION_PARSER-------------------------------------------
 
 symbol_t* parser_t::parse_declaration() {
 	decl_raw_t decl = declaration();
@@ -203,7 +211,7 @@ decl_raw_t parser_t::declaration() {
 	token_ptr_t has_typedef;
 	token_ptr_t type_spec;
 	while (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0)) {
-		/*if (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_EMPTY)) {
+		/*if (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, 0)) {
 			if (curr_specs[la->get()])
 				throw InvalidCombinationOfSpecifiers(la->get());
 		} else {
@@ -304,7 +312,7 @@ type_chain_t parser_t::init_declarator() {
 	} else if (token == T_BRACKET_OPEN) {
 		la->next();
 		dcl = declarator();
-		la->require(T_BRACKET_CLOSE, T_EMPTY);
+		la->require(T_BRACKET_CLOSE, 0);
 	}
 	if (!dcl.estimated_ident_pos)
 		dcl.estimated_ident_pos = la->get()->get_pos();
@@ -327,7 +335,7 @@ type_chain_t parser_t::func_arr_decl() {
 		expr_t* expr = nullptr;
 		if (la->get() != T_SQR_BRACKET_CLOSE)
 			expr = parse_expr();
-		la->require(T_SQR_BRACKET_CLOSE, T_EMPTY);
+		la->require(T_SQR_BRACKET_CLOSE, 0);
 		updatable_sym_t* l = new sym_type_array_t(expr);
 		dcl = func_arr_decl();
 		l->set_element_type(dcl.last, dcl.last_token_pos);
@@ -348,7 +356,7 @@ vector<node_t*> parser_t::parse_initializer_list() {
 					break;
 				res.push_back(parse_initializer());
 			} while (la->get() == T_COMMA);
-			la->require(T_BRACE_CLOSE, T_EMPTY);
+			la->require(T_BRACE_CLOSE, 0);
 		} else
 			res.push_back(parse_initializer());
 	}
@@ -364,13 +372,108 @@ node_t* parser_t::parse_initializer() {
 		return parse_expr();
 }
 
-node_t * parser_t::parse_state() {
-	return nullptr;
+//-------------------STATEMENT_PARSER-------------------------------------------
+
+statement_t* parser_t::parse_statement() {
+	if (la->get() == T_EMPTY)
+		throw UnexpectedEOF();
+
+	statement_t* res = 
+		la->get() == T_SEMICOLON ? nullptr :
+		la->get() == T_BRACE_OPEN ? stmt_block() :
+		la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0) ? stmt_decl() :
+		la->get()->is(T_IDENTIFIER, T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, T_BRACKET_OPEN, 0) ? stmt_expr() :
+		la->get() == T_KWRD_WHILE ? stmt_while() :
+		la->get() == T_KWRD_FOR ? stmt_for() :
+		la->get() == T_KWRD_IF ? stmt_if() : throw UnexpectedToken(la->get());
+
+	/*if (la->get() == T_SEMICOLON)
+		return nullptr;
+	if (la->get() == T_BRACE_OPEN)
+		res = stmt_block();
+	else if (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0))
+		res = stmt_decl();
+	else if (la->get()->is(T_IDENTIFIER, T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, 0))
+		res = stmt_expr();
+	else if (la->get() == T_KWRD_WHILE)
+		res = stmt_while();
+	else if (la->get() == T_KWRD_IF)
+		res = stmt_if();*/
+	return res;
 }
 
-expr_t* parser_t::parse_expr() {
-	return right_associated_bin_op();
+statement_t* parser_t::stmt_block() {
+	la->require(T_BRACE_OPEN, 0);
+	vector<statement_t*> stmts;
+	while (la->get() != T_BRACE_CLOSE) {
+		statement_t* stmt = parse_statement();
+		if (stmt)
+			stmts.push_back(stmt);
+	}
+	la->require(T_BRACE_CLOSE, 0);
+	return new stmt_block_t(stmts);
 }
+
+statement_t* parser_t::stmt_decl() {
+	symbol_t* decl = parse_declaration();
+	la->require(T_SEMICOLON, 0);
+	return new stmt_decl_t(decl);
+}
+
+statement_t* parser_t::stmt_expr() {
+	expr_t* expr = parse_expr();
+	la->require(T_SEMICOLON, 0);
+	return new stmt_expr_t(expr);
+}
+
+
+statement_t * parser_t::stmt_if() {
+	la->require(T_KWRD_IF, 0);
+	la->require(T_BRACKET_OPEN, 0);
+	expr_t* condition = parse_expr();
+	la->require(T_BRACKET_CLOSE, 0);
+	statement_t* then_stmt = parse_statement();
+	statement_t* else_stmt = nullptr;
+	if (la->get() == T_KWRD_ELSE) {
+		la->next();
+		else_stmt = parse_statement();
+	}
+	return new stmt_if_t(condition, then_stmt, else_stmt);
+}
+
+statement_t* parser_t::stmt_while() {
+	la->require(T_KWRD_WHILE, 0);
+	la->require(T_BRACKET_OPEN, 0);
+	expr_t* condition = parse_expr();
+	la->require(T_BRACKET_CLOSE, 0);
+	statement_t* stmt = parse_statement();
+	return new stmt_while_t(condition, stmt);
+}
+
+statement_t* parser_t::stmt_for() {
+	la->require(T_KWRD_FOR, 0);
+	la->require(T_BRACKET_OPEN, 0);
+
+	expr_t* init_expr = nullptr;
+	if (la->get() != T_SEMICOLON)
+		init_expr = parse_expr();
+	la->require(T_SEMICOLON, 0);
+
+	expr_t* condition = nullptr;
+	if (la->get() != T_SEMICOLON)
+		condition = parse_expr();
+	la->require(T_SEMICOLON, 0);
+
+	expr_t* expr = nullptr;
+	if (la->get() != T_BRACKET_CLOSE)
+		expr = parse_expr();
+	la->require(T_BRACKET_CLOSE, 0);
+
+	statement_t* stmt = parse_statement();
+	return new stmt_for_t(init_expr, condition, expr, stmt);
+}
+
+//---------------------------------PRINT-------------------------------------------
 
 void parser_t::print_expr(ostream& os) {
 	la->next();
@@ -417,6 +520,16 @@ void parser_t::print_decl(ostream& os) {
 	}
 }
 
+void parser_t::print_statement(ostream& os) {
+	if (la->next() != T_EMPTY) {
+		statement_t* stmt = parse_statement();
+		if (stmt)
+			stmt->print(os);
+		else
+			os << ";";
+	}
+}
+
 void set_operator_priority(TOKEN op, int priority) {
 	if (priority > 16 || priority < 1 || operators[priority-1].find(op) != operators[priority-1].end())
 		throw;
@@ -436,8 +549,4 @@ void parser_init() {
 #undef PRIORITY_SET
 #undef TOKEN_LIST
 #undef register_token
-}
-
-size_t symbol_t::get_hash() const {
-	return cached_hash;
 }

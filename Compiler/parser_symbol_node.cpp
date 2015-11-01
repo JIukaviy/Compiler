@@ -18,6 +18,10 @@ void symbol_t::update_hash() {
 	cached_hash = _get_hash();
 }
 
+size_t symbol_t::get_hash() const {
+	return cached_hash;
+}
+
 type_t::type_t(bool is_const_) : is_const_(is_const_) {}
 
 void type_t::set_const(bool val) {

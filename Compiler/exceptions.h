@@ -77,6 +77,11 @@ public:
 	using CompileError::CompileError;
 };
 
+class UnexpectedEOF : public SyntaxError {
+public:
+	UnexpectedEOF() : SyntaxError("Unexpected end of file") {};
+};
+
 class UnexpectedToken : public SyntaxError {
 public:
 	token_ptr_t op;
@@ -95,7 +100,8 @@ public:
 		if (op) {
 			op->print_pos(err);
 			err << "Operator \"" << op->get_name() << "\" ";
-		}
+		} else if (actually)
+			actually->print_pos(err);
 		if (expected_token != T_EMPTY || expected_tokens.size() != 0)
 			err << "Instead of the \"" << actually->get_name() << '\"' << endl;
 		else {
@@ -120,11 +126,6 @@ public:
 	for (auto i = expected.begin(); i != expected.end(); ++i)
 	err << " \"" + token_t::get_name_by_id(*i) << " \"\n";
 	};*/
-};
-
-class UnexpectedEOF : public SyntaxError {
-public:
-	UnexpectedEOF() : SyntaxError("Unexpected end of file") {};
 };
 
 class ExpressionIsExpected : public SyntaxError {

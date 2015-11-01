@@ -36,6 +36,9 @@
     <ClCompile Include="parser_symbol_node.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="parser_statement_node.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
@@ -81,6 +84,9 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="parser_symbol_node.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_statement_node.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

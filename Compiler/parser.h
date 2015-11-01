@@ -7,6 +7,7 @@
 #include "parser_base_node.h"
 #include "parser_expression_node.h"
 #include "parser_symbol_node.h"
+#include "parser_statement_node.h"
 #include <vector>
 #include <unordered_set>
 
@@ -76,10 +77,17 @@ class parser_t {
 	node_t* parse_initializer();
 	symbol_t* parse_declaration();
 
-	node_t* parse_state();
+	statement_t* parse_statement();
+	statement_t* stmt_expr();
+	statement_t* stmt_block();
+	statement_t* stmt_if();
+	statement_t* stmt_while();
+	statement_t* stmt_for();
+	statement_t* stmt_decl();
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);
 	void print_type(ostream&);
 	void print_decl(ostream&);
+	void print_statement(ostream&);
 };
