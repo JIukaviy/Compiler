@@ -4,6 +4,7 @@
 #include "tokens.h"
 #include "lexeme_analyzer.h"
 #include <vector>
+#include <unordered_set>
 
 using namespace std;
 
@@ -109,6 +110,7 @@ public:
 };
 
 class node_str_literal : public node_t {
+protected:
 	token_ptr_t str;
 public:
 	node_str_literal(token_ptr_t str);
@@ -116,29 +118,49 @@ public:
 };
 
 class symbol_t : public node_t {
+protected:
+	bool printed = false;
+	size_t cached_hash = 0;
+	virtual size_t _get_hash() const = 0;
 public:
 	virtual void print(ostream& os) = 0;
+	void update_hash();
+	size_t get_hash() const;
+	virtual bool eq(const symbol_t*) const = 0;
 };
 
-class type_t : public virtual symbol_t {
-	bool is_const;
+template<> struct std::hash<symbol_t*> {
+	size_t operator()(const symbol_t* s) const {
+		return s->get_hash();
+	}
+};
+
+template<> struct std::equal_to<symbol_t*> {
+	bool operator()(const symbol_t* a, const symbol_t* b) const {
+		return a->eq(b);
+	}
+};
+
+class type_t : public symbol_t {
+	bool is_const_;
 public:
-	type_t(bool is_const = false);
-	void set_is_const(bool val);
+	type_t(bool is_const_ = false);
+	virtual void set_const(bool val);
 	void print(ostream& os) override;
+	virtual bool is_const();
 	virtual bool completed();
 };
 
 class type_with_size_t : public virtual type_t {
 public:
-	type_with_size_t(bool is_const = 0);
+	type_with_size_t(bool is_const_ = 0);
 	virtual int get_size() = 0;
 };
 
 class updatable_sym_t : public virtual type_t {
 public:
-	updatable_sym_t(bool is_const = 0);
-	virtual void set_element_type(type_t* symbol, token_ptr_t token) = 0;		// токен необходим для вывода позиции в коде в случае ошибки
+	updatable_sym_t(bool is_const_ = 0);
+	virtual void set_element_type(type_t* symbol, pos_t pos) = 0;		// текущая позиция необходима в случае вывода ошибок
 };
 
 /*template <typename T>
@@ -156,86 +178,113 @@ public:
 	}
 };*/
 
-class sym_var_t : public updatable_sym_t {
+class sym_var_t : public symbol_t {
 protected:
 	token_ptr_t identifier;
-	vector<expr_t*> init_values;
+	vector<node_t*> init_list;
 	type_t* type;
+	size_t _get_hash() const override;
 public:
-	sym_var_t(token_ptr_t identifier);
+	sym_var_t(token_ptr_t identifier, type_t* type, vector<node_t*> init_list);
 	void print(ostream& os) override;
-	void set_element_type(type_t* symbol, token_ptr_t token) override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_void_t : public type_t {
+protected:
+	size_t _get_hash() const override;
 public:
 	void print(ostream& os) override;
 	bool completed() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_int_t : public type_with_size_t {
+protected:
+	size_t _get_hash() const override;
 public:
 	void print(ostream& os) override;
 	int get_size() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_char_t : public type_with_size_t {
+protected:
+	size_t _get_hash() const override;
 public:
 	void print(ostream& os) override;
 	int get_size() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_double_t : public type_with_size_t {
+protected:
+	size_t _get_hash() const override;
 public:
 	void print(ostream& os) override;
 	int get_size() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_ptr_t : public updatable_sym_t, public type_with_size_t {
+protected:
 	type_t* type;
+	size_t _get_hash() const override;
 public:
 	//using type_with_size_t::type_with_size_t;
-	sym_type_ptr_t(bool is_const = 0);
-	void set_element_type(type_t* type, token_ptr_t token) override;
+	sym_type_ptr_t(bool is_const_ = 0);
+	void set_element_type(type_t* type, pos_t pos) override;
 	void print(ostream& os) override;
 	int get_size() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_array_t : public updatable_sym_t, public type_with_size_t {
 protected:
 	expr_t* size;
 	type_with_size_t* elem_type;
+	size_t _get_hash() const override;
 public:
-	sym_type_array_t(expr_t* size = nullptr, bool is_const = false);
-	void set_element_type(type_t* type, token_ptr_t token) override;
+	sym_type_array_t(expr_t* size = nullptr, bool is_const_ = false);
+	void set_element_type(type_t* type, pos_t pos) override;
 	void print(ostream& os) override;
 	bool completed() override;
 	int get_size() override;
+	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_func_t : public updatable_sym_t {
 protected:
 	vector<type_t*> args;
 	type_t* ret_type;
+	//size_t _get_hash() const override;
 public:
-	sym_type_func_t(vector<type_t*>& args, bool is_const = false);
-	void set_element_type(type_t* type, token_ptr_t token) override;
+	sym_type_func_t(vector<type_t*>& args, bool is_const_ = false);
+	void set_element_type(type_t* type, pos_t pos) override;
 	void print(ostream& os) override {};
 };
 
 class sym_type_alias_t : public type_t {
 protected:
 	type_t* type;
+	token_ptr_t identifier;
+	size_t _get_hash() const override;
 public:
-	void print(ostream& os) override {};
+	sym_type_alias_t::sym_type_alias_t(token_ptr_t identifier, type_t* type);
+	bool is_const() override;
+	void set_const(bool val) override;
+	void print(ostream& os) override;
+	bool eq(const symbol_t*) const override;
+	type_t* get_type();
 };
 
 struct type_chain_t {
 	type_chain_t();
 	updatable_sym_t* first;
 	updatable_sym_t* last;
-	token_ptr_t last_token;
+	pos_t last_token_pos;
 	token_ptr_t identifier;
+	pos_t estimated_ident_pos;
 	void update(updatable_sym_t*);
 	void update(token_ptr_t);
 	void update(type_chain_t);
@@ -246,10 +295,21 @@ struct decl_raw_t {
 	token_ptr_t identifier;
 	token_ptr_t type_def; //token_ptr_t необходим для вывода места в коде где он встретился, в случае ошибки.
 	type_t* type;
+	pos_t estimated_ident_pos;
+	pos_t type_spec_pos;
 	vector<node_t*> init_list;
 	decl_raw_t();
 	decl_raw_t(token_ptr_t, type_t*);
 	decl_raw_t(type_chain_t);
+};
+
+class sym_table_t : public unordered_set<symbol_t*> {
+public:
+	symbol_t* get(symbol_t*);
+	symbol_t* get(token_ptr_t);
+	bool is_var(token_ptr_t);
+	bool is_alias(token_ptr_t);
+	//void insert(symbol_t*);
 };
 
 class parser_t {
@@ -263,7 +323,7 @@ class parser_t {
 	expr_t* factor();
 	expr_t* parse_expr();
 
-	set<type_t*> sym_table;
+	sym_table_t sym_table;
 	decl_raw_t declaration();
 	type_chain_t declarator();
 	type_chain_t init_declarator();
@@ -271,8 +331,11 @@ class parser_t {
 	vector<node_t*> parse_initializer_list();
 	node_t* parse_initializer();
 	symbol_t* parse_declaration();
+
+	node_t* parse_state();
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);
+	void print_type(ostream&);
 	void print_decl(ostream&);
 };

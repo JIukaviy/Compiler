@@ -10,17 +10,20 @@ ostream& operator<<(ostream& os, const token_ptr_t& e) {
 	return os;
 }
 
-token_t::token_t(int line_, int column_, TOKEN token_) {
-	line = line_;
-	column = column_;
-	token = token_;
+pos_t::pos_t() : line(0), column(0) {}
+pos_t::pos_t(int line, int column) : line(line), column(column) {}
+
+pos_t::operator bool() {
+	return line || column;
 }
 
-token_t::token_t() {
-	line = -1;
-	column = -1;
-	token = T_EMPTY;
+ostream& operator<<(ostream& os, const pos_t e) {
+	os << e.line << '\t' << e.column << '\t';
+	return os;
 }
+
+token_t::token_t(int line, int column, TOKEN token) : pos(line, column), token(token) {}
+token_t::token_t() : token(T_EMPTY) {}
 
 bool token_t::operator==(const TOKEN& token_) const {
 	return token == token_;
@@ -28,6 +31,10 @@ bool token_t::operator==(const TOKEN& token_) const {
 
 bool token_t::operator!=(const TOKEN& token_) const {
 	return token != token_;
+}
+
+bool token_t::operator==(const token_t& token_) const {
+	return token == token_.get_token_id();
 }
 
 token_t::operator TOKEN() {
@@ -97,19 +104,23 @@ string token_t::get_name_by_id(TOKEN token_id) {
 }
 
 int token_t::get_line() {
-	return line;
+	return pos.line;
 }
 
 int token_t::get_column() {
-	return column;
+	return pos.column;
+}
+
+pos_t token_t::get_pos() {
+	return pos;
 }
 
 void token_t::print(ostream& os) const {
-	os << "line: " << line << ", column: " << column << ", name: " << get_name();
+	os << pos << "name: " << get_name();
 }
 
 void token_t::print_pos(ostream & os) const {
-	os << line << '\t' << column << '\t';
+	os << pos;
 }
 
 void token_t::short_print(ostream & os) const {
@@ -122,6 +133,10 @@ bool token_ptr_t::operator==(const TOKEN& token_id_) const {
 
 bool token_ptr_t::operator!=(const TOKEN& token_id_) const {
 	return *(get()) != token_id_;
+}
+
+bool token_ptr_t::operator==(const token_ptr_t& token_ptr_) const {
+	return *(get()) == *token_ptr_;
 }
 
 token_ptr_t::operator TOKEN() {

@@ -185,6 +185,19 @@ decl_raw_t::decl_raw_t() : type(0) {}
 decl_raw_t::decl_raw_t(token_ptr_t ident, type_t* type) : identifier(ident), type(type) {}
 decl_raw_t::decl_raw_t(type_chain_t chain) : type(chain.first), identifier(chain.identifier) {}
 
+size_t rot_13_hash(unsigned char byte, size_t hash) {
+	hash += byte;
+	hash -= (hash << 13) | (hash >> 19);
+	return hash;
+}
+
+size_t rot_13_hash(unsigned int block, size_t hash) {
+	unsigned char* block_ptr = (unsigned char*)(&block);
+	for (int i = 0; i < 4; i++)
+		hash = rot_13_hash(*(block_ptr + i), hash);
+	return hash;
+}
+
 void type_chain_t::update(updatable_sym_t* e) {
 	if (e)
 		last = e;
@@ -200,21 +213,31 @@ void type_chain_t::update(type_chain_t e) {
 	update(e.last);
 	if (e.identifier)
 		identifier = e.identifier;
+	if (e.estimated_ident_pos)
+		estimated_ident_pos = e.estimated_ident_pos;
 }
 
 type_chain_t:: operator bool() {
 	return last;
 }
 
-type_t::type_t(bool is_const_) : is_const(is_const_) {}
+void symbol_t::update_hash() {
+	cached_hash = _get_hash();
+}
 
-void type_t::set_is_const(bool val) {
-	is_const = val;
+type_t::type_t(bool is_const_) : is_const_(is_const_) {}
+
+void type_t::set_const(bool val) {
+	is_const_ = val;
 }
 
 void type_t::print(ostream & os) {
-	if (is_const)
+	if (is_const_)
 		os << "const ";
+}
+
+bool type_t::is_const() {
+	return is_const_;
 }
 
 bool type_t::completed() {
@@ -222,6 +245,10 @@ bool type_t::completed() {
 }
 
 void sym_type_void_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
 	type_t::print(os);
 	os << "void ";
 }
@@ -230,8 +257,24 @@ bool sym_type_void_t::completed() {
 	return false;
 }
 
+size_t sym_type_void_t::_get_hash() const {
+	return T_KWRD_VOID;
+}
+
+bool sym_type_void_t::eq(const symbol_t* s) const {
+	return s && typeid(*s) == typeid(sym_type_void_t);
+}
+
 int sym_type_int_t::get_size() {
 	return sizeof(int);
+}
+
+size_t sym_type_int_t::_get_hash() const {
+	return T_KWRD_INT;
+}
+
+bool sym_type_int_t::eq(const symbol_t* s) const {
+	return s && typeid(*s) == typeid(sym_type_int_t);
 }
 
 void sym_type_int_t::print(ostream & os) {
@@ -243,6 +286,14 @@ int sym_type_char_t::get_size() {
 	return sizeof(char);
 }
 
+size_t sym_type_char_t::_get_hash() const {
+	return T_KWRD_CHAR;
+}
+
+bool sym_type_char_t::eq(const symbol_t* s) const {
+	return s && typeid(*s) == typeid(sym_type_char_t);
+}
+
 void sym_type_char_t::print(ostream & os) {
 	type_t::print(os);
 	os << token_t::get_name_by_id(T_KWRD_CHAR) << ' ';
@@ -252,38 +303,69 @@ int sym_type_double_t::get_size() {
 	return sizeof(float);
 }
 
+size_t sym_type_double_t::_get_hash() const {
+	return T_KWRD_DOUBLE;
+}
+
+bool sym_type_double_t::eq(const symbol_t* s) const {
+	return s && typeid(*s) == typeid(sym_type_double_t);
+}
+
 void sym_type_double_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
 	type_t::print(os);
 	os << token_t::get_name_by_id(T_KWRD_DOUBLE) << ' ';
 }
 
-type_with_size_t::type_with_size_t(bool is_const) : type_t(is_const) {}
-updatable_sym_t::updatable_sym_t(bool is_const) : type_t(is_const) {}
+type_with_size_t::type_with_size_t(bool is_const_) : type_t(is_const_) {}
+updatable_sym_t::updatable_sym_t(bool is_const_) : type_t(is_const_) {}
 
-void sym_var_t::set_element_type(type_t* symbol, token_ptr_t token) {
-	if (typeid(*symbol) == typeid(sym_type_void_t))
-		throw InvalidIncompleteType(token);
+size_t sym_var_t::_get_hash() const {
+	type->update_hash();
+	const string name = static_cast<token_with_value_t<string>*>(identifier.get())->get_value();
+	hash<string> hash_fn;
+	return hash_fn(name);
+}
 
-	type = symbol;
+bool sym_var_t::eq(const symbol_t* s) const {
+	const sym_var_t* var = dynamic_cast<const sym_var_t*>(s);
+	return var && identifier == var->identifier;
 }
 
 int sym_type_ptr_t::get_size() {
 	return sizeof(void*);
 }
 
-sym_type_ptr_t::sym_type_ptr_t(bool is_const) : type_t(is_const) {}
+size_t sym_type_ptr_t::_get_hash() const {
+	type->update_hash();
+	return rot_13_hash((unsigned char)T_OP_MUL, type->get_hash());
+}
 
-void sym_type_ptr_t::set_element_type(type_t * type_, token_ptr_t token) {
+bool sym_type_ptr_t::eq(const symbol_t* s) const {
+	const sym_type_ptr_t* ptr = dynamic_cast<const sym_type_ptr_t*>(s);
+	return ptr && type->eq(ptr->type);
+}
+
+sym_type_ptr_t::sym_type_ptr_t(bool is_const_) : type_t(is_const_) {}
+
+void sym_type_ptr_t::set_element_type(type_t * type_, pos_t pos) {
 	type = type_;
 }
 
 void sym_type_ptr_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
 	type_t::print(os);
 	os << "pointer to ";
 	type->print(os);
 }
 
-sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const) : type_t(is_const), size(size) {}
+sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const_) : type_t(is_const_), size(size) {}
 
 int sym_type_array_t::get_size() {
 	/*if (type)
@@ -292,7 +374,21 @@ int sym_type_array_t::get_size() {
 		return sizeof(void*);
 }
 
+size_t sym_type_array_t::_get_hash() const {
+	elem_type->update_hash();
+	return rot_13_hash((unsigned char)T_SQR_BRACKET_OPEN, elem_type->get_hash());
+}
+
+bool sym_type_array_t::eq(const symbol_t* s) const {
+	const sym_type_array_t* array = dynamic_cast<const sym_type_array_t*>(s);
+	return array && elem_type->eq(array->elem_type);
+}
+
 void sym_type_array_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
 	type_t::print(os);
 	os << "array[";
 	if (size)
@@ -305,37 +401,86 @@ bool sym_type_array_t::completed() {
 	return size;
 }
 
-void sym_type_array_t::set_element_type(type_t* type, token_ptr_t token) {
+void sym_type_array_t::set_element_type(type_t* type, pos_t pos) {
 	if (!type)
 		return;
 	if (!type->completed())
-		throw SyntaxError("Array can contatin only completed types", token);
+		throw SemanticError("Array can contatin only completed types", pos);
 	if (typeid(*type) == typeid(sym_type_func_t))
-		throw SyntaxError("Array can't contain functions", token);
+		throw SemanticError("Array can't contain functions", pos);
 
 	elem_type = dynamic_cast<type_with_size_t*>(type);
 	if (!elem_type)
-		throw InvalidIncompleteType(token);
+		throw InvalidIncompleteType(pos);
 }
 
-sym_var_t::sym_var_t(token_ptr_t identifier) : identifier(identifier) {}
+sym_var_t::sym_var_t(token_ptr_t identifier, type_t* type, vector<node_t*> init_list) : identifier(identifier), type(type), init_list(init_list) {}
 
 void sym_var_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
 	os << "variable: \"";
 	identifier->short_print(os);
+	os << "\", type: " << type->get_hash();
+	/*type->print(os);
+	if (!init_list.empty()) {
+		os << ", init list: {";
+		for (int i = 0; i < init_list.size(); i++) {
+			init_list[i]->flat_print(os);
+			if (i != init_list.size() - 1)
+				os << ", ";
+		}
+		os << "}";
+	}*/
 }
 
-sym_type_func_t::sym_type_func_t(vector<type_t*>& args, bool is_const) : args(args), type_t(is_const) {}
+sym_type_func_t::sym_type_func_t(vector<type_t*>& args, bool is_const_) : args(args), type_t(is_const_) {}
 
-void sym_type_func_t::set_element_type(type_t* type, token_ptr_t token) {
+void sym_type_func_t::set_element_type(type_t* type, pos_t pos) {
 	if (!type)
 		return;
 	if (typeid(*type) == typeid(sym_type_array_t))
-		throw SyntaxError("Function can't return array", token);
+		throw SemanticError("Function can't return array", pos);
 	if (typeid(*type) == typeid(sym_type_func_t))
-		throw SyntaxError("Function can't return function", token);
+		throw SemanticError("Function can't return function", pos);
 
 	ret_type = type;
+}
+
+sym_type_alias_t::sym_type_alias_t(token_ptr_t identifier, type_t* type) : identifier(identifier), type(type) {}
+
+bool sym_type_alias_t::is_const() {
+	return type->is_const();
+}
+
+void sym_type_alias_t::set_const(bool val) {
+	type->set_const(val);
+}
+
+void sym_type_alias_t::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
+	os << "alias: \"";
+	identifier->short_print(os);
+	os << "\", type: " << type->get_hash();
+}
+
+size_t sym_type_alias_t::_get_hash() const {
+	type->update_hash();
+	return rot_13_hash((unsigned char)T_KWRD_TYPEDEF, type->get_hash());
+}
+
+bool sym_type_alias_t::eq(const symbol_t* s) const {
+	const sym_type_alias_t* alias = dynamic_cast<const sym_type_alias_t*>(s);
+	return alias && type->eq(alias->type);
+}
+
+type_t* sym_type_alias_t::get_type() {
+	return type;
 }
 
 /*int sym_type_alias_t::get_size() {
@@ -343,6 +488,23 @@ void sym_type_func_t::set_element_type(type_t* type, token_ptr_t token) {
 		return type->get_size();
 	else
 		throw;
+}*/
+
+symbol_t* sym_table_t::get(symbol_t* s) {
+	auto res = find(s);
+	return res == end() ? nullptr : *res;
+}
+
+/*symbol_t * sym_table_t::get(token_ptr_t token) {
+	if (token != T_IDENTIFIER)
+		throw;
+	return static_cast<token_with_value_t<string>*>(token.get())->get_value().;
+}*/
+
+/*void sym_table_t::insert(symbol_t* s) {
+	if (!get(s))
+		throw SemanticError("Redefenition of symbol", )
+	unordered_set<symbol_t*>::insert(s);
 }*/
 
 set<TOKEN> operators[16];
@@ -449,8 +611,32 @@ expr_t* parser_t::factor() {
 
 symbol_t* parser_t::parse_declaration() {
 	decl_raw_t decl = declaration();
+	symbol_t* res = nullptr;
 	if (!decl.identifier)
-		throw SyntaxError("Identifier is expected");
+		throw SemanticError("Identifier is expected", decl.estimated_ident_pos);
+
+	if (decl.type->is_const() && decl.init_list.empty() && !decl.type_def)
+		throw SemanticError("For constant variable initializer is needed");
+
+	if (typeid(*decl.type) == typeid(sym_type_void_t))
+		throw InvalidIncompleteType(decl.type_spec_pos);
+
+	if (sym_table.get(decl.type))
+		decl.type = (type_t*)(sym_table.get(decl.type));
+	else
+		sym_table.insert(decl.type);
+
+	if (decl.type_def) {
+		res = new sym_type_alias_t(decl.identifier, decl.type);
+		if (!decl.init_list.empty())
+			throw SemanticError("Init list not required for typedef");
+	} else
+		res = new sym_var_t(decl.identifier, decl.type, decl.init_list);
+	
+	res->update_hash();
+	sym_table.insert(res);
+	
+	return res;
 }
 
 decl_raw_t parser_t::declaration() {
@@ -468,18 +654,18 @@ decl_raw_t parser_t::declaration() {
 		curr_specs[la->get()] = true;*/
 		if (la->get() == T_KWRD_TYPEDEF) {
 			if (has_typedef)
-				throw InvalidCombinationOfSpecifiers(la->get());
+				throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
 			else
 				has_typedef = la->get();
 		} else if (la->get() == T_KWRD_CONST) {
 			if (has_const)
-				throw InvalidCombinationOfSpecifiers(la->get());
+				throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
 			else
 				has_const = true;
-		} else if (!type_spec)
+		} else if (!type_spec) {
 			type_spec = la->get();
-		else
-			throw InvalidCombinationOfSpecifiers(la->get());
+		} else
+			throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
 		la->next();
 	}
 	/*type_t* type =
@@ -495,7 +681,9 @@ decl_raw_t parser_t::declaration() {
 		type_spec == T_KWRD_VOID ? new sym_type_void_t() : 0;*/
 
 	type_t* type = 0;
-	if (type_spec == T_KWRD_INT)
+	if (!type_spec)
+		throw SyntaxError("Type specifier is expected", la->get()->get_pos());
+	else if (type_spec == T_KWRD_INT)
 		type = new sym_type_int_t();
 	else if (type_spec == T_KWRD_DOUBLE)
 		type = new sym_type_double_t();
@@ -503,29 +691,26 @@ decl_raw_t parser_t::declaration() {
 		type = new sym_type_char_t();
 	else if (type_spec == T_KWRD_VOID)
 		type = new sym_type_void_t();
-	else
-		throw SyntaxError("Type specifier is expected", la->get());
 	
 	type_chain_t chain = declarator();
 	decl_raw_t res(chain);
 	bool is_ptr = false;
 	if (chain) {
 		is_ptr = typeid(sym_type_ptr_t) == typeid(*chain.last);
-		chain.last->set_element_type(type, type_spec);
+		chain.last->set_element_type(type, type_spec->get_pos());
 		if (is_ptr)
-			type->set_is_const(has_const);
+			type->set_const(has_const);
 		type = chain.last;
 	} else
 		res.type = type;
-	
-	/*if (typeid(*res.type) == typeid(sym_type_void_t))
-		throw InvalidIncompleteType();*/
 
 	if (!is_ptr)
-		type->set_is_const(has_const);
+		type->set_const(has_const);
 
 	res.init_list = parse_initializer_list();
 	res.type_def = has_typedef;
+	res.type_spec_pos = type_spec->get_pos();
+	res.estimated_ident_pos = chain.estimated_ident_pos;
 
 	return res;
 }
@@ -533,21 +718,23 @@ decl_raw_t parser_t::declaration() {
 type_chain_t parser_t::declarator() {
 	token_ptr_t token = la->get();
 	if (token == T_OP_MUL) {
-		bool is_const = false;
+		bool is_const_ = false;
 		if (la->next() == T_KWRD_CONST) {
-			is_const = true;
+			is_const_ = true;
 			la->next();
 		}
 		type_chain_t r = declarator();
-		updatable_sym_t* l = new sym_type_ptr_t(is_const);
+		updatable_sym_t* l = new sym_type_ptr_t(is_const_);
 		if (r.last)
-			r.last->set_element_type(l, r.last_token);
+			r.last->set_element_type(l, r.last_token_pos);
 		r.update(l);
-		r.last_token = token;
+		r.last_token_pos = token->get_pos();
 		return r;
 	} else
 		return init_declarator();
 }
+
+typedef const int int_a;
 
 type_chain_t parser_t::init_declarator() {
 	type_chain_t dcl;
@@ -560,14 +747,16 @@ type_chain_t parser_t::init_declarator() {
 		dcl = declarator();
 		la->require(T_BRACKET_CLOSE, T_EMPTY);
 	}
+	if (!dcl.estimated_ident_pos)
+		dcl.estimated_ident_pos = la->get()->get_pos();
 	type_chain_t r = func_arr_decl();
 	if (dcl.last)
-		dcl.last->set_element_type(r.first, r.last_token);
+		dcl.last->set_element_type(r.first, r.last_token_pos);
 	if (!dcl.first)
 		dcl.first = r.first;
 	if (r.last)
 		dcl.last = r.last;
-	dcl.last_token = token;
+	dcl.last_token_pos = token->get_pos();
 	return dcl;
 }
 
@@ -582,11 +771,11 @@ type_chain_t parser_t::func_arr_decl() {
 		la->require(T_SQR_BRACKET_CLOSE, T_EMPTY);
 		updatable_sym_t* l = new sym_type_array_t(expr);
 		dcl = func_arr_decl();
-		l->set_element_type(dcl.last, dcl.last_token);
+		l->set_element_type(dcl.last, dcl.last_token_pos);
 		dcl.first = l;
 		if (!dcl.last)
 			dcl.last = l;
-		dcl.last_token = token;
+		dcl.last_token_pos = token->get_pos();
 	}
 	return dcl;
 }
@@ -616,6 +805,10 @@ node_t* parser_t::parse_initializer() {
 		return parse_expr();
 }
 
+node_t * parser_t::parse_state() {
+	return nullptr;
+}
+
 expr_t* parser_t::parse_expr() {
 	return right_associated_bin_op();
 }
@@ -626,7 +819,7 @@ void parser_t::print_expr(ostream& os) {
 		parse_expr()->print(os);
 }
 
-void parser_t::print_decl(ostream& os) {
+void parser_t::print_type(ostream& os) {
 	la->next();
 	if (la->get() != T_EMPTY) {
 		decl_raw_t res = declaration();
@@ -652,6 +845,19 @@ void parser_t::print_decl(ostream& os) {
 	os << endl;
 }
 
+void parser_t::print_decl(ostream& os) {
+	la->next();
+	while (la->get() != T_EMPTY) {
+		parse_declaration();
+		la->require(T_SEMICOLON, 0);
+	}
+	for each (auto var in sym_table) {
+		os << var->get_hash() << ": ";
+		var->print(os);
+		os << endl;
+	}
+}
+
 void set_operator_priority(TOKEN op, int priority) {
 	if (priority > 16 || priority < 1 || operators[priority-1].find(op) != operators[priority-1].end())
 		throw;
@@ -671,4 +877,8 @@ void parser_init() {
 #undef PRIORITY_SET
 #undef TOKEN_LIST
 #undef register_token
+}
+
+size_t symbol_t::get_hash() const {
+	return cached_hash;
 }

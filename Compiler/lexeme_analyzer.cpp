@@ -32,6 +32,7 @@ map<AUTOMATON_STATE, token_ptr_t(*)(string, AUTOMATON_STATE, int, int)> token_ge
 lexeme_analyzer_t::lexeme_analyzer_t(istream& is_) {
 	is = &is_;
 	state = AS_START;
+	curr_pos.line = 1;
 
 	next_char();
 	skip_spaces();
@@ -43,21 +44,21 @@ void lexeme_analyzer_t::add_char() {
 
 void lexeme_analyzer_t::next_char() {
 	if (cc == '\t') {
-		column = column == 0 ? 1 : column;
-		int n = ceil(column / 4.0);
-		column = 4 * n;
+		curr_pos.column = curr_pos.column == 0 ? 1 : curr_pos.column;
+		int n = ceil(curr_pos.column / 4.0);
+		curr_pos.column = 4 * n;
 	}
 	if (cc == '\n') {
-		column = 0;
-		line++;
+		curr_pos.column = 0;
+		curr_pos.line++;
 	}
 	cc = is->get();
-	column++;
+	curr_pos.column++;
 	
 	if (cc == 255)
 		cc = eof_code;
 	if (cc < 0 || cc > 128)
-		throw BadCC(line, column);
+		throw BadCC(curr_pos);
 }
 
 bool lexeme_analyzer_t::eof() {
@@ -66,17 +67,17 @@ bool lexeme_analyzer_t::eof() {
 
 void lexeme_analyzer_t::throw_exception(AUTOMATON_STATE state) {
 	switch (state) {
-		case AS_END_REACHED: throw EOFReached(line, column); break;
-		case AS_ERR_BAD_CC: throw BadCC(line, column); break;
-		case AS_ERR_BAD_CHAR: throw BadChar(line, column); break;
-		case AS_ERR_BAD_EOF: throw BadEOF(line, column); break;
-		case AS_ERR_BAD_NL: throw BadNewLine(line, column); break;
-		case AS_ERR_CHAR_TL: throw BadChar(line, column); break;
-		case AS_ERR_CHAR_TS: throw BadChar(line, column); break;
-		case AS_ERR_NO_CC: throw NoCC(line, column); break;
-		case AS_ERR_NO_EXP: throw NoExp(line, column); break;
-		case AS_ERR_NO_FRACT: throw NoFract(line, column); break;
-		case AS_ERR_NO_HEX: throw NoHex(line, column); break;
+		case AS_END_REACHED: throw EOFReached(); break;
+		case AS_ERR_BAD_CC: throw BadCC(curr_pos); break;
+		case AS_ERR_BAD_CHAR: throw BadChar(curr_pos); break;
+		case AS_ERR_BAD_EOF: throw BadEOF(curr_pos); break;
+		case AS_ERR_BAD_NL: throw BadNewLine(curr_pos); break;
+		case AS_ERR_CHAR_TL: throw BadChar(curr_pos); break;
+		case AS_ERR_CHAR_TS: throw BadChar(curr_pos); break;
+		case AS_ERR_NO_CC: throw NoCC(curr_pos); break;
+		case AS_ERR_NO_EXP: throw NoExp(curr_pos); break;
+		case AS_ERR_NO_FRACT: throw NoFract(curr_pos); break;
+		case AS_ERR_NO_HEX: throw NoHex(curr_pos); break;
 	}
 }
 
@@ -92,19 +93,16 @@ token_ptr_t lexeme_analyzer_t::next() {
 		return curr_token = token_ptr_t(new token_t);
 	state = AS_START;
 	curr_str.clear();
-	int start_line;
-	int start_column;
+	pos_t start_pos;
 	while (state < AS_END_REACHED) {
-		if (state == AS_START) {
-			start_line = line;
-			start_column = column;
-		}
+		if (state == AS_START)
+			start_pos = curr_pos;
 		AUTOMATON_CARRET_COMMAND carret_command = commands[cc][state].carret_command;
 		state = commands[cc][state].state;
 		switch (carret_command) {
 			case ACC_NEXT: add_char(); next_char(); break;
 			case ACC_PREV: is->seekg((int)is->tellg() - 1); curr_str.pop_back(); break;
-			case ACC_REMEMBER: add_char(); rem_carr_pos = is->tellg(); rem_line = line; rem_col = column; next_char(); break;
+			case ACC_REMEMBER: add_char(); rem_carr_pos = is->tellg(); rem_pos = curr_pos; next_char(); break;
 			case ACC_RETURN_TO_REM: {
 				int p = (int)is->tellg() - rem_carr_pos - 1;
 				if (cc == '\n')		// костыль
@@ -114,8 +112,7 @@ token_ptr_t lexeme_analyzer_t::next() {
 
 				cc = is->get();
 
-				line = rem_line;
-				column = rem_col;
+				curr_pos = rem_pos;
 			} break;
 			case ACC_SKIP: next_char(); break;
 		}
@@ -123,7 +120,7 @@ token_ptr_t lexeme_analyzer_t::next() {
 
 	throw_exception(state);
 
-	curr_token = token_getters[state](curr_str, state, start_line, start_column);
+	curr_token = token_getters[state](curr_str, state, start_pos.line, start_pos.column);
 	skip_spaces();
 	return curr_token;
 }

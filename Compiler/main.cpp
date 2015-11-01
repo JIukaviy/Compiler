@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 			}
 		} else if (argv[1][0] == 't') {
 			try {
-				parser.print_decl(fout);
+				parser.print_type(fout);
 			} catch (LexemeAnalyzeError& e) {
 				fout << e;
 			} catch (SyntaxError& e) {
@@ -56,6 +56,8 @@ int main(int argc, char** argv) {
 		cerr << "Lexeme analyzer error: " << e << endl;
 	} catch (SyntaxError& e) {
 		cerr << "Parse error: " << e << endl;
+	} catch (SemanticError& e) {
+		cerr << "Semantic error: " << e << endl;
 	}
 
 	system("pause");

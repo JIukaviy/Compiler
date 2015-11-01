@@ -32,21 +32,24 @@ union value_t {
 	char* str;
 };
 
-/*struct token_pos {
+struct pos_t {
 	int line;
 	int column;
-	token_pos();
-	token_pos(int line, int column);
-};*/
+	pos_t();
+	pos_t(int line, int column);
+	operator bool();
+	friend ostream& operator<<(ostream& os, const pos_t e);
+};
 
 class token_t {
+protected:
 	TOKEN token;
-	int line;
-	int column;
+	pos_t pos;
 public:
 	token_t(int line_, int column_, TOKEN token_);
 	token_t();
 	bool operator==(const TOKEN&) const;
+	virtual bool operator==(const token_t&) const;
 	bool operator!=(const TOKEN&) const;
 	operator TOKEN();
 	virtual void print(ostream& os) const;
@@ -62,6 +65,7 @@ public:
 	static string get_name_by_id(TOKEN token_id);
 	int get_line();
 	int get_column();
+	pos_t get_pos();
 	TOKEN get_token_id() const;
 };
 
@@ -71,6 +75,7 @@ public:
 	friend ostream& operator<<(ostream& os, const token_ptr_t& e);
 	operator TOKEN();
 	bool operator==(const TOKEN&) const;
+	bool operator==(const token_ptr_t&) const;
 	bool operator!=(const TOKEN&) const;
 };
 
@@ -80,10 +85,16 @@ protected:
 	T value;
 public:
 	token_with_value_t(int line_, int column_, TOKEN token_, T value_);
+	bool operator==(const token_t&) const override;
 	void print(ostream& os) const override;
 	virtual void short_print(ostream& os) const;
-	T& get_value() const;
+	const T& get_value() const;
 };
+
+template<typename T>
+bool token_with_value_t<T>::operator==(const token_t& token_) const {
+	return token_ == token && static_cast<const token_with_value_t<T>&>(token_).get_value() == value;
+}
 
 template<typename T>
 void token_with_value_t<T>::print(ostream& os) const {
@@ -97,7 +108,7 @@ void token_with_value_t<T>::short_print(ostream & os) const {
 }
 
 template<typename T>
-inline T & token_with_value_t<T>::get_value() const {
+inline const T& token_with_value_t<T>::get_value() const {
 	return value;
 }
 

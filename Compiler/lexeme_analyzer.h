@@ -92,132 +92,79 @@ struct automaton_commands_t {
 	automaton_commands_t() : state(AS_ERR_BAD_CHAR), carret_command(ACC_STOP) {};
 };
 
-class LexemeAnalyzeError {
+class CompileError {
 protected:
-	virtual char* error_str() const {
-		return "Error";
-	}
-	string error;
+	stringstream err;
+	pos_t pos;
+	virtual void make_str() {};
 public:
-	int line = -1;
-	int column = -1;
+	CompileError() : err("Unexpected error") {};
+	CompileError(pos_t pos) : err("Unexpected error"), pos(pos) {};
+	CompileError(string what) : err(what) {};
+	CompileError(string what, pos_t pos) : err(what), pos(pos) {};
 
-	LexemeAnalyzeError() : line(-1), column(-1) { error = error_str(); };
-	LexemeAnalyzeError(int line_, int column_) : line(line_), column(column_) { error = error_str(); }
-	LexemeAnalyzeError(int line_, int column_, char* what) : line(line_), column(column_), error(what) {};
+	friend ostream& operator<<(ostream& os, CompileError& e) {
+		e.make_str();
+		if (e.pos)
+			os << e.pos;
+		os << e.err.str();
+		return os;
+	};
+};
 
-	friend ostream& operator<<(ostream& is, const LexemeAnalyzeError& e) {
-		if (e.line >= 0)
-			is << e.line << '\t' << e.column << '\t';
-		is << e.error << endl;
-		return is;
-	}
+class LexemeAnalyzeError : public CompileError {
+	using CompileError::CompileError;
 };
 
 class BadNewLine : public LexemeAnalyzeError {
 public:
 	using LexemeAnalyzeError::LexemeAnalyzeError;
-	BadNewLine(int line_, int column_) : LexemeAnalyzeError(line_, column_, "Unexpected new line") {}
+	BadNewLine(pos_t pos) : LexemeAnalyzeError("Unexpected new line", pos) {}
 };
 
 class BadEOF : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "BadEOF";
-	}
 public:
-	BadEOF(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	BadEOF() : LexemeAnalyzeError() { error = error_str(); }
+	BadEOF(pos_t pos) : LexemeAnalyzeError("BadEOF", pos) {}
 };
 
 class BadChar : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "BadChar";
-	}
 public:
-	BadChar(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	BadChar() : LexemeAnalyzeError() { error = error_str(); }
+	BadChar(pos_t pos) : LexemeAnalyzeError("BadChar", pos) {}
 };
 
 class NoExp : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "NoExp";
-	}
 public:
-	NoExp(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	NoExp() : LexemeAnalyzeError() { error = error_str(); }
+	NoExp(pos_t pos) : LexemeAnalyzeError("NoExp", pos) {}
 };
 
 class NoFract : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "NoFract";
-	}
 public:
-	NoFract(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	NoFract() : LexemeAnalyzeError() { error = error_str(); }
+	NoFract(pos_t pos) : LexemeAnalyzeError("NoFract", pos) {}
 };
 
 class NoHex : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "NoHex";
-	}
 public:
-	NoHex(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	NoHex() : LexemeAnalyzeError() { error = error_str(); }
+	NoHex(pos_t pos) : LexemeAnalyzeError("NoHex", pos) {}
 };
 
 class NoCC : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "NoCC";
-	}
 public:
-	NoCC(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	NoCC() : LexemeAnalyzeError() { error = error_str(); }
+	NoCC(pos_t pos) : LexemeAnalyzeError("NoCC", pos) {}
 };
 
 class BadCC : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "BadCC";
-	}
 public:
-	BadCC(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	BadCC() : LexemeAnalyzeError() { error = error_str(); }
+	BadCC(pos_t pos) : LexemeAnalyzeError("BadCC", pos) {}
 };
 
 class EOFReached : public LexemeAnalyzeError {
-protected:
-	char* error_str() const override {
-		return "End of file reached";
-	}
 public:
-	EOFReached(int line_, int column_) : LexemeAnalyzeError(line_, column_) { error = error_str(); }
-	EOFReached() : LexemeAnalyzeError() { error = error_str(); }
+	EOFReached() : LexemeAnalyzeError("EOF Reached") {}
 };
 
-class SyntaxError {
-protected:
-	stringstream err;
-	token_ptr_t token;
-	virtual void make_str() {};
+class SyntaxError : public CompileError {
 public:
-	SyntaxError(string what) : err(what) {};
-	SyntaxError(string what, token_ptr_t token) : err(what), token(token) {};
-	SyntaxError() : err("Unexpected error") {};
-
-	friend ostream& operator<<(ostream& os, SyntaxError& e) {
-		e.make_str();
-		if (e.token)
-			e.token->print_pos(os);
-		os << e.err.str();
-		return os;
-	};
-
+	using CompileError::CompileError;
 };
 
 class UnexpectedToken : public SyntaxError {
@@ -279,16 +226,6 @@ public:
 	};
 };
 
-/*class TokenIsExpected : public SyntaxError {
-public:
-	TokenIsExpected(TOKEN expected) {
-		err = "Token \"" + token_t::get_name_by_id(expected) + "\" is expected";
-	};
-	TokenIsExpected(const set<TOKEN>& expected) {
-		err = "Token \"" + token_t::get_name_by_id(expected) + "\" is expected";
-	};
-};*/
-
 class CloseBracketExpected : public SyntaxError {
 public:
 	CloseBracketExpected() : SyntaxError("Close bracket is expected") {};
@@ -296,25 +233,33 @@ public:
 
 class InvalidCombinationOfSpecifiers : public SyntaxError {
 public:
-	InvalidCombinationOfSpecifiers(token_ptr_t token) : SyntaxError("Invalid combination of specifiers", token) {};
-	InvalidCombinationOfSpecifiers() : SyntaxError("Invalid combination of specifiers") {};
+	InvalidCombinationOfSpecifiers(pos_t pos) : SyntaxError("Invalid combination of specifiers", pos) {};
 };
 
-class InvalidIncompleteType : public SyntaxError {
+class SemanticError : public CompileError {
 public:
-	InvalidIncompleteType(token_ptr_t token) : SyntaxError("Invalid incomplete type", token) {};
-	InvalidIncompleteType() : SyntaxError("Invalid incomplete type") {};
+	using CompileError::CompileError;
 };
+
+
+class InvalidIncompleteType : public SemanticError {
+public:
+	InvalidIncompleteType(pos_t pos) : SemanticError("Invalid incomplete type", pos) {};
+};
+
+/*class RedefenitionOfSymbol : public SemanticError {
+	RedefenitionOfSymbol(symbol_t* s, pos_t pos) {
+
+	}
+};*/
 
 class lexeme_analyzer_t {
 protected:
 	istream* is;
 	unsigned char cc = 0;
-	int line = 1;
-	int column = 0;
+	pos_t curr_pos;
+	pos_t rem_pos;
 	int rem_carr_pos = -1;
-	int rem_line = -1;
-	int rem_col = -1;
 	string curr_str;
 	token_ptr_t prev_token;
 	token_ptr_t curr_token;
