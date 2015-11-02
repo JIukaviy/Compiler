@@ -2,7 +2,7 @@
 #include <map>
 #include <set>
 
-#define is_char(a) ((a) >= 'a' && (a) <= 'z' || (a) >= 'A' && (a) <= 'Z')
+#define is_char(a) ((a) >= 'a' && (a) <= 'z' || (a) >= 'A' && (a) <= 'Z' || (a) == '_')
 #define is_digit(a) ((a) >= '0' && (a) <= '9')
 #define is_hex_digit(a) (is_digit(i) || (a) >= 'a' && (a) <= 'f' || (a) >= 'A' && (a) <= 'F')
 #define is_new_line(a) ((a) == 10 || (a) == 13)

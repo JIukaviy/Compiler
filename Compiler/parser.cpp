@@ -1,5 +1,6 @@
 #include "parser.h"
 #include <map>
+#include <assert.h>
 
 parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {}
 
@@ -49,22 +50,48 @@ void node_str_literal::print(ostream& os) {
 	os << '"';
 }
 
-symbol_t* sym_table_t::get(symbol_t* s) {
-	auto res = find(s);
-	return res == end() ? nullptr : *res;
+symbol_t* sym_table_t::get(const symbol_t* s) {
+	return get(s->get_name());
 }
 
-/*symbol_t * sym_table_t::get(token_ptr_t token) {
-	if (token != T_IDENTIFIER)
-		throw;
-	return static_cast<token_with_value_t<string>*>(token.get())->get_value().;
-}*/
+void sym_table_t::insert(symbol_t* s) {
+	if (!get(s)) {
+		map_st[s->get_name()] = s;
+		vec_st.push_back(s);
+	}
+}
 
-/*void sym_table_t::insert(symbol_t* s) {
-	if (!get(s))
-		throw SemanticError("Redefenition of symbol", )
-	unordered_set<symbol_t*>::insert(s);
-}*/
+symbol_t* sym_table_t::get(const string& s) {
+	auto res = map_st.find(s);
+	return res == map_st.end() ? nullptr : res->second;
+}
+
+symbol_t* sym_table_t::get(const token_ptr_t& token) {
+	assert(token == T_IDENTIFIER);
+	return get(static_cast<token_with_value_t<string>*>(token.get())->get_value());
+}
+
+bool sym_table_t::is_var(const token_ptr_t& token) {
+	if (token != T_IDENTIFIER)
+		return false;
+	symbol_t* s = get(token);
+	return s ? typeid(*s) == typeid(sym_var_t) : false;
+}
+
+bool sym_table_t::is_alias(const token_ptr_t& token) {
+	if (token != T_IDENTIFIER)
+		return false;
+	symbol_t* s = get(token);
+	return s ? typeid(*s) == typeid(sym_type_alias_t) : false;
+}
+
+void sym_table_t::print(ostream & os) {
+	for each (auto var in vec_st) {
+		os << var->get_name() << ": ";
+		var->print(os);
+		os << endl;
+	}
+}
 
 set<TOKEN> operators[16];
 
@@ -136,7 +163,7 @@ expr_t* parser_t::parser_t::postfix_op() {
 				}
 				if (la->get() == T_COMMA)
 					la->next();
-				else 
+				else
 					break;
 			}
 			la->require(T_BRACKET_CLOSE, 0);
@@ -188,19 +215,19 @@ symbol_t* parser_t::parse_declaration() {
 	if (typeid(*decl.type) == typeid(sym_type_void_t))
 		throw InvalidIncompleteType(decl.type_spec_pos);
 
-	if (sym_table.get(decl.type))
-		decl.type = (type_t*)(sym_table.get(decl.type));
-	else
-		sym_table.insert(decl.type);
+	if (sym_table.get(decl.identifier))
+		throw RedefenitionOfSymbol(decl.identifier);
+
+	sym_table.insert(decl.type);
 
 	if (decl.type_def) {
-		res = new sym_type_alias_t(decl.identifier, decl.type);
 		if (!decl.init_list.empty())
 			throw SemanticError("Init list not required for typedef");
+		res = new sym_type_alias_t(decl.identifier, decl.type);
 	} else
 		res = new sym_var_t(decl.identifier, decl.type, decl.init_list);
 	
-	res->update_hash();
+	res->update_name();
 	sym_table.insert(res);
 	
 	return res;
@@ -210,42 +237,22 @@ decl_raw_t parser_t::declaration() {
 	bool has_const = false;
 	token_ptr_t has_typedef;
 	token_ptr_t type_spec;
-	while (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0)) {
-		/*if (la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, 0)) {
-			if (curr_specs[la->get()])
-				throw InvalidCombinationOfSpecifiers(la->get());
-		} else {
-			if (curr_specs[T_KWRD_INT] || curr_specs[T_KWRD_DOUBLE] || curr_specs[T_KWRD_CHAR] || curr_specs[T_KWRD_VOID])
-				throw InvalidCombinationOfSpecifiers(la->get());
-		}
-		curr_specs[la->get()] = true;*/
+	while (la->get()->is(T_IDENTIFIER, T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0)) {
 		if (la->get() == T_KWRD_TYPEDEF) {
 			if (has_typedef)
 				throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
 			else
 				has_typedef = la->get();
-		} else if (la->get() == T_KWRD_CONST) {
-			if (has_const)
-				throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
-			else
-				has_const = true;
-		} else if (!type_spec) {
+		} else if (la->get() == T_KWRD_CONST)
+			has_const = true;
+		else if (la->get() == T_IDENTIFIER && !sym_table.is_alias(la->get()))
+			break;
+		else if (!type_spec) {
 			type_spec = la->get();
 		} else
 			throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
 		la->next();
 	}
-	/*type_t* type =
-		curr_specs[T_KWRD_INT] ? new sym_type_int_t() :
-		curr_specs[T_KWRD_DOUBLE] ? new sym_type_double_t() :
-		curr_specs[T_KWRD_CHAR] ? new sym_type_char_t() :
-		curr_specs[T_KWRD_VOID] ? new sym_type_void_t() : 0;*/
-
-	/*type_t* type =
-		type_spec == T_KWRD_INT ? new sym_type_int_t() :
-		type_spec == T_KWRD_DOUBLE ? new sym_type_double_t() :
-		type_spec == T_KWRD_CHAR ? new sym_type_char_t() :
-		type_spec == T_KWRD_VOID ? new sym_type_void_t() : 0;*/
 
 	type_t* type = 0;
 	if (!type_spec)
@@ -258,6 +265,8 @@ decl_raw_t parser_t::declaration() {
 		type = new sym_type_char_t();
 	else if (type_spec == T_KWRD_VOID)
 		type = new sym_type_void_t();
+	else if (type_spec == T_IDENTIFIER)
+		type = static_cast<type_t*>(sym_table.get(type_spec));
 	
 	type_chain_t chain = declarator();
 	decl_raw_t res(chain);
@@ -278,6 +287,7 @@ decl_raw_t parser_t::declaration() {
 	res.type_def = has_typedef;
 	res.type_spec_pos = type_spec->get_pos();
 	res.estimated_ident_pos = chain.estimated_ident_pos;
+	res.type->update_name();
 
 	return res;
 }
@@ -382,7 +392,7 @@ statement_t* parser_t::parse_statement() {
 		la->get() == T_SEMICOLON ? nullptr :
 		la->get() == T_BRACE_OPEN ? stmt_block() :
 		la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0) ? stmt_decl() :
-		la->get()->is(T_IDENTIFIER, T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, T_BRACKET_OPEN, 0) ? stmt_expr() :
+		la->get()->is(T_IDENTIFIER, T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, T_BRACKET_OPEN, 0) || sym_table.is_alias(la->get()) ? stmt_expr() :
 		la->get() == T_KWRD_WHILE ? stmt_while() :
 		la->get() == T_KWRD_FOR ? stmt_for() :
 		la->get() == T_KWRD_IF ? stmt_if() : throw UnexpectedToken(la->get());
@@ -513,11 +523,7 @@ void parser_t::print_decl(ostream& os) {
 		parse_declaration();
 		la->require(T_SEMICOLON, 0);
 	}
-	for each (auto var in sym_table) {
-		os << var->get_hash() << ": ";
-		var->print(os);
-		os << endl;
-	}
+	sym_table.print(os);
 }
 
 void parser_t::print_statement(ostream& os) {

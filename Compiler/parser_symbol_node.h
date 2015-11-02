@@ -1,5 +1,4 @@
 #pragma once
-
 #include "tokens.h"
 #include "parser_base_node.h"
 #include "parser_expression_node.h"
@@ -7,31 +6,28 @@
 class symbol_t : public node_t {
 protected:
 	bool printed = false;
-	size_t cached_hash = 0;
-	virtual size_t _get_hash() const = 0;
+	virtual string _get_name() const = 0;
+	string name;
 public:
+	symbol_t();
+	symbol_t(string name);
 	virtual void print(ostream& os) = 0;
-	void update_hash();
-	size_t get_hash() const;
-	virtual bool eq(const symbol_t*) const = 0;
+	virtual void update_name();
+	const string& get_name() const;
+	bool lower(symbol_t* s) const;
 };
 
-template<> struct std::hash<symbol_t*> {
-	size_t operator()(const symbol_t* s) const {
-		return s->get_hash();
-	}
-};
-
-template<> struct std::equal_to<symbol_t*> {
-	bool operator()(const symbol_t* a, const symbol_t* b) const {
-		return a->eq(b);
+template<> struct less<symbol_t*> {
+	bool operator()(symbol_t* a, symbol_t* b) {
+		return a->lower(b);
 	}
 };
 
 class type_t : public symbol_t {
+protected:
 	bool is_const_;
 public:
-	type_t(bool is_const_ = false);
+	type_t(bool is_const = false);
 	virtual void set_const(bool val);
 	void print(ostream& os) override;
 	virtual bool is_const();
@@ -40,13 +36,13 @@ public:
 
 class type_with_size_t : public virtual type_t {
 public:
-	type_with_size_t(bool is_const_ = 0);
+	type_with_size_t(bool is_const = false);
 	virtual int get_size() = 0;
 };
 
 class updatable_sym_t : public virtual type_t {
 public:
-	updatable_sym_t(bool is_const_ = 0);
+	updatable_sym_t(bool is_const_= false);
 	virtual void set_element_type(type_t* symbol, pos_t pos) = 0;		// текущая позиция необходима в случае вывода ошибок
 };
 
@@ -70,81 +66,94 @@ protected:
 	token_ptr_t identifier;
 	vector<node_t*> init_list;
 	type_t* type;
-	size_t _get_hash() const override;
+	string _get_name() const override;
 public:
 	sym_var_t(token_ptr_t identifier, type_t* type, vector<node_t*> init_list);
 	void print(ostream& os) override;
-	bool eq(const symbol_t*) const override;
 };
 
-class sym_type_void_t : public type_t {
-protected:
-	size_t _get_hash() const override;
+template<TOKEN T>
+class sym_built_in_type : public virtual type_t {
+	string _get_name() const;
 public:
+	sym_built_in_type(bool is_const = false);
 	void print(ostream& os) override;
+};
+
+template<TOKEN T>
+inline string sym_built_in_type<T>::_get_name() const {
+	char t[20];
+	_ltoa_s(T, t, 10);
+	return string(t);
+}
+
+template<TOKEN T>
+inline sym_built_in_type<T>::sym_built_in_type(bool is_const) : type_t(is_const) {}
+
+template<TOKEN T>
+inline void sym_built_in_type<T>::print(ostream & os) {
+	if (printed)
+		return;
+	else
+		printed = true;
+	type_t::print(os);
+	os << token_t::get_name_by_id(T) << ' ';
+}
+
+class sym_type_void_t : public sym_built_in_type<T_KWRD_VOID> {
+public:
+	using sym_built_in_type<T_KWRD_VOID>::sym_built_in_type;
 	bool completed() override;
-	bool eq(const symbol_t*) const override;
 };
 
-class sym_type_int_t : public type_with_size_t {
-protected:
-	size_t _get_hash() const override;
+class sym_type_int_t : public sym_built_in_type<T_KWRD_INT>, public type_with_size_t {
 public:
-	void print(ostream& os) override;
+	using sym_built_in_type<T_KWRD_INT>::sym_built_in_type;
 	int get_size() override;
-	bool eq(const symbol_t*) const override;
 };
 
-class sym_type_char_t : public type_with_size_t {
-protected:
-	size_t _get_hash() const override;
+class sym_type_char_t : public sym_built_in_type<T_KWRD_CHAR>, public type_with_size_t {
 public:
-	void print(ostream& os) override;
+	using sym_built_in_type<T_KWRD_CHAR>::sym_built_in_type;
 	int get_size() override;
-	bool eq(const symbol_t*) const override;
 };
 
-class sym_type_double_t : public type_with_size_t {
-protected:
-	size_t _get_hash() const override;
+class sym_type_double_t : public sym_built_in_type<T_KWRD_DOUBLE>, public type_with_size_t {
 public:
-	void print(ostream& os) override;
+	using sym_built_in_type<T_KWRD_DOUBLE>::sym_built_in_type;
 	int get_size() override;
-	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_ptr_t : public updatable_sym_t, public type_with_size_t {
 protected:
 	type_t* type;
-	size_t _get_hash() const override;
+	string _get_name() const override;
 public:
 	//using type_with_size_t::type_with_size_t;
 	sym_type_ptr_t(bool is_const_ = 0);
 	void set_element_type(type_t* type, pos_t pos) override;
 	void print(ostream& os) override;
 	int get_size() override;
-	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_array_t : public updatable_sym_t, public type_with_size_t {
 protected:
 	expr_t* size;
 	type_with_size_t* elem_type;
-	size_t _get_hash() const override;
+	string _get_name() const override;
 public:
 	sym_type_array_t(expr_t* size = nullptr, bool is_const_ = false);
 	void set_element_type(type_t* type, pos_t pos) override;
 	void print(ostream& os) override;
 	bool completed() override;
 	int get_size() override;
-	bool eq(const symbol_t*) const override;
 };
 
 class sym_type_func_t : public updatable_sym_t {
 protected:
 	vector<type_t*> args;
 	type_t* ret_type;
-	//size_t _get_hash() const override;
+	//const string& _get_name() const override;
 public:
 	sym_type_func_t(vector<type_t*>& args, bool is_const_ = false);
 	void set_element_type(type_t* type, pos_t pos) override;
@@ -155,12 +164,10 @@ class sym_type_alias_t : public type_t {
 protected:
 	type_t* type;
 	token_ptr_t identifier;
-	size_t _get_hash() const override;
+	string _get_name() const override;
 public:
 	sym_type_alias_t::sym_type_alias_t(token_ptr_t identifier, type_t* type);
 	bool is_const() override;
-	void set_const(bool val) override;
 	void print(ostream& os) override;
-	bool eq(const symbol_t*) const override;
 	type_t* get_type();
 };

@@ -103,7 +103,7 @@ public:
 		} else if (actually)
 			actually->print_pos(err);
 		if (expected_token != T_EMPTY || expected_tokens.size() != 0)
-			err << "Instead of the \"" << actually->get_name() << '\"' << endl;
+			err << "Instead of the \"" << actually->get_name() << '\"';
 		else {
 			if (op)
 				err << "was not expecting \"" << actually->get_name() << '\"' << endl;
@@ -158,8 +158,11 @@ public:
 	InvalidIncompleteType(pos_t pos) : SemanticError("Invalid incomplete type", pos) {};
 };
 
-/*class RedefenitionOfSymbol : public SemanticError {
-RedefenitionOfSymbol(symbol_t* s, pos_t pos) {
-
-}
-};*/
+class RedefenitionOfSymbol : public SemanticError {
+public:
+	RedefenitionOfSymbol(token_ptr_t token) {
+		err << token->get_pos() << "Redefenition of symbol \"";
+		token->short_print(err);
+		err << "\"";
+	}
+};

@@ -43,9 +43,7 @@ int main(int argc, char** argv) {
 		} else if (argv[1][0] == 'd') {
 			try {
 				parser.print_decl(fout);
-			} catch (LexemeAnalyzeError& e) {
-				fout << e;
-			} catch (SyntaxError& e) {
+			} catch (CompileError& e) {
 				fout << e;
 			}
 		} else if (argv[1][0] == 'o') {
@@ -61,7 +59,7 @@ int main(int argc, char** argv) {
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {
-		parser.print_statement(cout);
+		parser.print_decl(cout);
 	} catch (LexemeAnalyzeError& e) {
 		cerr << "Lexeme analyzer error: " << e << endl;
 	} catch (SyntaxError& e) {

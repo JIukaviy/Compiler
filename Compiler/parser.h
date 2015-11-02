@@ -9,7 +9,8 @@
 #include "parser_symbol_node.h"
 #include "parser_statement_node.h"
 #include <vector>
-#include <unordered_set>
+#include <stack>
+#include <map>
 
 using namespace std;
 
@@ -48,17 +49,25 @@ struct decl_raw_t {
 	decl_raw_t(type_chain_t);
 };
 
-class sym_table_t : public unordered_set<symbol_t*> {
+class sym_table_t {
+protected:
+	map<string, symbol_t*> map_st;
+	vector<symbol_t*> vec_st;
 public:
-	symbol_t* get(symbol_t*);
-	symbol_t* get(token_ptr_t);
-	bool is_var(token_ptr_t);
-	bool is_alias(token_ptr_t);
-	//void insert(symbol_t*);
+	void insert(symbol_t* s);
+	symbol_t* get(const string&);
+	symbol_t* get(const symbol_t*);
+	symbol_t* get(const token_ptr_t&);
+	bool is_var(const token_ptr_t&);
+	bool is_alias(const token_ptr_t&);
+	void print(ostream& os);
 };
 
 class parser_t {
 	lexeme_analyzer_t* la;
+
+	sym_table_t sym_table;
+	stack<symbol_t*> loop_stack;
 
 	expr_t* left_associated_bin_op(int priority);
 	expr_t* tern_op();
@@ -68,7 +77,6 @@ class parser_t {
 	expr_t* factor();
 	expr_t* parse_expr();
 
-	sym_table_t sym_table;
 	decl_raw_t declaration();
 	type_chain_t declarator();
 	type_chain_t init_declarator();
@@ -79,11 +87,11 @@ class parser_t {
 
 	statement_t* parse_statement();
 	statement_t* stmt_expr();
+	statement_t* stmt_decl();
 	statement_t* stmt_block();
 	statement_t* stmt_if();
 	statement_t* stmt_while();
 	statement_t* stmt_for();
-	statement_t* stmt_decl();
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);

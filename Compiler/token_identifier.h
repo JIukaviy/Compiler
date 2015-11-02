@@ -9,5 +9,5 @@ token_ptr_t token_ident(string str, AUTOMATON_STATE state, int line, int column)
 #endif
 
 #ifdef TOKEN_LIST
-register_token(IDENTIFIER, "Indetifier", token_ident)
+register_token(IDENTIFIER, "Identifier", token_ident)
 #endif
