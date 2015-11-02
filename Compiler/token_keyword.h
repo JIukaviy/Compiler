@@ -4,6 +4,7 @@
 register_token(KWRD_CHAR, "char", token_keyword)
 register_token(KWRD_CONST, "const", token_keyword)
 register_token(KWRD_TYPEDEF, "typedef", token_keyword)
+register_token(KWRD_BREAK, "break", token_keyword)
 register_token(KWRD_CONTINUE, "continue", token_keyword)
 register_token(KWRD_DOUBLE, "double", token_keyword)
 register_token(KWRD_ELSE, "else", token_keyword)
