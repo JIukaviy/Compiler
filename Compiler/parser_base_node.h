@@ -6,7 +6,7 @@ using namespace std;
 class node_t {
 public:
 	virtual void print(ostream&) = 0;
-	virtual void flat_print(ostream&);
+	virtual void short_print(ostream&);
 };
 
 void print_level(ostream& os, int level);

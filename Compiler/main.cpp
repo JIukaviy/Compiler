@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {
-		parser.print_decl(cout);
+		parser.print_statement(cout);
 	} catch (LexemeAnalyzeError& e) {
 		cerr << "Lexeme analyzer error: " << e << endl;
 	} catch (SyntaxError& e) {

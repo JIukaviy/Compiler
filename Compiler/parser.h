@@ -67,7 +67,7 @@ class parser_t {
 	lexeme_analyzer_t* la;
 
 	sym_table_t sym_table;
-	stack<symbol_t*> loop_stack;
+	stack<stmt_loop_t*> loop_stack;
 
 	expr_t* left_associated_bin_op(int priority);
 	expr_t* tern_op();
@@ -92,6 +92,7 @@ class parser_t {
 	statement_t* stmt_if();
 	statement_t* stmt_while();
 	statement_t* stmt_for();
+	statement_t* stmt_break_continue();
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);

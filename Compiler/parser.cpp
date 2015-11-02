@@ -395,7 +395,8 @@ statement_t* parser_t::parse_statement() {
 		la->get()->is(T_IDENTIFIER, T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, T_BRACKET_OPEN, 0) || sym_table.is_alias(la->get()) ? stmt_expr() :
 		la->get() == T_KWRD_WHILE ? stmt_while() :
 		la->get() == T_KWRD_FOR ? stmt_for() :
-		la->get() == T_KWRD_IF ? stmt_if() : throw UnexpectedToken(la->get());
+		la->get() == T_KWRD_IF ? stmt_if() :
+		la->get()->is(T_KWRD_BREAK, T_KWRD_CONTINUE, 0) ? stmt_break_continue() : throw UnexpectedToken(la->get());
 
 	/*if (la->get() == T_SEMICOLON)
 		return nullptr;
@@ -456,8 +457,12 @@ statement_t* parser_t::stmt_while() {
 	la->require(T_BRACKET_OPEN, 0);
 	expr_t* condition = parse_expr();
 	la->require(T_BRACKET_CLOSE, 0);
-	statement_t* stmt = parse_statement();
-	return new stmt_while_t(condition, stmt);
+
+	stmt_while_t* res = new stmt_while_t(condition);
+	loop_stack.push(res);
+	res->set_statement(parse_statement());
+	loop_stack.pop();
+	return res;
 }
 
 statement_t* parser_t::stmt_for() {
@@ -479,8 +484,23 @@ statement_t* parser_t::stmt_for() {
 		expr = parse_expr();
 	la->require(T_BRACKET_CLOSE, 0);
 
-	statement_t* stmt = parse_statement();
-	return new stmt_for_t(init_expr, condition, expr, stmt);
+	stmt_for_t* res = new stmt_for_t(init_expr, condition, expr);
+	loop_stack.push(res);
+	res->set_statement(parse_statement());
+	loop_stack.pop();
+	return res;
+}
+
+statement_t* parser_t::stmt_break_continue() {
+	token_ptr_t token = la->get();
+	la->require(T_KWRD_BREAK, T_KWRD_CONTINUE, 0);
+	la->require(T_SEMICOLON, 0);
+	if (loop_stack.empty())
+		throw JumpStmtNotInsideLoop(token);
+	if (token == T_KWRD_BREAK)
+		return new stmt_break_t(loop_stack.top());
+	else
+		return new stmt_continue_t(loop_stack.top());
 }
 
 //---------------------------------PRINT-------------------------------------------
@@ -507,7 +527,7 @@ void parser_t::print_type(ostream& os) {
 		if (!res.init_list.empty()) {
 			os << "with initializer: {";
 			for (int i = 0; i < res.init_list.size(); i++) {
-				res.init_list[i]->flat_print(os);
+				res.init_list[i]->short_print(os);
 				if (i != res.init_list.size() - 1)
 					os << ", ";
 			}

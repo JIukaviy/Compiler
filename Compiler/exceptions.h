@@ -166,3 +166,12 @@ public:
 		err << "\"";
 	}
 };
+
+class JumpStmtNotInsideLoop : public SemanticError {
+public:
+	JumpStmtNotInsideLoop(token_ptr_t token) {
+		err << token->get_pos() << "Statement \"";
+		token->short_print(err);
+		err << "\" must be inside the loop";
+	}
+};

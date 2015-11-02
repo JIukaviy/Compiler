@@ -21,10 +21,10 @@ void expr_bin_op_t::print(ostream& os, int level) {
 	right->print(os, level + 1);
 }
 
-void expr_bin_op_t::flat_print(ostream& os) {
-	left->flat_print(os);
+void expr_bin_op_t::short_print(ostream& os) {
+	left->short_print(os);
 	op->short_print(os);
-	right->flat_print(os);
+	right->short_print(os);
 }
 
 void expr_tern_op_t::print(ostream& os, int level) {
@@ -37,12 +37,12 @@ void expr_tern_op_t::print(ostream& os, int level) {
 	right->print(os, level + 1);
 }
 
-void expr_tern_op_t::flat_print(ostream& os) {
-	left->flat_print(os);
+void expr_tern_op_t::short_print(ostream& os) {
+	left->short_print(os);
 	os << " ? " << endl;
-	middle->flat_print(os);
+	middle->short_print(os);
 	os << " : " << endl;
-	right->flat_print(os);
+	right->short_print(os);
 }
 
 void expr_var_t::print(ostream& os, int level) {
@@ -51,7 +51,7 @@ void expr_var_t::print(ostream& os, int level) {
 	os << endl;
 }
 
-void expr_var_t::flat_print(ostream& os) {
+void expr_var_t::short_print(ostream& os) {
 	variable->short_print(os);
 }
 
@@ -61,7 +61,7 @@ void expr_const_t::print(ostream& os, int level) {
 	os << endl;
 }
 
-void expr_const_t::flat_print(ostream& os) {
+void expr_const_t::short_print(ostream& os) {
 	constant->short_print(os);
 }
 
@@ -72,9 +72,9 @@ void expr_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
 }
 
-void expr_un_op_t::flat_print(ostream& os) {
+void expr_un_op_t::short_print(ostream& os) {
 	op->short_print(os);
-	expr->flat_print(os);
+	expr->short_print(os);
 }
 
 void expr_prefix_un_op_t::print(ostream& os, int level) {
@@ -85,9 +85,9 @@ void expr_prefix_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
 }
 
-void expr_prefix_un_op_t::flat_print(ostream& os) {
+void expr_prefix_un_op_t::short_print(ostream& os) {
 	op->short_print(os);
-	expr->flat_print(os);
+	expr->short_print(os);
 }
 
 void expr_postfix_un_op_t::print(ostream& os, int level) {
@@ -98,8 +98,8 @@ void expr_postfix_un_op_t::print(ostream& os, int level) {
 	expr->print(os, level + 1);
 }
 
-void expr_postfix_un_op_t::flat_print(ostream& os) {
-	expr->flat_print(os);
+void expr_postfix_un_op_t::short_print(ostream& os) {
+	expr->short_print(os);
 	op->short_print(os);
 }
 
@@ -110,10 +110,10 @@ void expr_arr_index_t::print(ostream& os, int level) {
 	right->print(os, level + 1);
 }
 
-void expr_arr_index_t::flat_print(ostream& os) {
-	left->flat_print(os);
+void expr_arr_index_t::short_print(ostream& os) {
+	left->short_print(os);
 	os << "[";
-	right->flat_print(os);
+	right->short_print(os);
 	os << "]";
 }
 
@@ -127,8 +127,8 @@ void expr_struct_access_t::print(ostream& os, int level) {
 	os << endl;
 }
 
-void expr_struct_access_t::flat_print(ostream& os) {
-	expr->flat_print(os);
+void expr_struct_access_t::short_print(ostream& os) {
+	expr->short_print(os);
 	op->short_print(os);
 	ident->short_print(os);
 }
@@ -141,11 +141,11 @@ void expr_func_t::print(ostream &os, int level) {
 		args[i]->print(os, level + 1);
 }
 
-void expr_func_t::flat_print(ostream &os) {
-	func->flat_print(os);
+void expr_func_t::short_print(ostream &os) {
+	func->short_print(os);
 	os << "(";
 	for (int i = 0; i < args.size(); i++) {
-		args[i]->flat_print(os);
+		args[i]->short_print(os);
 		if (i != args.size() - 1)
 			os << ", ";
 	}

@@ -143,7 +143,7 @@ void sym_type_array_t::print(ostream & os) {
 	type_t::print(os);
 	os << "array[";
 	if (size)
-		size->flat_print(os);
+		size->short_print(os);
 	os << "] with elems: ";
 	elem_type->print(os);
 }
