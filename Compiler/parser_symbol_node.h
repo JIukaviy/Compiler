@@ -176,8 +176,11 @@ class sym_type_struct : public type_with_size_t {
 protected:
 	sym_table_t* sym_table;
 public:
-	sym_type_struct();
-
+	sym_type_struct(sym_table_t* sym_table);
+	sym_table_t* get_sym_table();
+	bool completed() override;
+	int get_size() override;
+	void print(ostream& os) override;
 };
 
 class sym_type_func_t : public updatable_sym_t {

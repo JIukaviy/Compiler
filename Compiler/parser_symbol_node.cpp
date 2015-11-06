@@ -334,3 +334,23 @@ bool type_ptr_t::operator!=(type_ptr_t type) const {
 bool updt_sym_ptr_t::operator==(SYM_TYPE sym_type) const {
 	return get()->is(sym_type);
 }
+
+//--------------------------------SYMBOL_STRUCT-------------------------------
+
+sym_type_struct::sym_type_struct(sym_table_t * sym_table) : sym_table(sym_table) {}
+
+sym_table_t * sym_type_struct::get_sym_table() {
+	return sym_table;
+}
+
+bool sym_type_struct::completed() {
+	return sym_table;
+}
+
+int sym_type_struct::get_size() {
+	return 0;
+}
+
+void sym_type_struct::print(ostream & os) {
+
+}

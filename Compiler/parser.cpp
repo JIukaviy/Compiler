@@ -138,7 +138,7 @@ expr_t* parser_t::factor() {
 	la->next();
 	if (t == T_IDENTIFIER) {
 		return new expr_var_t(t);
-	} else if (t == T_INTEGER || t == T_DOUBLE || t == T_STRING)
+	} else if (t->is(T_INTEGER, T_DOUBLE, T_STRING, T_CHAR, 0))
 		return new expr_const_t(t);
 	else if (t == T_BRACKET_OPEN) {
 		expr_t* l = right_associated_bin_op();
