@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Заголовочные файлы\tokens">
+      <UniqueIdentifier>{37938e45-9645-4a85-be09-fff94db6fa17}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -39,6 +42,12 @@
     <ClCompile Include="parser_statement_node.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="symbol_table.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="expression_optimizer.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
@@ -48,30 +57,6 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="parser.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_identifier.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_register.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_keyword.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_operator.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_string.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_double.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_char.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="token_integer.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="exceptions.h">
@@ -87,6 +72,39 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="parser_statement_node.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="symbol_table.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="token_char.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_double.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_identifier.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_integer.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_keyword.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_operator.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_string.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="token_register.h">
+      <Filter>Заголовочные файлы\tokens</Filter>
+    </ClInclude>
+    <ClInclude Include="expression_optimizer.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="base_symbol_table.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

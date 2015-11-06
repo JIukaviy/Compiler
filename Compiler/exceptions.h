@@ -1,5 +1,7 @@
 #pragma once
 #include "tokens.h"
+#include "parser_symbol_node.h"
+#include <assert.h>
 #include <sstream>
 
 class CompileError {
@@ -167,11 +169,80 @@ public:
 	}
 };
 
+class UndefinedSymbol : public SemanticError {
+public:
+	UndefinedSymbol(const token_ptr_t token) {
+		err << token->get_pos() << "Undefined symbol \"";
+		token->short_print(err);
+		err << "\"";
+	};
+	UndefinedSymbol(const sym_ptr_t s, const pos_t pos) {
+		err << pos << "Undefined symbol \"" << s->get_name() << "\"";
+	};
+	UndefinedSymbol(const string s, const pos_t pos) {
+		err << pos << "Undefined symbol \"" << s << "\"";
+	};
+};
+
 class JumpStmtNotInsideLoop : public SemanticError {
 public:
 	JumpStmtNotInsideLoop(token_ptr_t token) {
 		err << token->get_pos() << "Statement \"";
 		token->short_print(err);
 		err << "\" must be inside the loop";
+	}
+};
+
+class IllegalConversion : public SemanticError {
+public:
+	IllegalConversion(type_ptr_t a, type_ptr_t b, pos_t pos) {
+		err << pos << "Can't convert from \"";
+		a->print(err);
+		err << "\" to \"";
+		b->print(err);
+		err << "\"";
+	}
+};
+
+class InvalidTernOpOperands : public SemanticError {
+public:
+	InvalidTernOpOperands(type_ptr_t a, type_ptr_t b, expr_tern_op_t* bin_op) {
+		err << bin_op->get_colon_token()->get_pos() << "Operands of ternary operator must be the same type: \"";
+		err << " (\"";
+		a->print(err);
+		err << "\" and \"";
+		b->print(err);
+		err << "\")";
+	}
+};
+
+class InvalidBinOpOperands : public SemanticError {
+public:
+	InvalidBinOpOperands(type_ptr_t a, type_ptr_t b, expr_bin_op_t* bin_op) {
+		err << bin_op->get_pos() << "Invalid operands for binary operator: \"";
+		bin_op->get_op()->short_print(err);
+		err << "\" (\"";
+		a->print(err);
+		err << "\" and \"";
+		b->print(err);
+		err << "\")";
+	}
+};
+
+class InvalidUnOpOperand : public SemanticError {
+public:
+	InvalidUnOpOperand(type_ptr_t a, expr_un_op_t* un_op) {
+		err << un_op->get_op()->get_pos() << "Invalid operand for unary operator: \"";
+		un_op->get_op()->short_print(err);
+		err << "\" (\"";
+		a->print(err);
+		err << "\")";
+	}
+};
+
+class ExprMustBeLeftHandValue : public SemanticError {
+public:
+	ExprMustBeLeftHandValue(pos_t pos) {
+		err << pos << "Expression must be the left-hand value";
 	}
 };

@@ -5,7 +5,7 @@ token_ptr_t token_without_value(string str, AUTOMATON_STATE state, int line, int
 #endif
 
 #ifdef TOKEN_LIST
-register_token(OP_ASSIGN, "=", token_without_value, 16)
+register_token(OP_ASSIGN, "=", token_without_value, 16) // Must be the first assign operator
 register_token(OP_MOD_ASSIGN, "%=", token_without_value, 16)
 register_token(OP_MUL_ASSIGN, "*=", token_without_value, 16)
 register_token(OP_DIV_ASSIGN, "/=", token_without_value, 16)
@@ -15,7 +15,7 @@ register_token(OP_SUB_ASSIGN, "-=", token_without_value, 16)
 register_token(OP_BIT_AND_ASSIGN, "&=", token_without_value, 16)
 register_token(OP_BIT_OR_ASSIGN, "|=", token_without_value, 16)
 register_token(OP_LEFT_ASSIGN, "<<=", token_without_value, 16)
-register_token(OP_RIGHT_ASSIGN, ">>=", token_without_value, 16)
+register_token(OP_RIGHT_ASSIGN, ">>=", token_without_value, 16)	// Must be the last assign operator
 
 register_token(QUESTION_MARK, "?", token_without_value, 15)
 register_token(COLON, ":", token_without_value, 15)

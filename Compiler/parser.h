@@ -8,6 +8,7 @@
 #include "parser_expression_node.h"
 #include "parser_symbol_node.h"
 #include "parser_statement_node.h"
+#include "symbol_table.h"
 #include <vector>
 #include <stack>
 #include <map>
@@ -16,22 +17,14 @@ using namespace std;
 
 void parser_init();
 
-class node_str_literal : public node_t {
-protected:
-	token_ptr_t str;
-public:
-	node_str_literal(token_ptr_t str);
-	void print(ostream&) override;
-};
-
 struct type_chain_t {
 	type_chain_t();
-	updatable_sym_t* first;
-	updatable_sym_t* last;
+	shared_ptr<updatable_sym_t> first;
+	shared_ptr<updatable_sym_t> last;
 	pos_t last_token_pos;
 	token_ptr_t identifier;
 	pos_t estimated_ident_pos;
-	void update(updatable_sym_t*);
+	void update(shared_ptr<updatable_sym_t>);
 	void update(token_ptr_t);
 	void update(type_chain_t);
 	operator bool();
@@ -40,27 +33,13 @@ struct type_chain_t {
 struct decl_raw_t {
 	token_ptr_t identifier;
 	token_ptr_t type_def; //token_ptr_t необходим для вывода места в коде где он встретился, в случае ошибки.
-	type_t* type;
+	type_ptr_t type;
 	pos_t estimated_ident_pos;
 	pos_t type_spec_pos;
-	vector<node_t*> init_list;
+	vector<expr_t*> init_list;
 	decl_raw_t();
-	decl_raw_t(token_ptr_t, type_t*);
+	decl_raw_t(token_ptr_t, type_ptr_t);
 	decl_raw_t(type_chain_t);
-};
-
-class sym_table_t {
-protected:
-	map<string, symbol_t*> map_st;
-	vector<symbol_t*> vec_st;
-public:
-	void insert(symbol_t* s);
-	symbol_t* get(const string&);
-	symbol_t* get(const symbol_t*);
-	symbol_t* get(const token_ptr_t&);
-	bool is_var(const token_ptr_t&);
-	bool is_alias(const token_ptr_t&);
-	void print(ostream& os);
 };
 
 class parser_t {
@@ -81,9 +60,9 @@ class parser_t {
 	type_chain_t declarator();
 	type_chain_t init_declarator();
 	type_chain_t func_arr_decl();
-	vector<node_t*> parse_initializer_list();
-	node_t* parse_initializer();
-	symbol_t* parse_declaration();
+	vector<expr_t*> parse_initializer_list();
+	expr_t* parse_initializer();
+	sym_ptr_t parse_declaration();
 
 	statement_t* parse_statement();
 	statement_t* stmt_expr();
@@ -93,6 +72,15 @@ class parser_t {
 	statement_t* stmt_while();
 	statement_t* stmt_for();
 	statement_t* stmt_break_continue();
+
+	//expr_t* validate_expr(expr_t*);
+	/*void check_is_const(expr_t*);
+	expr_t* optimize_expr(expr_t*);
+	int calc_expr(expr_t*);
+	expr_t* optimize_bin_op(expr_bin_op_t*);
+	expr_t* optimize_un_op(expr_un_op_t*);
+	expr_t* optimize_tern_op(expr_tern_op_t*);
+	expr_t* optimize_arr_index(expr_arr_index_t*);*/
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);

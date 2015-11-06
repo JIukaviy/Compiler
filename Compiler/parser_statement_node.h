@@ -2,7 +2,7 @@
 
 #include "parser_base_node.h"
 #include "parser_expression_node.h"
-#include "parser_symbol_node.h"
+#include "symbol_table.h"
 #include "exceptions.h"
 #include <vector>
 
@@ -18,8 +18,12 @@ public:
 
 class stmt_block_t : public statement_t {
 	vector<statement_t*> statements;
+	sym_table_t sym_table;
 public:
+	stmt_block_t();
 	stmt_block_t(const vector<statement_t*>& statements);
+	void add_statement(statement_t* stmt);
+	sym_table_t& get_sym_table();
 	void print(ostream&, int level) override;
 };
 
@@ -31,9 +35,9 @@ public:
 };
 
 class stmt_decl_t : public statement_t {
-	symbol_t* symbol;
+	sym_ptr_t symbol;
 public:
-	stmt_decl_t(symbol_t* symbol);
+	stmt_decl_t(sym_ptr_t symbol);
 	void print(ostream&, int level) override;
 };
 

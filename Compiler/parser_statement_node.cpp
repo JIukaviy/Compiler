@@ -1,8 +1,9 @@
 #include "parser_statement_node.h"
 
 stmt_expr_t::stmt_expr_t(expr_t * expression) : expression(expression) {}
+stmt_block_t::stmt_block_t() {}
 stmt_block_t::stmt_block_t(const vector<statement_t*>& statements) : statements(statements) {}
-stmt_decl_t::stmt_decl_t(symbol_t * symbol) : symbol(symbol) {}
+stmt_decl_t::stmt_decl_t(sym_ptr_t symbol) : symbol(symbol) {}
 stmt_if_t::stmt_if_t(expr_t* condition, statement_t* then_stmt) : condition(condition), then_stmt(then_stmt), else_stmt(0) {}
 stmt_if_t::stmt_if_t(expr_t* condition, statement_t* then_stmt, statement_t* else_stmt) : condition(condition), then_stmt(then_stmt), else_stmt(else_stmt) {}
 stmt_loop_t::stmt_loop_t(statement_t * stmt) : stmt(stmt) {}
@@ -31,6 +32,14 @@ void stmt_block_t::print(ostream& os, int level) {
 		var->print(os, level + 1);
 	print_level(os, level);
 	os << '}' << endl;
+}
+
+void stmt_block_t::add_statement(statement_t* stmt) {
+	statements.push_back(stmt);
+}
+
+sym_table_t & stmt_block_t::get_sym_table() {
+	return sym_table;
 }
 
 void stmt_expr_t::print(ostream& os, int level) {
