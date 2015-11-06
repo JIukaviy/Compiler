@@ -176,12 +176,12 @@ expr_res_t valid_bin_op(expr_bin_op_t* bin_op, sym_table_t& st) {
 						right = automate_cast_expr(right, ST_INTEGER, op->get_pos());
 				else 
 					if (left.type == ST_DOUBLE || right.type == ST_DOUBLE) {
-						left = automate_cast_expr(left, left.type, op->get_pos());
-						right = automate_cast_expr(right, left.type, op->get_pos());
+						left = automate_cast_expr(left, ST_DOUBLE, op->get_pos());
+						right = automate_cast_expr(right, ST_DOUBLE, op->get_pos());
 				} else 
 					if (left.type == ST_INTEGER || right.type == ST_INTEGER) {
-						left = automate_cast_expr(left, left.type, op->get_pos());
-						right = automate_cast_expr(right, left.type, op->get_pos());
+						left = automate_cast_expr(left, ST_INTEGER, op->get_pos());
+						right = automate_cast_expr(right, ST_INTEGER, op->get_pos());
 				} else 
 					if (left.type != ST_CHAR && right.type != ST_CHAR)
 						throw InvalidBinOpOperands(left.type, right.type, bin_op);
