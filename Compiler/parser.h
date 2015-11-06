@@ -64,23 +64,14 @@ class parser_t {
 	expr_t* parse_initializer();
 	sym_ptr_t parse_declaration();
 
-	statement_t* parse_statement();
-	statement_t* stmt_expr();
-	statement_t* stmt_decl();
-	statement_t* stmt_block();
-	statement_t* stmt_if();
-	statement_t* stmt_while();
-	statement_t* stmt_for();
-	statement_t* stmt_break_continue();
-
-	//expr_t* validate_expr(expr_t*);
-	/*void check_is_const(expr_t*);
-	expr_t* optimize_expr(expr_t*);
-	int calc_expr(expr_t*);
-	expr_t* optimize_bin_op(expr_bin_op_t*);
-	expr_t* optimize_un_op(expr_un_op_t*);
-	expr_t* optimize_tern_op(expr_tern_op_t*);
-	expr_t* optimize_arr_index(expr_arr_index_t*);*/
+	stmt_ptr_t parse_statement();
+	stmt_ptr_t stmt_expr();
+	stmt_ptr_t stmt_decl();
+	stmt_ptr_t stmt_block();
+	stmt_ptr_t stmt_if();
+	stmt_ptr_t stmt_while();
+	stmt_ptr_t stmt_for();
+	stmt_ptr_t stmt_break_continue();
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);

@@ -10,7 +10,11 @@ public:
 	virtual void short_print(ostream&);
 };
 
-typedef shared_ptr<node_t>  node_ptr_t;
+typedef shared_ptr<node_t> node_ptr_t;
+
+class statement_t;
+
+typedef shared_ptr<statement_t> stmt_ptr_t;
 
 /*class expr_t;
 class symbol_t;

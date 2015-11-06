@@ -17,12 +17,12 @@ public:
 };
 
 class stmt_block_t : public statement_t {
-	vector<statement_t*> statements;
+	vector<stmt_ptr_t> statements;
 	sym_table_t sym_table;
 public:
 	stmt_block_t();
-	stmt_block_t(const vector<statement_t*>& statements);
-	void add_statement(statement_t* stmt);
+	stmt_block_t(const vector<stmt_ptr_t>& statements);
+	void add_statement(stmt_ptr_t stmt);
 	sym_table_t& get_sym_table();
 	void print(ostream&, int level) override;
 };
@@ -55,27 +55,27 @@ inline void stmt_named_t<T>::short_print(ostream & os, int level) {
 
 class stmt_if_t : public stmt_named_t<T_KWRD_IF> {
 	expr_t* condition;
-	statement_t* then_stmt;
-	statement_t* else_stmt;
+	stmt_ptr_t then_stmt;
+	stmt_ptr_t else_stmt;
 public:
-	stmt_if_t(expr_t* condition, statement_t* then_stmt);
-	stmt_if_t(expr_t* condition, statement_t* then_stmt, statement_t* else_stmt);
+	stmt_if_t(expr_t* condition, stmt_ptr_t then_stmt);
+	stmt_if_t(expr_t* condition, stmt_ptr_t then_stmt, stmt_ptr_t else_stmt);
 	void print(ostream&, int level) override;
 };
 
 class stmt_loop_t : public virtual statement_t {
 protected:
-	statement_t* stmt;
+	stmt_ptr_t stmt;
 public:
-	stmt_loop_t(statement_t* stmt);
+	stmt_loop_t(stmt_ptr_t stmt);
 	stmt_loop_t();
-	void set_statement(statement_t* statement);
+	void set_statement(stmt_ptr_t statement);
 };
 
 class stmt_while_t : public stmt_loop_t, public stmt_named_t<T_KWRD_WHILE> {
 	expr_t* condition;
 public:
-	stmt_while_t(expr_t* condition, statement_t* stmt);
+	stmt_while_t(expr_t* condition, stmt_ptr_t stmt);
 	stmt_while_t(expr_t* condition);
 	void print(ostream&, int level) override;
 };
@@ -85,7 +85,7 @@ class stmt_for_t : public stmt_loop_t, public stmt_named_t<T_KWRD_FOR> {
 	expr_t* condition;
 	expr_t* expr;
 public:
-	stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr, statement_t* stmt);
+	stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr, stmt_ptr_t stmt);
 	stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr);
 	void print(ostream&, int level) override;
 };

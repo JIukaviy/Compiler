@@ -327,11 +327,11 @@ expr_t* parser_t::parse_initializer() {
 
 //-------------------STATEMENT_PARSER-------------------------------------------
 
-statement_t* parser_t::parse_statement() {
+stmt_ptr_t parser_t::parse_statement() {
 	if (la->get() == T_EMPTY)
 		throw UnexpectedEOF();
 
-	statement_t* res = 
+	stmt_ptr_t res = 
 		la->get() == T_SEMICOLON ? nullptr :
 		la->get() == T_BRACE_OPEN ? stmt_block() :
 		la->get()->is(T_KWRD_TYPEDEF, T_KWRD_CONST, T_KWRD_INT, T_KWRD_DOUBLE, T_KWRD_CHAR, T_KWRD_VOID, 0) || sym_table.is_alias(la->get()) ? stmt_decl() :
@@ -356,46 +356,46 @@ statement_t* parser_t::parse_statement() {
 	return res;
 }
 
-statement_t* parser_t::stmt_block() {
+stmt_ptr_t parser_t::stmt_block() {
 	la->require(T_BRACE_OPEN, 0);
-	vector<statement_t*> stmts;
+	vector<stmt_ptr_t> stmts;
 	while (la->get() != T_BRACE_CLOSE) {
-		statement_t* stmt = parse_statement();
+		stmt_ptr_t stmt = parse_statement();
 		if (stmt)
 			stmts.push_back(stmt);
 	}
 	la->require(T_BRACE_CLOSE, 0);
-	return new stmt_block_t(stmts);
+	return stmt_ptr_t(new stmt_block_t(stmts));
 }
 
-statement_t* parser_t::stmt_decl() {
+stmt_ptr_t parser_t::stmt_decl() {
 	sym_ptr_t decl = parse_declaration();
 	la->require(T_SEMICOLON, 0);
-	return new stmt_decl_t(decl);
+	return stmt_ptr_t(new stmt_decl_t(decl));
 }
 
-statement_t* parser_t::stmt_expr() {
+stmt_ptr_t parser_t::stmt_expr() {
 	expr_t* expr = parse_expr();
 	la->require(T_SEMICOLON, 0);
-	return new stmt_expr_t(expr);
+	return stmt_ptr_t(new stmt_expr_t(expr));
 }
 
 
-statement_t * parser_t::stmt_if() {
+stmt_ptr_t parser_t::stmt_if() {
 	la->require(T_KWRD_IF, 0);
 	la->require(T_BRACKET_OPEN, 0);
 	expr_t* condition = parse_expr();
 	la->require(T_BRACKET_CLOSE, 0);
-	statement_t* then_stmt = parse_statement();
-	statement_t* else_stmt = nullptr;
+	stmt_ptr_t then_stmt = parse_statement();
+	stmt_ptr_t else_stmt = nullptr;
 	if (la->get() == T_KWRD_ELSE) {
 		la->next();
 		else_stmt = parse_statement();
 	}
-	return new stmt_if_t(condition, then_stmt, else_stmt);
+	return stmt_ptr_t(new stmt_if_t(condition, then_stmt, else_stmt));
 }
 
-statement_t* parser_t::stmt_while() {
+stmt_ptr_t parser_t::stmt_while() {
 	la->require(T_KWRD_WHILE, 0);
 	la->require(T_BRACKET_OPEN, 0);
 	expr_t* condition = parse_expr();
@@ -405,10 +405,10 @@ statement_t* parser_t::stmt_while() {
 	loop_stack.push(res);
 	res->set_statement(parse_statement());
 	loop_stack.pop();
-	return res;
+	return stmt_ptr_t(res);
 }
 
-statement_t* parser_t::stmt_for() {
+stmt_ptr_t parser_t::stmt_for() {
 	la->require(T_KWRD_FOR, 0);
 	la->require(T_BRACKET_OPEN, 0);
 
@@ -431,19 +431,19 @@ statement_t* parser_t::stmt_for() {
 	loop_stack.push(res);
 	res->set_statement(parse_statement());
 	loop_stack.pop();
-	return res;
+	return stmt_ptr_t(res);
 }
 
-statement_t* parser_t::stmt_break_continue() {
+stmt_ptr_t parser_t::stmt_break_continue() {
 	token_ptr_t token = la->get();
 	la->require(T_KWRD_BREAK, T_KWRD_CONTINUE, 0);
 	la->require(T_SEMICOLON, 0);
 	if (loop_stack.empty())
 		throw JumpStmtNotInsideLoop(token);
 	if (token == T_KWRD_BREAK)
-		return new stmt_break_t(loop_stack.top());
+		return stmt_ptr_t(new stmt_break_t(loop_stack.top()));
 	else
-		return new stmt_continue_t(loop_stack.top());
+		return stmt_ptr_t(new stmt_continue_t(loop_stack.top()));
 }
 
 //---------------------------------VALIDATE_AND_OPTIMIZE_EXPRESSIONS-------------------------------------------
@@ -504,7 +504,7 @@ void parser_t::print_decl(ostream& os) {
 
 void parser_t::print_statement(ostream& os) {
 	if (la->next() != T_EMPTY) {
-		statement_t* stmt = parse_statement();
+		stmt_ptr_t stmt = parse_statement();
 		if (stmt)
 			stmt->print(os);
 		else
