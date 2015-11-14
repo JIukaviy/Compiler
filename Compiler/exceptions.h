@@ -86,41 +86,43 @@ public:
 
 class UnexpectedToken : public SyntaxError {
 public:
-	token_ptr_t op;
-	token_ptr_t actually;
+	token_ptr op;
+	token_ptr actually;
 	set<TOKEN> expected_tokens;
 	TOKEN expected_token;
 
 	UnexpectedToken() : SyntaxError("Unexpected token") {};
-	UnexpectedToken(token_ptr_t actually, TOKEN expected) : actually(actually), expected_token(expected) {};
-	UnexpectedToken(token_ptr_t op, token_ptr_t actually, TOKEN expected) : op(op), actually(actually), expected_token(expected) {};
-	UnexpectedToken(token_ptr_t actually) : actually(actually), expected_token(T_EMPTY) {};
-	UnexpectedToken(token_ptr_t actually, const set<TOKEN>& expected) : actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
-	UnexpectedToken(token_ptr_t op, token_ptr_t actually, const set<TOKEN>& expected) : op(op), actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
+	UnexpectedToken(token_ptr actually, TOKEN expected) : actually(actually), expected_token(expected) {};
+	UnexpectedToken(token_ptr op, token_ptr actually, TOKEN expected) : op(op), actually(actually), expected_token(expected) {};
+	UnexpectedToken(token_ptr actually) : actually(actually), expected_token(T_EMPTY) {};
+	UnexpectedToken(token_ptr actually, const set<TOKEN>& expected) : actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
+	UnexpectedToken(token_ptr op, token_ptr actually, const set<TOKEN>& expected) : op(op), actually(actually), expected_tokens(expected), expected_token(T_EMPTY) {};
 
 	void make_str() override {
 		if (op) {
 			op->print_pos(err);
 			err << "Operator \"" << op->get_name() << "\" ";
-		} else if (actually)
+		} else if (actually != T_EMPTY)
 			actually->print_pos(err);
-		if (expected_token != T_EMPTY || expected_tokens.size() != 0)
-			err << "Instead of the \"" << actually->get_name() << '\"';
-		else {
+		if (expected_token != T_EMPTY || expected_tokens.size() != 0) {
+			err << "Expected ";
+			if (expected_token != T_EMPTY)
+				err << '\"' << token_t::get_name_by_id(expected_token) << "\" ";
+			else {
+				err << "one of: " << endl;
+				for (auto i = expected_tokens.begin(); i != expected_tokens.end(); ++i)
+					err << " \"" << token_t::get_name_by_id(*i) << " \" ";
+			}
+			if (actually != T_EMPTY)
+				err << "before \"" << actually->get_name() << "\"";
+			else
+				err << "before end of input";
+		} else {
 			if (op)
 				err << "was not expecting \"" << actually->get_name() << '\"' << endl;
 			else
 				err << "Token \"" << actually->get_name() << "\" is not expected";
-			return;
-		}
-		err << "was expecting ";
-		if (expected_token != T_EMPTY)
-			err << '\"' << token_t::get_name_by_id(expected_token) << '\"' << endl;
-		else {
-			err << "one of these tokens: " << endl;
-			for (auto i = expected_tokens.begin(); i != expected_tokens.end(); ++i)
-				err << " \"" << token_t::get_name_by_id(*i) << " \"\n" << endl;
-		}
+		}	
 	}
 
 	/*UnexpectedToken(const set<TOKEN>& expected) {
@@ -133,7 +135,7 @@ public:
 class ExpressionIsExpected : public SyntaxError {
 public:
 	ExpressionIsExpected() : SyntaxError("Expression is expected") {};
-	ExpressionIsExpected(token_ptr_t token) {
+	ExpressionIsExpected(token_ptr token) {
 		token->print_pos(err);
 		err << "Operator: \"" << token->get_name() << "\" expecting expression" << endl;
 	};
@@ -162,21 +164,26 @@ public:
 
 class RedefenitionOfSymbol : public SemanticError {
 public:
-	RedefenitionOfSymbol(token_ptr_t token) {
+	RedefenitionOfSymbol(token_ptr token) {
 		err << token->get_pos() << "Redefenition of symbol \"";
 		token->short_print(err);
+		err << "\"";
+	}
+	RedefenitionOfSymbol(sym_ptr symbol, pos_t pos) {
+		err << pos << "Redefenition of symbol \"";
+		symbol->short_print(err);
 		err << "\"";
 	}
 };
 
 class UndefinedSymbol : public SemanticError {
 public:
-	UndefinedSymbol(const token_ptr_t token) {
+	UndefinedSymbol(const token_ptr token) {
 		err << token->get_pos() << "Undefined symbol \"";
 		token->short_print(err);
 		err << "\"";
 	};
-	UndefinedSymbol(const sym_ptr_t s, const pos_t pos) {
+	UndefinedSymbol(const sym_ptr s, const pos_t pos) {
 		err << pos << "Undefined symbol \"" << s->get_name() << "\"";
 	};
 	UndefinedSymbol(const string s, const pos_t pos) {
@@ -186,7 +193,7 @@ public:
 
 class JumpStmtNotInsideLoop : public SemanticError {
 public:
-	JumpStmtNotInsideLoop(token_ptr_t token) {
+	JumpStmtNotInsideLoop(token_ptr token) {
 		err << token->get_pos() << "Statement \"";
 		token->short_print(err);
 		err << "\" must be inside the loop";
@@ -195,7 +202,7 @@ public:
 
 class IllegalConversion : public SemanticError {
 public:
-	IllegalConversion(type_ptr_t a, type_ptr_t b, pos_t pos) {
+	IllegalConversion(type_ptr a, type_ptr b, pos_t pos) {
 		err << pos << "Can't convert from \"";
 		a->print(err);
 		err << "\" to \"";
@@ -206,7 +213,7 @@ public:
 
 class InvalidTernOpOperands : public SemanticError {
 public:
-	InvalidTernOpOperands(type_ptr_t a, type_ptr_t b, expr_tern_op_t* bin_op) {
+	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* bin_op) {
 		err << bin_op->get_colon_token()->get_pos() << "Operands of ternary operator must be the same type: \"";
 		err << " (\"";
 		a->print(err);
@@ -218,7 +225,7 @@ public:
 
 class InvalidBinOpOperands : public SemanticError {
 public:
-	InvalidBinOpOperands(type_ptr_t a, type_ptr_t b, expr_bin_op_t* bin_op) {
+	InvalidBinOpOperands(type_ptr a, type_ptr b, expr_bin_op_t* bin_op) {
 		err << bin_op->get_pos() << "Invalid operands for binary operator: \"";
 		bin_op->get_op()->short_print(err);
 		err << "\" (\"";
@@ -231,7 +238,7 @@ public:
 
 class InvalidUnOpOperand : public SemanticError {
 public:
-	InvalidUnOpOperand(type_ptr_t a, expr_un_op_t* un_op) {
+	InvalidUnOpOperand(type_ptr a, expr_un_op_t* un_op) {
 		err << un_op->get_op()->get_pos() << "Invalid operand for unary operator: \"";
 		un_op->get_op()->short_print(err);
 		err << "\" (\"";

@@ -9,7 +9,7 @@ using namespace std;
 
 //#define register_keyword_token(name, incode_name) #ifdef LA_H
 
-#define register_token(incode_name, printed_name, func_name) T_##incode_name,
+#define register_token(incode_name, printed_name, func_name, statement, ...) T_##incode_name,
 #define TOKEN_DECLARATION
 #define TOKEN_LIST
 enum TOKEN {
@@ -52,6 +52,8 @@ public:
 	virtual bool operator==(const token_t&) const;
 	bool operator!=(const TOKEN&) const;
 	operator TOKEN();
+	/*string print() const;
+	string short_print() const;*/
 	virtual void print(ostream& os) const;
 	virtual void print_pos(ostream& os) const;
 	virtual void short_print(ostream& os) const;
@@ -69,13 +71,13 @@ public:
 	TOKEN get_token_id() const;
 };
 
-class token_ptr_t : public shared_ptr<token_t> {
+class token_ptr : public shared_ptr<token_t> {
 public:
 	using shared_ptr<token_t>::shared_ptr;
-	friend ostream& operator<<(ostream& os, const token_ptr_t& e);
+	friend ostream& operator<<(ostream& os, const token_ptr& e);
 	operator TOKEN();
 	bool operator==(const TOKEN&) const;
-	bool operator==(const token_ptr_t&) const;
+	bool operator==(const token_ptr&) const;
 	bool operator!=(const TOKEN&) const;
 };
 
@@ -103,7 +105,7 @@ void token_with_value_t<T>::print(ostream& os) const {
 }
 
 template<typename T>
-void token_with_value_t<T>::short_print(ostream & os) const {
+void token_with_value_t<T>::short_print(ostream& os) const {
 	os << value;
 }
 

@@ -1,14 +1,14 @@
 #include "parser_expression_node.h"
 
-expr_bin_op_t::expr_bin_op_t(expr_t* left_, expr_t* right_, token_ptr_t op_) : left(left_), right(right_), op(op_) {}
-expr_un_op_t::expr_un_op_t(expr_t* expr_, token_ptr_t op_) : expr(expr_), op(op_) {}
+expr_bin_op_t::expr_bin_op_t(expr_t* left_, expr_t* right_, token_ptr op_) : left(left_), right(right_), op(op_) {}
+expr_un_op_t::expr_un_op_t(expr_t* expr_, token_ptr op_) : expr(expr_), op(op_) {}
 expr_func_t::expr_func_t(expr_t * expr_, vector<expr_t*> args_) : func(expr_), args(args_) {}
-expr_struct_access_t::expr_struct_access_t(expr_t* expr_, token_ptr_t op_, token_ptr_t ident_) : expr(expr_), op(op_), member(ident_) {}
-expr_arr_index_t::expr_arr_index_t(expr_t * left_, expr_t * right_, token_ptr_t sqr_bracket) : arr(left_), index(right_), sqr_bracket(sqr_bracket) {}
-expr_var_t::expr_var_t(token_ptr_t variable_) : variable(variable_) {}
-expr_const_t::expr_const_t(token_ptr_t constant_) : constant(constant_) {}
-expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_, token_ptr_t qm, token_ptr_t c) : left(left_), middle(middle_), right(right_), question_mark(qm), colon(c) {}
-expr_cast_t::expr_cast_t(expr_t* expr, node_ptr_t type) : expr(expr), type(type) {}
+expr_struct_access_t::expr_struct_access_t(expr_t* expr_, token_ptr op_, token_ptr ident_) : expr(expr_), op(op_), member(ident_) {}
+expr_arr_index_t::expr_arr_index_t(expr_t * left_, expr_t * right_, token_ptr sqr_bracket) : arr(left_), index(right_), sqr_bracket(sqr_bracket) {}
+expr_var_t::expr_var_t(token_ptr variable_) : variable(variable_) {}
+expr_const_t::expr_const_t(token_ptr constant_) : constant(constant_) {}
+expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_, token_ptr qm, token_ptr c) : left(left_), middle(middle_), right(right_), question_mark(qm), colon(c) {}
+expr_cast_t::expr_cast_t(expr_t* expr, node_ptr type) : expr(expr), type(type) {}
 
 void expr_t::print(ostream& os) {
 	print(os, 0);
@@ -44,7 +44,7 @@ void expr_bin_op_t::set_right(expr_t* e) {
 	right = e;
 }
 
-token_ptr_t expr_bin_op_t::get_op() {
+token_ptr expr_bin_op_t::get_op() {
 	return op;
 }
 
@@ -82,11 +82,11 @@ expr_t * expr_tern_op_t::get_right() {
 	return right;
 }
 
-token_ptr_t expr_tern_op_t::get_question_mark_token() {
+token_ptr expr_tern_op_t::get_question_mark_token() {
 	return question_mark;
 }
 
-token_ptr_t expr_tern_op_t::get_colon_token() {
+token_ptr expr_tern_op_t::get_colon_token() {
 	return colon;
 }
 
@@ -112,7 +112,7 @@ void expr_var_t::short_print(ostream& os) {
 	variable->short_print(os);
 }
 
-token_ptr_t expr_var_t::get_token() {
+token_ptr expr_var_t::get_token() {
 	return variable;
 }
 
@@ -126,7 +126,7 @@ void expr_const_t::short_print(ostream& os) {
 	constant->short_print(os);
 }
 
-token_ptr_t expr_const_t::get_token() {
+token_ptr expr_const_t::get_token() {
 	return constant;
 }
 
@@ -150,7 +150,7 @@ void expr_un_op_t::set_expr(expr_t* e) {
 	expr = e;
 }
 
-token_ptr_t expr_un_op_t::get_op() {
+token_ptr expr_un_op_t::get_op() {
 	return op;
 }
 
@@ -194,7 +194,7 @@ void expr_arr_index_t::short_print(ostream& os) {
 	os << "]";
 }
 
-token_ptr_t expr_arr_index_t::get_sqr_bracket_token() {
+token_ptr expr_arr_index_t::get_sqr_bracket_token() {
 	return sqr_bracket;
 }
 
@@ -238,11 +238,11 @@ void expr_struct_access_t::set_expr(expr_t* e) {
 	expr = e;
 }
 
-token_ptr_t expr_struct_access_t::get_op() {
+token_ptr expr_struct_access_t::get_op() {
 	return op;
 }
 
-token_ptr_t expr_struct_access_t::get_member() {
+token_ptr expr_struct_access_t::get_member() {
 	return member;
 }
 

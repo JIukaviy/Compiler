@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define register_token(incode_name, printed_name, func_name) AS_END_##incode_name,
+#define register_token(incode_name, printed_name, func_name, statement, ...) AS_END_##incode_name,
 #define AUTOMATON_STATE_DECLARATION
 #define TOKEN_LIST
 
@@ -100,8 +100,8 @@ protected:
 	pos_t rem_pos;
 	int rem_carr_pos = -1;
 	string curr_str;
-	token_ptr_t prev_token;
-	token_ptr_t curr_token;
+	token_ptr prev_token;
+	token_ptr curr_token;
 	bool eof_reached = false;
 
 	AUTOMATON_STATE state;
@@ -112,10 +112,10 @@ protected:
 	void skip_spaces();
 public:
 	lexeme_analyzer_t(istream& is_);
-	token_ptr_t next();
-	token_ptr_t get();
-	token_ptr_t require(TOKEN first, ...);
-	token_ptr_t require(token_ptr_t op, TOKEN first, ...);
-	token_ptr_t require(set<TOKEN>&);
+	token_ptr next();
+	token_ptr get();
+	token_ptr require(TOKEN first, ...);
+	token_ptr require(token_ptr op, TOKEN first, ...);
+	token_ptr require(set<TOKEN>&);
 	bool eof();
 };

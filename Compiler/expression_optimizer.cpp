@@ -24,7 +24,7 @@ inline T expr_res_val_t<T, ERT>::get_val() {
 bool expr_res_t::operator==(SYM_TYPE ert) {
 	return expr_res_type == ert;
 }*/
-
+/*
 map<TOKEN, map<SYM_TYPE, set<SYM_TYPE>>> bin_ops_operands;
 
 void init_expr_optimizer() {
@@ -44,10 +44,10 @@ void init_expr_optimizer() {
 }
 
 struct expr_res_t {
-	type_ptr_t type;
+	type_ptr type;
 	expr_t* expr = 0;
 	bool left_hand_value = false;
-	expr_res_t(expr_t* expr, type_ptr_t type, bool left_hand_value) : expr(expr), type(type), left_hand_value(left_hand_value) {}
+	expr_res_t(expr_t* expr, type_ptr type, bool left_hand_value) : expr(expr), type(type), left_hand_value(left_hand_value) {}
 	expr_res_t() : expr(0) {}
 	operator bool() {
 		return expr;
@@ -62,7 +62,7 @@ expr_res_t try_valid(expr_t* expr, sym_table_t& st, expr_res_t (*func)(T*, sym_t
 
 #define try_valid(name) if (res = try_valid<expr_##name##_t>(expr, st, valid_##name)) return res
 
-expr_res_t add_cast_expr(expr_res_t er, type_ptr_t type) {
+expr_res_t add_cast_expr(expr_res_t er, type_ptr type) {
 	er.type = type;
 	er.expr = new expr_cast_t(er.expr, er.type);
 	return er;
@@ -85,11 +85,11 @@ bool is_zero(expr_t* expr) {
 	return false;
 }
 
-expr_res_t automate_cast_expr(expr_res_t er, type_ptr_t type, pos_t pos) {
+expr_res_t automate_cast_expr(expr_res_t er, type_ptr type, pos_t pos) {
 	expr_res_t res = er;
 	if (er.type == type)
 		return er;
-	else if (er.type == ST_PTR && type == ST_PTR && dynamic_pointer_cast<sym_type_ptr_t>(type)->get_element_type() == ST_VOID)
+	else if (er.type == ST_PTR && type == ST_PTR && dynamic_pointer_cast<sym_type_ptr>(type)->get_element_type() == ST_VOID)
 		return res = add_cast_expr(er, type);
 	else if (er.type == ST_CHAR) {
 		if (type == ST_INTEGER)
@@ -113,26 +113,26 @@ expr_res_t valid_expr(expr_t* expr, sym_table_t& st);
 
 expr_res_t valid_const(expr_const_t* constant, sym_table_t& st) {
 	int a;
-	token_ptr_t token = constant->get_token();
+	token_ptr token = constant->get_token();
 	assert(token->is(T_INTEGER, T_DOUBLE, T_CHAR, T_STRING, 0));
-	type_ptr_t type = type_t::make_type(symbol_t::token_to_sym_type(token->get_token_id()));
+	type_ptr type = type_t::make_type(symbol_t::token_to_sym_type(token->get_token_id()));
 	type->set_const(true);
 	return expr_res_t(constant, type, false);
 }
 
 expr_res_t valid_var(expr_var_t* var, sym_table_t& st) {
-	token_ptr_t token = var->get_token();
-	sym_ptr_t sym = st.get(token);
+	token_ptr token = var->get_token();
+	sym_ptr sym = st.get(token);
 	if (!sym)
 		UndefinedSymbol(var->get_token());
 	if (sym == ST_ALIAS)
 		throw SemanticError("Using type name is not allowed", token->get_pos());
 	assert(sym == ST_VAR);
-	type_ptr_t type = static_cast<sym_var_t*>(sym.get())->get_type();
+	type_ptr type = static_cast<sym_var_t*>(sym.get())->get_type();
 	if (type == ST_ARRAY) {
-		auto ptr = new sym_type_ptr_t();
+		auto ptr = new sym_type_ptr();
 		ptr->set_element_type(dynamic_pointer_cast<sym_type_array_t>(type)->get_element_type(), pos_t());
-		type = type_ptr_t(ptr);
+		type = type_ptr(ptr);
 	}
 	return expr_res_t(var, type, true);
 }
@@ -142,7 +142,7 @@ expr_res_t valid_bin_op(expr_bin_op_t* bin_op, sym_table_t& st) {
 	expr_res_t right = valid_expr(bin_op->get_right(), st);
 	expr_res_t res;
 	res.expr = bin_op;
-	token_ptr_t op = bin_op->get_op();
+	token_ptr op = bin_op->get_op();
 	try {
 		if (op >= T_OP_ASSIGN && op <= T_OP_RIGHT_ASSIGN) {
 			if (!left.left_hand_value)
@@ -208,7 +208,7 @@ expr_res_t valid_bin_op(expr_bin_op_t* bin_op, sym_table_t& st) {
 
 expr_res_t valid_un_op(expr_un_op_t* un_op, sym_table_t& st) {
 	expr_res_t expr = valid_expr(un_op->get_expr(), st);
-	token_ptr_t op = un_op->get_op();
+	token_ptr op = un_op->get_op();
 	expr_res_t res;
 	res.expr = un_op;
 	if (op == T_OP_INC || op == T_OP_DEC) {
@@ -226,7 +226,7 @@ expr_res_t valid_un_op(expr_un_op_t* un_op, sym_table_t& st) {
 	} else if (op == T_OP_MUL) {
 		if (expr.type != ST_PTR)
 			throw InvalidUnOpOperand(expr.type, un_op);
-		res.type = dynamic_pointer_cast<sym_type_ptr_t>(expr.type)->get_element_type();	
+		res.type = dynamic_pointer_cast<sym_type_ptr>(expr.type)->get_element_type();	
 		res.left_hand_value = true;
 	} else if (op->is(T_OP_BIT_NOT, T_OP_NOT, 0)) {
 		expr = automate_cast_expr(expr, ST_INTEGER, op->get_pos());
@@ -234,7 +234,7 @@ expr_res_t valid_un_op(expr_un_op_t* un_op, sym_table_t& st) {
 	} else if (op == T_OP_BIT_AND) {
 		if (!expr.left_hand_value)
 			throw SemanticError("Expression must be left-hand value or function", op->get_pos());
-		shared_ptr<sym_type_ptr_t> ptr(new sym_type_ptr_t);
+		shared_ptr<sym_type_ptr> ptr(new sym_type_ptr);
 		ptr->set_element_type(expr.type, op->get_pos());
 		res.type = ptr;
 	} else
@@ -247,8 +247,8 @@ expr_res_t valid_tern_op(expr_tern_op_t* tern_op, sym_table_t& st) {
 	expr_res_t left = valid_expr(tern_op->get_left(), st);
 	expr_res_t middle = valid_expr(tern_op->get_middle(), st);
 	expr_res_t right = valid_expr(tern_op->get_right(), st);
-	token_ptr_t qm = tern_op->get_question_mark_token();
-	token_ptr_t c = tern_op->get_colon_token();
+	token_ptr qm = tern_op->get_question_mark_token();
+	token_ptr c = tern_op->get_colon_token();
 	expr_res_t res;
 	res.expr = tern_op;
 
@@ -280,7 +280,7 @@ expr_res_t valid_arr_index(expr_arr_index_t* arr_index, sym_table_t& st) {
 	res.expr = arr_index;
 	if (arr.type != ST_PTR)
 		throw SemanticError("Left operand of \"[]\" must be the pointer", op_pos);
-	res.type = dynamic_pointer_cast<sym_type_ptr_t>(arr.type)->get_element_type();
+	res.type = dynamic_pointer_cast<sym_type_ptr>(arr.type)->get_element_type();
 	try {
 		index = automate_cast_expr(index, ST_INTEGER, op_pos);
 	} catch (IllegalConversion&) {
@@ -318,4 +318,4 @@ expr_res_t valid_expr(expr_t* expr, sym_table_t& st) {
 
 expr_t* validate_expr(expr_t* expr, sym_table_t& st) {
 	return valid_expr(expr, st).expr;
-}
+}*/

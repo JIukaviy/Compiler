@@ -6,5 +6,5 @@ void node_t::short_print(ostream& os) {
 
 void print_level(ostream& os, int level) {
 	for (int i = 0; i < level; i++)
-		os << '\t';
+		os << '\t_t';
 }

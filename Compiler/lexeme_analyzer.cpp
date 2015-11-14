@@ -27,7 +27,7 @@ map<AUTOMATON_STATE, TOKEN> state_to_token;
 #include "token_register.h"
 #undef TOKEN_FUNC
 
-map<AUTOMATON_STATE, token_ptr_t(*)(string, AUTOMATON_STATE, int, int)> token_getters;
+map<AUTOMATON_STATE, token_ptr(*)(string, AUTOMATON_STATE, int, int)> token_getters;
 
 lexeme_analyzer_t::lexeme_analyzer_t(istream& is_) {
 	is = &is_;
@@ -88,9 +88,9 @@ void lexeme_analyzer_t::skip_spaces() {
 	}
 }
 
-token_ptr_t lexeme_analyzer_t::next() {
+token_ptr lexeme_analyzer_t::next() {
 	if (eof())
-		return curr_token = token_ptr_t(new token_t);
+		return curr_token = token_ptr(new token_t);
 	state = AS_START;
 	curr_str.clear();
 	pos_t start_pos;
@@ -125,42 +125,36 @@ token_ptr_t lexeme_analyzer_t::next() {
 	return curr_token;
 }
 
-token_ptr_t lexeme_analyzer_t::get() {
+token_ptr lexeme_analyzer_t::get() {
 	return curr_token;
 }
 
-token_ptr_t lexeme_analyzer_t::require(TOKEN first, ...) {
-	if (get() == T_EMPTY)
-		throw UnexpectedEOF();
+token_ptr lexeme_analyzer_t::require(TOKEN first, ...) {
 	if (!get()->is(&first))
 		throw UnexpectedToken(get(), first);
-	token_ptr_t t = get();
+	token_ptr t = get();
 	next();
 	return t;
 }
 
-token_ptr_t lexeme_analyzer_t::require(token_ptr_t op, TOKEN first, ...) {
-	if (get() == T_EMPTY)
-		throw UnexpectedEOF();
+token_ptr lexeme_analyzer_t::require(token_ptr op, TOKEN first, ...) {
 	if (!get()->is(&first))
 		throw UnexpectedToken(op, get(), first);
-	token_ptr_t t = get();
+	token_ptr t = get();
 	next();
 	return t;
 }
 
-token_ptr_t lexeme_analyzer_t::require(set<TOKEN>& tokens) {
-	if (get() == T_EMPTY)
-		throw UnexpectedEOF();
+token_ptr lexeme_analyzer_t::require(set<TOKEN>& tokens) {
 	if (tokens.find(get()->get_token_id()) != tokens.end())
 		throw UnexpectedToken(get(), tokens);
-	token_ptr_t t = get();
+	token_ptr t = get();
 	next();
 	return t;
 }
 
 void lexeme_analyzer_init() {
-#define register_token(incode_name, printed_name, func_name) token_getters[AS_END_##incode_name] = func_name; \
+#define register_token(incode_name, printed_name, func_name, statement, ...) token_getters[AS_END_##incode_name] = func_name; \
 										 state_to_token[AS_END_##incode_name] = T_##incode_name;
 #define TOKEN_LIST
 #define AUTOMATON_STATE_DECLARATION
@@ -169,7 +163,7 @@ void lexeme_analyzer_init() {
 #undef TOKEN_LIST
 #undef register_token
 
-#define register_token(incode_name, printed_name, func_name) keywords[string(printed_name)] = T_##incode_name;
+#define register_token(incode_name, printed_name, func_name, statement, ...) keywords[string(printed_name)] = T_##incode_name;
 #define TOKEN_LIST
 #define KEYWORD_REGISTRATION
 #include "token_keyword.h"

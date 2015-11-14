@@ -5,7 +5,7 @@
 
 map<TOKEN, string> token_names;
 
-ostream& operator<<(ostream& os, const token_ptr_t& e) {
+ostream& operator<<(ostream& os, const token_ptr& e) {
 	e.get()->print(os);
 	return os;
 }
@@ -18,7 +18,7 @@ pos_t::operator bool() {
 }
 
 ostream& operator<<(ostream& os, const pos_t e) {
-	os << e.line << '\t' << e.column << '\t';
+	os << e.line << ':' << e.column << ": ";
 	return os;
 }
 
@@ -127,24 +127,24 @@ void token_t::short_print(ostream & os) const {
 	os << get_name();
 }
 
-bool token_ptr_t::operator==(const TOKEN& token_id_) const {
+bool token_ptr::operator==(const TOKEN& token_id_) const {
 	return *(get()) == token_id_;
 }
 
-bool token_ptr_t::operator!=(const TOKEN& token_id_) const {
+bool token_ptr::operator!=(const TOKEN& token_id_) const {
 	return *(get()) != token_id_;
 }
 
-bool token_ptr_t::operator==(const token_ptr_t& token_ptr_) const {
+bool token_ptr::operator==(const token_ptr& token_ptr_) const {
 	return *(get()) == *token_ptr_;
 }
 
-token_ptr_t::operator TOKEN() {
+token_ptr::operator TOKEN() {
 	return TOKEN(*(get()));
 }
 
 void tokens_init() {
-#define register_token(incode_name, printed_name, func_name) token_names[T_##incode_name] = string(printed_name);
+#define register_token(incode_name, printed_name, func_name, statement, ...) token_names[T_##incode_name] = string(printed_name);
 #define TOKEN_LIST
 #define TOKEN_NAME_REGISTRATION
 #include "token_register.h"
