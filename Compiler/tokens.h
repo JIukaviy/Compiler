@@ -105,7 +105,6 @@ void token_with_value_t<T>::print_l(ostream& os, int level) {
 
 template<typename T>
 void token_with_value_t<T>::short_print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << value;
 }
 

@@ -67,7 +67,6 @@ bool lexeme_analyzer_t::eof() {
 
 void lexeme_analyzer_t::throw_exception(AUTOMATON_STATE state) {
 	switch (state) {
-		case AS_END_REACHED: throw EOFReached(); break;
 		case AS_ERR_BAD_CC: throw BadCC(curr_pos); break;
 		case AS_ERR_BAD_CHAR: throw BadChar(curr_pos); break;
 		case AS_ERR_BAD_EOF: throw BadEOF(curr_pos); break;
@@ -83,9 +82,8 @@ void lexeme_analyzer_t::throw_exception(AUTOMATON_STATE state) {
 
 void lexeme_analyzer_t::skip_spaces() {
 	state = AS_START;
-	while ((state = commands[cc][state].state) == AS_SPACE) {
+	while ((state = commands[cc][state].state) == AS_SPACE)
 		 next_char();
-	}
 }
 
 token_ptr lexeme_analyzer_t::next() {
@@ -115,11 +113,13 @@ token_ptr lexeme_analyzer_t::next() {
 				curr_pos = rem_pos;
 			} break;
 			case ACC_SKIP: next_char(); break;
+			case ACC_SKIP_AND_ERASE: next_char(); curr_str.clear(); break;
 		}
 	}
 
 	throw_exception(state);
-
+	if (state == AS_END_REACHED)
+		return token_ptr(new token_t());
 	curr_token = token_getters[state](curr_str, state, start_pos.line, start_pos.column);
 	skip_spaces();
 	return curr_token;
@@ -248,9 +248,24 @@ void lexeme_analyzer_init() {
 	fill(true, AS_OP_MUL__MUL__ASSIGN, AS_END_OP_MUL, ACC_STOP);
 	set('=', AS_OP_MUL__MUL__ASSIGN, AS_END_OP_MUL_ASSIGN);
 
-	set('/', AS_START, AS_OP_DIV__DIV_ASSIGN);
-	fill(true, AS_OP_DIV__DIV_ASSIGN, AS_END_OP_DIV, ACC_STOP);
-	set('=', AS_OP_DIV__DIV_ASSIGN, AS_END_OP_DIV_ASSIGN);
+	set('/', AS_START, AS_OP_DIV__DIV_ASSIGN__COMMENT);
+	fill(true, AS_OP_DIV__DIV_ASSIGN__COMMENT, AS_END_OP_DIV, ACC_STOP);
+	set('=', AS_OP_DIV__DIV_ASSIGN__COMMENT, AS_END_OP_DIV_ASSIGN);
+
+	//---------------------------------<COMMENTS>---------------------------------
+	set('/', AS_OP_DIV__DIV_ASSIGN__COMMENT, AS_COMMENT, ACC_SKIP_AND_ERASE);
+	fill(true, AS_COMMENT, AS_COMMENT, ACC_SKIP);
+	set('\n', AS_COMMENT, AS_START, ACC_SKIP);
+	set(eof_code, AS_COMMENT, AS_END_REACHED, ACC_STOP);
+
+	set('*', AS_OP_DIV__DIV_ASSIGN__COMMENT, AS_MUL_COMMENT, ACC_SKIP_AND_ERASE);
+	fill(true, AS_MUL_COMMENT, AS_MUL_COMMENT, ACC_SKIP);
+	set('*', AS_MUL_COMMENT, AS_MUL_COMMENT_END, ACC_SKIP);
+	fill(true, AS_MUL_COMMENT_END, AS_MUL_COMMENT, ACC_SKIP);
+	set('/', AS_MUL_COMMENT_END, AS_START, ACC_SKIP);
+	set(eof_code, AS_MUL_COMMENT, AS_ERR_BAD_EOF);
+	set(eof_code, AS_MUL_COMMENT_END, AS_ERR_BAD_EOF);
+	//---------------------------------</COMMENTS>---------------------------------
 
 	set('^', AS_START, AS_OP_XOR__XOR_ASSIGN);
 	fill(true, AS_OP_XOR__XOR_ASSIGN, AS_END_OP_XOR, ACC_STOP);

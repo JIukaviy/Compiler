@@ -59,7 +59,9 @@ int main(int argc, char** argv) {
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {
-		parser.print_statements(cout);
+		//parser.print_statements(cout);
+		while (!la.eof())
+			cout << la.next() << endl;
 	} catch (LexemeAnalyzeError& e) {
 		cerr << "Lexeme analyzer error: " << e << endl;
 	} catch (SyntaxError& e) {

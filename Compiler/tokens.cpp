@@ -116,8 +116,8 @@ pos_t token_t::get_pos() {
 }
 
 void token_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	os << pos << "name: " << get_name();
+	if (token != T_EMPTY)
+		os << pos << get_name();
 }
 
 void token_t::print_pos(ostream& os) {
@@ -125,8 +125,8 @@ void token_t::print_pos(ostream& os) {
 }
 
 void token_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	os << get_name();
+	if (token != T_EMPTY)
+		os << get_name();
 }
 
 bool token_ptr::operator==(const TOKEN& token_id_) const {
