@@ -215,7 +215,7 @@ void parser_t::optimize_type(type_ptr type) {
 		finded_type = alias ? alias->get_type() : finded_type;
 		if (struct_definition) {
 			if (finded_type->completed())
-				throw RedefenitionOfSymbol(base_type);
+				throw RedefenitionOfSymbol(finded_type, base_type);
 			static_pointer_cast<sym_type_struct_t>(finded_type)->set_sym_table(static_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
 		}
 		type->set_base_type(finded_type);
@@ -525,7 +525,7 @@ void parser_t::parse_decl_stmt() {
 		sym_ptr finded_global_sym = sym_table->find_global(sym_func);
 		shared_ptr<sym_func_t> finded_func = dynamic_pointer_cast<sym_func_t>(finded_global_sym);
 		if (finded_global_sym && (!finded_func || !sym_func->get_func_type()->is(finded_func->get_func_type())))
-			throw RedefenitionOfSymbol(sym_func);
+			throw RedefenitionOfSymbol(finded_global_sym, sym_func);
 		if (la->get() == T_BRACE_OPEN) {
 			if (sym_table != top_sym_table)
 				throw SemanticError("Functions can't be defined in functions", la->get()->get_pos());

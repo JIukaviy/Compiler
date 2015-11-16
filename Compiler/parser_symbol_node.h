@@ -241,6 +241,7 @@ public:
 	sym_table_ptr get_sym_table();
 	void clear_sym_table();
 	bool defined();
+	void short_print_l(ostream& os, int level);
 	void print_l(ostream& os, int level) override;
 };
 

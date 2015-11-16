@@ -169,10 +169,12 @@ public:
 		token->short_print(err);
 		err << "\"";
 	}
-	RedefenitionOfSymbol(sym_ptr symbol) {
-		err << symbol->get_token()->get_pos() << "Redefenition of symbol \"";
-		symbol->short_print(err);
-		err << "\"";
+	RedefenitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
+		err << redef_symbol->get_token()->get_pos() << "Redefenition of symbol \"";
+		orig_symbol->short_print(err);
+		err << "\", first defenition was here: ";
+		pos_t pos = orig_symbol->get_token()->get_pos();
+		err << pos.line << ':' << pos.column;
 	}
 };
 

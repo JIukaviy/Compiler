@@ -12,8 +12,9 @@ void sym_table_t::_insert(sym_ptr s) {
 }
 
 void sym_table_t::insert(sym_ptr s) {
-	if (find_local(s))
-		throw RedefenitionOfSymbol(s);
+	sym_ptr a = find_local(s);
+	if (a)
+		throw RedefenitionOfSymbol(a, s);
 	_insert(s);
 }
 
@@ -118,6 +119,7 @@ bool sym_table_t::is_alias(const token_ptr& token) {
 void sym_table_t::print_l(ostream& os, int level) {
 	for each (auto var in *this) {
 		//os << var->get_name() << ": ";
+		print_level(os, level);
 		var->print_l(os, level);
 		os << endl;
 	}
@@ -125,7 +127,7 @@ void sym_table_t::print_l(ostream& os, int level) {
 
 void sym_table_t::short_print_l(ostream& os, int level) {
 	for each (auto var in *this) {
-		//os << var->get_name() << ": ";
+		print_level(os, level);
 		var->short_print_l(os, level);
 		os << endl;
 	}

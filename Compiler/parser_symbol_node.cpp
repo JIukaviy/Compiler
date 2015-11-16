@@ -92,7 +92,6 @@ void symbol_t::set_token(token_ptr token_) {
 }
 
 void symbol_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << get_name();
 }
 
@@ -136,7 +135,6 @@ type_t::type_t(type_base_ptr type_, bool is_const) : type_base_t(ST_QL) {
 }
 
 void type_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	if (_is_const)
 		os << "const ";
 	type->print_l(os, level);
@@ -214,7 +212,6 @@ string sym_built_in_type::_get_name() const {
 sym_built_in_type::sym_built_in_type() : type_base_t(ST_VOID) {}
 
 void sym_built_in_type::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << token_t::get_name_by_id(st_to_token.at(symbol_type));
 }
 
@@ -229,7 +226,6 @@ int sym_type_str_literal_t::get_size() {
 }
 
 void sym_type_str_literal_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << '"';
 	str->short_print(os);
 	os << '"';
@@ -284,10 +280,9 @@ string sym_var_t::_get_name() const {
 }
 
 void sym_var_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "variable: \"";
 	identifier->short_print(os);
-	os << "\", type: " << endl;
+	os << "\", type: ";
 	type->print_l(os, level);
 	if (!init_list.empty()) {
 		os << ", init list: {";
@@ -301,10 +296,9 @@ void sym_var_t::print_l(ostream& os, int level) {
 }
 
 void sym_var_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "variable: \"";
 	identifier->short_print(os);
-	os << "\", type: " << endl;
+	os << "\", type: ";
 	type->short_print_l(os, level);
 }
 
@@ -321,7 +315,6 @@ string sym_type_ptr::_get_name() const {
 }
 
 void sym_type_ptr::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "pointer to ";;
 	elem_type->print(os);
 }
@@ -347,7 +340,6 @@ string sym_type_array_t::_get_name() const {
 }
 
 void sym_type_array_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "array[";
 	if (size)
 		size->short_print(os);
@@ -414,7 +406,6 @@ void sym_type_func_t::set_element_type(type_ptr type) {
 }
 
 void sym_type_func_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "function(";
 	for (int i = 0; i < arg_types.size(); i++) {
 		arg_types[i]->print(os);
@@ -422,7 +413,7 @@ void sym_type_func_t::print_l(ostream& os, int level) {
 			os << ", ";
 	}
 	os << ") that returns: ";
-	elem_type->print(os);
+	elem_type->print_l(os, level);
 }
 
 //--------------------------------SYMBOL_FUNCTION-------------------------------
@@ -459,12 +450,16 @@ bool sym_func_t::defined() {
 	return (bool)block;
 }
 
-void sym_func_t::print_l(ostream& os, int level) {
-	print_level(os, level);
+void sym_func_t::short_print_l(ostream& os, int level) {
 	os << static_pointer_cast<token_with_value_t<string>>(identifier)->get_value() + ": ";
-	func_type->print(os);
+	func_type->print_l(os, level);
+}
+
+void sym_func_t::print_l(ostream& os, int level) {
+	os << static_pointer_cast<token_with_value_t<string>>(identifier)->get_value() + ": ";
+	func_type->print_l(os, level);
 	if (block) {
-		os << endl;
+		os << ' ';
 		block->print_l(os, level);
 	}
 }
@@ -481,11 +476,10 @@ void sym_type_alias_t::update_name() {
 }
 
 void sym_type_alias_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "alias: \"";
 	identifier->short_print(os);
 	os << "\", type: ";
-	type->print(os);
+	type->print_l(os, level);
 }
 
 bool sym_type_alias_t::completed() {
@@ -584,19 +578,18 @@ int sym_type_struct_t::get_size() {
 }
 
 void sym_type_struct_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	short_print(os);
 	if (sym_table) {
-		os << endl;
-		print_level(os, level);
-		os << '{' << endl;
-		sym_table->short_print_l(os, level + 1);
-		print_level(os, level);
+		os << " {";
+		if (!sym_table->empty()) {
+			os << endl;
+			sym_table->short_print_l(os, level + 1);
+			print_level(os, level);
+		}
 		os << '}';
 	}
 }
 
 void sym_type_struct_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "struct " << static_pointer_cast<token_with_value_t<string>>(identifier)->get_value();
 }
