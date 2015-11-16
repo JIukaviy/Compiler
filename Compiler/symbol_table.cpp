@@ -4,123 +4,129 @@
 
 sym_table_t::sym_table_t() : parent(nullptr) {}
 
-sym_table_t::sym_table_t(sym_table_t* parent) : parent(parent) {}
+sym_table_t::sym_table_t(sym_table_ptr  parent) : parent(parent) {}
 
-bool sym_table_t::_insert(sym_ptr s) {
-	if (!local_find(s)) {
-		map_st[s->get_name()] = s;
-		push_back(s);
-		return true;
-	}
-	return false;
+void sym_table_t::_insert(sym_ptr s) {
+	map_st[s->get_name()] = s;
+	push_back(s);
 }
 
-void sym_table_t::insert(sym_ptr s, pos_t pos) {
-	if (!_insert(s))
-		throw RedefenitionOfSymbol(s, pos);
-}
-
-void sym_table_t::insert_no_except(sym_ptr s) {
+void sym_table_t::insert(sym_ptr s) {
+	if (find_local(s))
+		throw RedefenitionOfSymbol(s);
 	_insert(s);
 }
 
-sym_ptr sym_table_t::global_get(const sym_ptr s) {
-	sym_ptr res = global_find(s);
+sym_ptr sym_table_t::find_global_or_insert(sym_ptr s) {
+	sym_ptr finded = find_global(s);
+	return finded ? finded : _insert(s), s;
+}
+
+sym_ptr sym_table_t::find_local_or_insert(sym_ptr s) {
+	sym_ptr finded = find_local(s);
+	return finded ? finded : _insert(s), s;
+}
+
+sym_ptr sym_table_t::get_global(const sym_ptr s) {
+	sym_ptr res = find_global(s);
 	if (!res)
 		throw UndefinedSymbol(s, pos_t());
 	return res;
 }
 
-sym_ptr sym_table_t::local_get(const sym_ptr s) {
-	sym_ptr res = local_find(s);
+sym_ptr sym_table_t::get_local(const sym_ptr s) {
+	sym_ptr res = find_local(s);
 	if (!res)
 		throw UndefinedSymbol(s, pos_t());
 	return res;
 }
 
-sym_ptr sym_table_t::global_get(const string& s) {
-	sym_ptr res = global_find(s);
+sym_ptr sym_table_t::get_global(const string& s) {
+	sym_ptr res = find_global(s);
 	if (!res)
 		throw UndefinedSymbol(s, pos_t());
 	return res;
 }
 
-sym_ptr sym_table_t::local_get(const string& s) {
-	sym_ptr res = local_find(s);
+sym_ptr sym_table_t::get_local(const string& s) {
+	sym_ptr res = find_local(s);
 	if (!res)
 		throw UndefinedSymbol(s, pos_t());
 	return res;
 }
 
-sym_ptr sym_table_t::global_get(const token_ptr& token) {
-	sym_ptr res = global_find(token);
+sym_ptr sym_table_t::get_global(const token_ptr& token) {
+	sym_ptr res = find_global(token);
 	if (!res)
 		throw UndefinedSymbol(token);
 	return res;
 }
 
-sym_ptr sym_table_t::local_get(const token_ptr& token) {
-	sym_ptr res = local_find(token);
+sym_ptr sym_table_t::get_local(const token_ptr& token) {
+	sym_ptr res = find_local(token);
 	if (!res)
 		throw UndefinedSymbol(token);
 	return res;
 }
 
-sym_table_t* sym_table_t::get_parent() {
+sym_table_ptr  sym_table_t::get_parent() {
 	return parent;
 }
 
-sym_ptr sym_table_t::global_find(const string& s) {
+sym_ptr sym_table_t::find_global(const string& s) {
 	auto res = map_st.find(s);
-	return res == map_st.end() ? (parent ? parent->global_find(s) : nullptr) : res->second;
+	return res == map_st.end() ? (parent ? parent->find_global(s) : nullptr) : res->second;
 }
 
-sym_ptr sym_table_t::local_find(const string& s) {
+sym_ptr sym_table_t::find_local(const string& s) {
 	auto res = map_st.find(s);
 	return res == map_st.end() ? nullptr : res->second;
 }
 
-sym_ptr sym_table_t::global_find(const sym_ptr s) {
-	return global_find(s->get_name());
+sym_ptr sym_table_t::find_global(const sym_ptr s) {
+	return find_global(s->get_name());
 }
 
-sym_ptr sym_table_t::local_find(const sym_ptr s) {
-	return local_find(s->get_name());
+sym_ptr sym_table_t::find_local(const sym_ptr s) {
+	return find_local(s->get_name());
 }
 
-sym_ptr sym_table_t::global_find(const token_ptr& token) {
+sym_ptr sym_table_t::find_global(const token_ptr& token) {
 	assert(token == T_IDENTIFIER);
-	return global_find(static_pointer_cast<token_with_value_t<string>>(token)->get_value());
+	return find_global(static_pointer_cast<token_with_value_t<string>>(token)->get_value());
 }
 
-sym_ptr sym_table_t::local_find(const token_ptr& token) {
+sym_ptr sym_table_t::find_local(const token_ptr& token) {
 	assert(token == T_IDENTIFIER);
-	return local_find(static_pointer_cast<token_with_value_t<string>>(token)->get_value());
+	return find_local(static_pointer_cast<token_with_value_t<string>>(token)->get_value());
 }
 
 bool sym_table_t::is_var(const token_ptr& token) {
 	if (token != T_IDENTIFIER)
 		return false;
-	sym_ptr s = global_find(token);
+	sym_ptr s = find_global(token);
 	return s ? s == ST_VAR : false;
 }
 
 bool sym_table_t::is_alias(const token_ptr& token) {
 	if (token != T_IDENTIFIER)
 		return false;
-	sym_ptr s = global_find(token);
+	sym_ptr s = find_global(token);
 	return s ? s == ST_ALIAS : false;
 }
 
-void sym_table_t::print(ostream& os) {
-	print(os, 0);
+void sym_table_t::print_l(ostream& os, int level) {
+	for each (auto var in *this) {
+		//os << var->get_name() << ": ";
+		var->print_l(os, level);
+		os << endl;
+	}
 }
 
-void sym_table_t::print(ostream& os, int level) {
+void sym_table_t::short_print_l(ostream& os, int level) {
 	for each (auto var in *this) {
-		print_level(os, level);
 		//os << var->get_name() << ": ";
-		var->print(os);
+		var->short_print_l(os, level);
 		os << endl;
 	}
 }

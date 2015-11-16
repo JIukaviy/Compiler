@@ -19,12 +19,13 @@ void parser_init();
 
 struct type_chain_t {
 	type_chain_t();
-	shared_ptr<updatable_sym_t> first;
-	shared_ptr<updatable_sym_t> last;
-	pos_t last_token_pos;
+	type_ptr first;
+	type_ptr last;
 	token_ptr identifier;
 	pos_t estimated_ident_pos;
-	void update(shared_ptr<updatable_sym_t>);
+	sym_table_ptr func_sym_table;
+
+	void update(type_ptr);
 	void update(token_ptr);
 	void update(type_chain_t);
 	operator bool();
@@ -36,6 +37,7 @@ struct decl_raw_t {
 	type_ptr type;
 	pos_t estimated_ident_pos;
 	pos_t type_spec_pos;
+	sym_table_ptr func_sym_table;
 	vector<expr_t*> init_list;
 	bool init_decl_is_empty = true;
 	decl_raw_t();
@@ -46,13 +48,14 @@ struct decl_raw_t {
 class parser_t {
 	lexeme_analyzer_t* la;
 
-	sym_table_t *sym_table;
-	sym_table_t *prelude_sym_table;
+	sym_table_ptr sym_table;
+	sym_table_ptr top_sym_table;
+	sym_table_ptr prelude_sym_table;
 	stack<shared_ptr<stmt_loop_t>> loop_stack;
 	stack<shared_ptr<sym_func_t>> func_stack;
 	set<shared_ptr<sym_type_struct_t>> declared_structs;
 
-	sym_table_t* new_namespace();
+	sym_table_ptr  new_namespace();
 	void exit_namespace();
 
 	expr_t* left_associated_bin_op(int priority);
@@ -69,11 +72,12 @@ class parser_t {
 	decl_raw_t parse_declaration_raw();
 	type_chain_t parse_declarator();
 	type_chain_t parse_init_declarator();
-	type_chain_t func_arr_decl();
+	type_chain_t func_arr_decl(bool in_func = false);
 	vector<expr_t*> parse_initializer_list();
 	expr_t* parse_initializer();
 	sym_ptr parse_declaration(bool abstract_decl = false);
-	sym_ptr parse_declaration(decl_raw_t, sym_table_t*, bool abstract_decl = false);
+	sym_ptr parse_declaration(decl_raw_t, sym_table_ptr , bool abstract_decl = false);
+	void optimize_type(type_ptr);
 
 	bool is_begin_of(STATEMENT stmt, token_ptr token);
 	bool is_begin_of(STATEMENT stmt);
@@ -82,7 +86,7 @@ class parser_t {
 	void parse_decl_stmt();
 	stmt_ptr parse_block_stmt();
 	void parse_top_level_stmt();
-	void parse_struct_decl_list(sym_table_t* sym_table);
+	void parse_struct_decl_list(sym_table_ptr  sym_table);
 	stmt_ptr parse_if_stmt();
 	stmt_ptr parse_while_stmt();
 	stmt_ptr parse_for_stmt();

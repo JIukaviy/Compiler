@@ -169,8 +169,8 @@ public:
 		token->short_print(err);
 		err << "\"";
 	}
-	RedefenitionOfSymbol(sym_ptr symbol, pos_t pos) {
-		err << pos << "Redefenition of symbol \"";
+	RedefenitionOfSymbol(sym_ptr symbol) {
+		err << symbol->get_token()->get_pos() << "Redefenition of symbol \"";
 		symbol->short_print(err);
 		err << "\"";
 	}

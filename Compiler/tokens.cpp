@@ -115,15 +115,17 @@ pos_t token_t::get_pos() {
 	return pos;
 }
 
-void token_t::print(ostream& os) const {
+void token_t::print_l(ostream& os, int level) {
+	print_level(os, level);
 	os << pos << "name: " << get_name();
 }
 
-void token_t::print_pos(ostream & os) const {
+void token_t::print_pos(ostream& os) {
 	os << pos;
 }
 
-void token_t::short_print(ostream & os) const {
+void token_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	os << get_name();
 }
 

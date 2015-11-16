@@ -4,6 +4,7 @@
 #include <ostream>
 #include <memory>
 #include <set>
+#include "parser_base_node.h"
 
 using namespace std;
 
@@ -41,7 +42,7 @@ struct pos_t {
 	friend ostream& operator<<(ostream& os, const pos_t e);
 };
 
-class token_t {
+class token_t : public node_t {
 protected:
 	TOKEN token;
 	pos_t pos;
@@ -51,12 +52,10 @@ public:
 	bool operator==(const TOKEN&) const;
 	virtual bool operator==(const token_t&) const;
 	bool operator!=(const TOKEN&) const;
-	operator TOKEN();
-	/*string print() const;
-	string short_print() const;*/
-	virtual void print(ostream& os) const;
-	virtual void print_pos(ostream& os) const;
-	virtual void short_print(ostream& os) const;
+	operator TOKEN(); 
+	void print_l(ostream& os, int level) override;
+	void short_print_l(ostream& os, int level) override;
+	virtual void print_pos(ostream& os);
 	string get_name() const;
 	bool is(TOKEN *first);
 	bool is(TOKEN first, ...);
@@ -88,8 +87,8 @@ protected:
 public:
 	token_with_value_t(int line_, int column_, TOKEN token_, T value_);
 	bool operator==(const token_t&) const override;
-	void print(ostream& os) const override;
-	virtual void short_print(ostream& os) const;
+	void print_l(ostream& os, int level) override;
+	void short_print_l(ostream& os, int level) override;
 	const T& get_value() const;
 };
 
@@ -99,13 +98,14 @@ bool token_with_value_t<T>::operator==(const token_t& token_) const {
 }
 
 template<typename T>
-void token_with_value_t<T>::print(ostream& os) const {
-	token_t::print(os);
+void token_with_value_t<T>::print_l(ostream& os, int level) {
+	token_t::print_l(os, level);
 	os << ", value: " << value;
 }
 
 template<typename T>
-void token_with_value_t<T>::short_print(ostream& os) const {
+void token_with_value_t<T>::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	os << value;
 }
 

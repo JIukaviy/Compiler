@@ -67,7 +67,6 @@ int main(int argc, char** argv) {
 	} catch (SemanticError& e) {
 		cerr << "Semantic error: " << e << endl;
 	}
-
 	system("pause");
 		
 	return 0;

@@ -10,19 +10,16 @@ expr_const_t::expr_const_t(token_ptr constant_) : constant(constant_) {}
 expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_, token_ptr qm, token_ptr c) : left(left_), middle(middle_), right(right_), question_mark(qm), colon(c) {}
 expr_cast_t::expr_cast_t(expr_t* expr, node_ptr type) : expr(expr), type(type) {}
 
-void expr_t::print(ostream& os) {
-	print(os, 0);
-}
-
-void expr_bin_op_t::print(ostream& os, int level) {
-	left->print(os, level + 1);
+void expr_bin_op_t::print_l(ostream& os, int level) {
+	left->print_l(os, level + 1);
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
-	right->print(os, level + 1);
+	right->print_l(os, level + 1);
 }
 
-void expr_bin_op_t::short_print(ostream& os) {
+void expr_bin_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	left->short_print(os);
 	op->short_print(os);
 	right->short_print(os);
@@ -52,17 +49,18 @@ pos_t expr_bin_op_t::get_pos() {
 	return op->get_pos();
 }
 
-void expr_tern_op_t::print(ostream& os, int level) {
-	left->print(os, level + 1);
+void expr_tern_op_t::print_l(ostream& os, int level) {
+	left->print_l(os, level + 1);
 	print_level(os, level);
 	os << "?" << endl;
-	middle->print(os, level + 1);
+	middle->print_l(os, level + 1);
 	print_level(os, level);
 	os << ":" << endl;
-	right->print(os, level + 1);
+	right->print_l(os, level + 1);
 }
 
-void expr_tern_op_t::short_print(ostream& os) {
+void expr_tern_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	left->short_print(os);
 	os << " ? ";
 	middle->short_print(os);
@@ -102,13 +100,14 @@ void expr_tern_op_t::set_right(expr_t * e) {
 	right = e;
 }
 
-void expr_var_t::print(ostream& os, int level) {
+void expr_var_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	variable->short_print(os);
 	os << endl;
 }
 
-void expr_var_t::short_print(ostream& os) {
+void expr_var_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	variable->short_print(os);
 }
 
@@ -116,13 +115,14 @@ token_ptr expr_var_t::get_token() {
 	return variable;
 }
 
-void expr_const_t::print(ostream& os, int level) {
+void expr_const_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	constant->short_print(os);
 	os << endl;
 }
 
-void expr_const_t::short_print(ostream& os) {
+void expr_const_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	constant->short_print(os);
 }
 
@@ -130,14 +130,15 @@ token_ptr expr_const_t::get_token() {
 	return constant;
 }
 
-void expr_un_op_t::print(ostream& os, int level) {
+void expr_un_op_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
-	expr->print(os, level + 1);
+	expr->print_l(os, level + 1);
 }
 
-void expr_un_op_t::short_print(ostream& os) {
+void expr_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	op->short_print(os);
 	expr->short_print(os);
 }
@@ -154,40 +155,43 @@ token_ptr expr_un_op_t::get_op() {
 	return op;
 }
 
-void expr_prefix_un_op_t::print(ostream& os, int level) {
+void expr_prefix_un_op_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	os << "prefix ";
 	op->short_print(os);
 	os << endl;
-	expr->print(os, level + 1);
+	expr->print_l(os, level + 1);
 }
 
-void expr_prefix_un_op_t::short_print(ostream& os) {
+void expr_prefix_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	op->short_print(os);
 	expr->short_print(os);
 }
 
-void expr_postfix_un_op_t::print(ostream& os, int level) {
+void expr_postfix_un_op_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	os << "postfix ";
 	op->short_print(os);
 	os << endl;
-	expr->print(os, level + 1);
+	expr->print_l(os, level + 1);
 }
 
-void expr_postfix_un_op_t::short_print(ostream& os) {
+void expr_postfix_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	expr->short_print(os);
 	op->short_print(os);
 }
 
-void expr_arr_index_t::print(ostream& os, int level) {
-	arr->print(os, level + 1);
+void expr_arr_index_t::print_l(ostream& os, int level) {
+	arr->print_l(os, level + 1);
 	print_level(os, level);
 	os << "[]" << endl;
-	index->print(os, level + 1);
+	index->print_l(os, level + 1);
 }
 
-void expr_arr_index_t::short_print(ostream& os) {
+void expr_arr_index_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	arr->short_print(os);
 	os << "[";
 	index->short_print(os);
@@ -214,8 +218,8 @@ void expr_arr_index_t::set_arr(expr_t * e) {
 	arr = e;
 }
 
-void expr_struct_access_t::print(ostream& os, int level) {
-	expr->print(os, level + 1);
+void expr_struct_access_t::print_l(ostream& os, int level) {
+	expr->print_l(os, level + 1);
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
@@ -224,7 +228,8 @@ void expr_struct_access_t::print(ostream& os, int level) {
 	os << endl;
 }
 
-void expr_struct_access_t::short_print(ostream& os) {
+void expr_struct_access_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	expr->short_print(os);
 	op->short_print(os);
 	member->short_print(os);
@@ -246,15 +251,16 @@ token_ptr expr_struct_access_t::get_member() {
 	return member;
 }
 
-void expr_func_t::print(ostream &os, int level) {
-	func->print(os, level + 1);
+void expr_func_t::print_l(ostream &os, int level) {
+	func->print_l(os, level + 1);
 	print_level(os, level);
 	os << "()" << endl;
 	for (int i = 0; i < args.size(); i++)
-		args[i]->print(os, level + 1);
+		args[i]->print_l(os, level + 1);
 }
 
-void expr_func_t::short_print(ostream &os) {
+void expr_func_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	func->short_print(os);
 	os << "(";
 	for (int i = 0; i < args.size(); i++) {
@@ -265,15 +271,16 @@ void expr_func_t::short_print(ostream &os) {
 	os << ")";
 }
 
-void expr_cast_t::print(ostream& os, int level) {
+void expr_cast_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	os << "cast to (";
 	type->print(os);
 	os << ')' << endl;
-	expr->print(os, level + 1);
+	expr->print_l(os, level + 1);
 }
 
-void expr_cast_t::short_print(ostream& os) {
+void expr_cast_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
 	os << "(";
 	type->short_print(os);
 	os << ") ";
