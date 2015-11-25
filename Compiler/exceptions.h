@@ -1,6 +1,6 @@
 #pragma once
 #include "tokens.h"
-#include "parser_symbol_node.h"
+#include "parser_expression_node.h"
 #include <assert.h>
 #include <sstream>
 
@@ -139,6 +139,10 @@ public:
 		token->print_pos(err);
 		err << "Operator: \"" << token->get_name() << "\" expecting expression" << endl;
 	};
+	ExpressionIsExpected(sym_ptr symbol) {
+		symbol->get_token()->print_pos(err);
+		err << "Expected expression before symbol: \"" << symbol << '\"' << endl;
+	};
 };
 
 class CloseBracketExpected : public SyntaxError {
@@ -148,7 +152,11 @@ public:
 
 class InvalidCombinationOfSpecifiers : public SyntaxError {
 public:
-	InvalidCombinationOfSpecifiers(pos_t pos) : SyntaxError("Invalid combination of specifiers", pos) {};
+	InvalidCombinationOfSpecifiers(token_ptr token) {
+		err << token->get_pos() << "Invalid combination of specifiers: \"";
+		token->short_print(err);
+		err << "\"";
+	};
 };
 
 class SemanticError : public CompileError {
@@ -162,15 +170,15 @@ public:
 	InvalidIncompleteType(pos_t pos) : SemanticError("Invalid incomplete type", pos) {};
 };
 
-class RedefenitionOfSymbol : public SemanticError {
+class RedefinitionOfSymbol : public SemanticError {
 public:
-	RedefenitionOfSymbol(token_ptr token) {
-		err << token->get_pos() << "Redefenition of symbol \"";
+	RedefinitionOfSymbol(token_ptr token) {
+		err << token->get_pos() << "Redefinition of symbol \"";
 		token->short_print(err);
 		err << "\"";
 	}
-	RedefenitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
-		err << redef_symbol->get_token()->get_pos() << "Redefenition of symbol \"";
+	RedefinitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
+		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol \"";
 		orig_symbol->short_print(err);
 		err << "\", first defenition was here: ";
 		pos_t pos = orig_symbol->get_token()->get_pos();
@@ -249,9 +257,20 @@ public:
 	}
 };
 
-class ExprMustBeLeftHandValue : public SemanticError {
+class ExprMustBeLValue : public SemanticError {
 public:
-	ExprMustBeLeftHandValue(pos_t pos) {
-		err << pos << "Expression must be the left-hand value";
+	ExprMustBeLValue(pos_t pos) {
+		err << pos << "Expression must be the lvalue";
+	}
+};
+
+class AssignmentToReadOnly : public SemanticError {
+public:
+	/*AssignmentToReadOnly(expr_t* expr) {
+		err << expr->get_pos() << "Assignment to read only ";
+		err << (typeid(*expr) == typeid(expr_bin_op_t)) ? "location" : "expression";
+	}*/
+	AssignmentToReadOnly(pos_t pos) {
+		err << pos << "Assignment to read only expression";
 	}
 };
