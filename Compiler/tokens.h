@@ -80,8 +80,14 @@ public:
 	bool operator!=(const TOKEN&) const;
 };
 
+class token_base_with_value_t : public token_t {
+public:
+	using token_t::token_t;
+	virtual bool is_null() = 0;
+};
+
 template <typename T>
-class token_with_value_t : public token_t {
+class token_with_value_t : public token_base_with_value_t {
 protected:
 	T value;
 public:
@@ -89,6 +95,7 @@ public:
 	bool operator==(const token_t&) const override;
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
+	bool is_null() override;
 	const T& get_value() const;
 };
 
@@ -109,11 +116,21 @@ void token_with_value_t<T>::short_print_l(ostream& os, int level) {
 }
 
 template<typename T>
+inline bool token_with_value_t<T>::is_null() {
+	return value == 0;
+}
+
+template<>
+inline bool token_with_value_t<string>::is_null() {
+	return value.empty();
+}
+
+template<typename T>
 inline const T& token_with_value_t<T>::get_value() const {
 	return value;
 }
 
 template<typename T>
-token_with_value_t<T>::token_with_value_t(int line_, int column_, TOKEN token_, T value_) : token_t(line_, column_, token_) {
+token_with_value_t<T>::token_with_value_t(int line_, int column_, TOKEN token_, T value_) : token_base_with_value_t(line_, column_, token_) {
 	value = value_;
 }
