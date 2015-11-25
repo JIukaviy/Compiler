@@ -3,13 +3,17 @@
 #include <assert.h>
 #include "expression_optimizer.h"
 
-parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {
-	prelude_sym_table = sym_table_ptr(new sym_table_t);
+sym_table_ptr parser_t::prelude_sym_table;
 
-	prelude_sym_table->insert(sym_ptr(new sym_type_int_t));
-	prelude_sym_table->insert(sym_ptr(new sym_type_char_t));
-	prelude_sym_table->insert(sym_ptr(new sym_type_double_t));
-	prelude_sym_table->insert(sym_ptr(new sym_type_void_t));
+parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {
+	if (!prelude_sym_table) {
+		prelude_sym_table = sym_table_ptr(new sym_table_t);
+
+		prelude_sym_table->insert(sym_ptr(new sym_type_int_t));
+		prelude_sym_table->insert(sym_ptr(new sym_type_char_t));
+		prelude_sym_table->insert(sym_ptr(new sym_type_double_t));
+		prelude_sym_table->insert(sym_ptr(new sym_type_void_t));
+	}
 
 	sym_table = top_sym_table = sym_table_ptr(new sym_table_t(prelude_sym_table));
 }
@@ -68,7 +72,9 @@ expr_t* parser_t::right_associated_bin_op() {
 	token_ptr op = la->get();
 	if (op->is(op_by_priority[15])) {
 		la->next();
-		try_parse(return new expr_bin_op_t(left, right_associated_bin_op(), op));
+		expr_bin_op_t* res = expr_bin_op_t::make_bin_op(op);
+		res->set_operands(left, right_associated_bin_op());
+		return res;
 	} else
 		return left;
 }
@@ -81,12 +87,14 @@ expr_t* parser_t::tern_op() {
 		expr_t* middle = tern_op();
 		token_ptr c = la->get();
 		la->require(op, T_COLON, 0);
-		try_parse(return new expr_tern_op_t(left, middle, right_associated_bin_op(), op, c));
+		expr_tern_op_t* res = new expr_tern_op_t(op, c);
+		res->set_operands(left, middle, right_associated_bin_op());
+		return res;
 	} else
 		return left;
 }
 
-sym_table_ptr  parser_t::new_namespace() {
+sym_table_ptr parser_t::new_namespace() {
 	return sym_table = sym_table_ptr(new sym_table_t(sym_table));
 }
 
@@ -101,7 +109,9 @@ expr_t* parser_t::left_associated_bin_op(int p) {
 	token_ptr op = la->get();
 	while (op->is(op_by_priority[p-1])) {
 		la->next();
-		try_parse(left = new expr_bin_op_t(left, left_associated_bin_op(p-1), op));
+		expr_bin_op_t* bin_op = expr_bin_op_t::make_bin_op(op);
+		bin_op->set_operands(left, left_associated_bin_op(p - 1));
+		left = bin_op;
 		op = la->get();
 	}
 	return left;
@@ -111,7 +121,7 @@ expr_t* parser_t::prefix_un_op() {
 	token_ptr op = la->get();
 	if (op->is(op_by_priority[2])) {
 		la->next();
-		try_parse(return new expr_prefix_un_op_t(prefix_un_op(), op));
+		//try_parse(return new expr_prefix_un_op_t(prefix_un_op(), op));
 	} else
 		return postfix_op();
 }
@@ -123,17 +133,17 @@ expr_t* parser_t::parser_t::postfix_op() {
 	while (op->is(T_OP_INC, T_OP_DEC, T_BRACKET_OPEN, T_OP_DOT, T_OP_ARROW, T_SQR_BRACKET_OPEN, 0)) {
 		if (op->is(T_OP_INC, T_OP_DEC, 0)) {
 			la->next();
-			left = new expr_postfix_un_op_t(left, op);
+			//left = new expr_postfix_un_op_t(left, op);
 		} else if (op == T_BRACKET_OPEN) {
-			left = new expr_func_t(left, parse_func_args());
+			//left = new expr_func_t(left, parse_func_args());
 		} else if (op->is(T_OP_DOT, T_OP_ARROW, 0)) {
 			la->next();
-			left = new expr_struct_access_t(left, op, la->require(op, T_IDENTIFIER, 0));
+			//left = new expr_struct_access_t(left, op, la->require(op, T_IDENTIFIER, 0));
 		} else if (op == T_SQR_BRACKET_OPEN) {
 			la->next();
 			expr_t* index = right_associated_bin_op();
 			la->require(op, T_SQR_BRACKET_CLOSE, 0);
-			left = new expr_arr_index_t(left, index, op);
+			//left = new expr_arr_index_t(left, index, op);
 		}
 		op = la->get();
 	}
@@ -144,7 +154,9 @@ expr_t* parser_t::factor() {
 	token_ptr t = la->get();
 	la->next();
 	if (t == T_IDENTIFIER) {
-		return new expr_var_t(t);
+		expr_var_t* res = new expr_var_t();
+		res->set_symbol(dynamic_pointer_cast<sym_with_type_t>(sym_table->get_global(t)));
+		return res;
 	} else if (t->is(T_INTEGER, T_DOUBLE, T_STRING, T_CHAR, 0))
 		return new expr_const_t(t);
 	else if (t == T_BRACKET_OPEN) {
@@ -208,14 +220,14 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr  sym_table, b
 void parser_t::optimize_type(type_ptr type) {
 	type_base_ptr base_type = type->get_base_type();
 	bool struct_definition = base_type == ST_STRUCT && base_type->completed();
-	type_base_ptr finded_type = static_pointer_cast<type_base_t>(struct_definition ?
+	type_base_ptr finded_type = dynamic_pointer_cast<type_base_t>(struct_definition ?
 																	sym_table->find_local(base_type) : sym_table->find_global(base_type));
 	if (finded_type) {
 		shared_ptr<sym_type_alias_t> alias = dynamic_pointer_cast<sym_type_alias_t>(finded_type);
 		finded_type = alias ? alias->get_type() : finded_type;
 		if (struct_definition) {
 			if (finded_type->completed())
-				throw RedefenitionOfSymbol(finded_type, base_type);
+				throw RedefinitionOfSymbol(finded_type, base_type);
 			static_pointer_cast<sym_type_struct_t>(finded_type)->set_sym_table(static_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
 		}
 		type->set_base_type(finded_type);
@@ -247,7 +259,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 			if (type_spec->is(T_KWRD_DOUBLE, T_KWRD_INT, T_KWRD_CHAR, T_KWRD_VOID, 0))
 				base_type = type_base_t::make_type(symbol_t::token_to_sym_type(type_spec));
 			else if (type_spec == T_IDENTIFIER)
-				base_type = static_pointer_cast<type_base_t>(sym_table->get_global(type_spec));
+				base_type = dynamic_pointer_cast<type_base_t>(sym_table->get_global(type_spec));
 			else if (type_spec == T_KWRD_STRUCT) {
 				la->next();
 				struct_ident = la->require(T_IDENTIFIER, 0);
@@ -265,7 +277,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 				assert(false);
 			base_type->set_token(type_spec);
 		} else
-			throw InvalidCombinationOfSpecifiers(la->get()->get_pos());
+			throw InvalidCombinationOfSpecifiers(la->get());
 		la->next();
 	}
 
@@ -308,7 +320,7 @@ type_chain_t parser_t::parse_declarator() {
 			la->next();
 		}
 		type_chain_t r = parse_declarator();
-		type_base_ptr ptr = type_base_ptr(new sym_type_ptr);
+		type_base_ptr ptr = type_base_ptr(new sym_type_ptr_t);
 		ptr->set_token(token);
 		type_ptr l(new type_t(ptr));
 		if (is_const_)
@@ -525,7 +537,7 @@ void parser_t::parse_decl_stmt() {
 		sym_ptr finded_global_sym = sym_table->find_global(sym_func);
 		shared_ptr<sym_func_t> finded_func = dynamic_pointer_cast<sym_func_t>(finded_global_sym);
 		if (finded_global_sym && (!finded_func || !sym_func->get_func_type()->is(finded_func->get_func_type())))
-			throw RedefenitionOfSymbol(finded_global_sym, sym_func);
+			throw RedefinitionOfSymbol(finded_global_sym, sym_func);
 		if (la->get() == T_BRACE_OPEN) {
 			if (sym_table != top_sym_table)
 				throw SemanticError("Functions can't be defined in functions", la->get()->get_pos());
@@ -625,6 +637,7 @@ stmt_ptr parser_t::parse_return_stmt() {
 	if (func_stack.empty())
 		throw SemanticError("Return statement must be inside the function", la->get()->get_pos());
 	expr_t* expr = la->get() == T_SEMICOLON ? nullptr : parse_expr();
+	la->require(T_SEMICOLON);
 	return stmt_ptr(new stmt_return_t(func_stack.top()));
 }
 
@@ -698,6 +711,18 @@ void parser_t::print_statements(ostream& os) {
 		parse_top_level_stmt();
 		sym_table->print(os);
 	}
+}
+
+sym_table_ptr parser_t::get_prelude_sym_table() {
+	return prelude_sym_table;
+}
+
+type_base_ptr parser_t::get_base_type(SYM_TYPE sym_type) {
+	return dynamic_pointer_cast<type_base_t>(prelude_sym_table->get_global(type_t::make_type(sym_type)));
+}
+
+type_ptr parser_t::get_type(SYM_TYPE sym_type) {
+	return type_ptr(new type_t(get_base_type(sym_type)));
 }
 
 void set_operator_priority(TOKEN op, int priority) {
