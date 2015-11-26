@@ -36,12 +36,12 @@ type_base_ptr type_base_t::make_type(SYM_TYPE sym_type) {
 		type_base_ptr ch(new sym_type_char_t);
 		ptr->set_element_type(type_ptr(new type_t(ch, true)));
 		res = type_base_ptr(ptr);
-	}
-	res =
-		sym_type == ST_INTEGER ? type_base_ptr(new sym_type_int_t()) :
-		sym_type == ST_DOUBLE ? type_base_ptr(new sym_type_double_t()) :
-		sym_type == ST_CHAR ? type_base_ptr(new sym_type_char_t()) :
-		sym_type == ST_VOID ? type_base_ptr(new sym_type_void_t()) : type_base_ptr(new sym_type_ptr_t());
+	} else 
+		res =
+			sym_type == ST_INTEGER ? type_base_ptr(new sym_type_int_t()) :
+			sym_type == ST_DOUBLE ? type_base_ptr(new sym_type_double_t()) :
+			sym_type == ST_CHAR ? type_base_ptr(new sym_type_char_t()) :
+			sym_type == ST_VOID ? type_base_ptr(new sym_type_void_t()) : type_base_ptr(new sym_type_ptr_t());
 	res->update_name();
 	return res;
 }
