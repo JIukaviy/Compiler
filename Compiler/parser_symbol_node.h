@@ -237,6 +237,7 @@ public:
 	sym_type_func_t(const vector<type_ptr> &at);
 	virtual void update_name();
 	void set_arg_types(const vector<type_ptr> &at);
+	vector<type_ptr> get_arg_types();
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 };

@@ -449,6 +449,10 @@ void sym_type_func_t::set_arg_types(const vector<type_ptr> &at) {
 	arg_types = at;
 }
 
+vector<type_ptr> sym_type_func_t::get_arg_types() {
+	return arg_types;
+}
+
 void sym_type_func_t::set_element_type(type_ptr type) {
 	if (!type)
 		return;
