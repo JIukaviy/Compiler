@@ -121,7 +121,9 @@ expr_t* parser_t::prefix_un_op() {
 	token_ptr op = la->get();
 	if (op->is(op_by_priority[2])) {
 		la->next();
-		//try_parse(return new expr_prefix_un_op_t(prefix_un_op(), op));
+		expr_un_op_t* un_op = expr_prefix_un_op_t::make_prefix_un_op(op);
+		un_op->set_operand(prefix_un_op());
+		return un_op;
 	} else
 		return postfix_op();
 }
@@ -133,7 +135,9 @@ expr_t* parser_t::parser_t::postfix_op() {
 	while (op->is(T_OP_INC, T_OP_DEC, T_BRACKET_OPEN, T_OP_DOT, T_OP_ARROW, T_SQR_BRACKET_OPEN, 0)) {
 		if (op->is(T_OP_INC, T_OP_DEC, 0)) {
 			la->next();
-			//left = new expr_postfix_un_op_t(left, op);
+			expr_un_op_t* un_op = expr_postfix_un_op_t::make_postfix_un_op(op);
+			un_op->set_operand(left);
+			left = un_op;
 		} else if (op == T_BRACKET_OPEN) {
 			//left = new expr_func_t(left, parse_func_args());
 		} else if (op->is(T_OP_DOT, T_OP_ARROW, 0)) {
@@ -143,7 +147,9 @@ expr_t* parser_t::parser_t::postfix_op() {
 			la->next();
 			expr_t* index = right_associated_bin_op();
 			la->require(op, T_SQR_BRACKET_CLOSE, 0);
-			//left = new expr_arr_index_t(left, index, op);
+			expr_arr_index_t* arr = new expr_arr_index_t(op);
+			arr->set_operands(left, index);
+			left = arr;
 		}
 		op = la->get();
 	}
@@ -155,7 +161,7 @@ expr_t* parser_t::factor() {
 	la->next();
 	if (t == T_IDENTIFIER) {
 		expr_var_t* res = new expr_var_t();
-		res->set_symbol(dynamic_pointer_cast<sym_with_type_t>(sym_table->get_global(t)));
+		res->set_symbol(dynamic_pointer_cast<sym_with_type_t>(sym_table->get_global(t)), t);
 		return res;
 	} else if (t->is(T_INTEGER, T_DOUBLE, T_STRING, T_CHAR, 0))
 		return new expr_const_t(t);
@@ -718,7 +724,7 @@ sym_table_ptr parser_t::get_prelude_sym_table() {
 }
 
 type_base_ptr parser_t::get_base_type(SYM_TYPE sym_type) {
-	return dynamic_pointer_cast<type_base_t>(prelude_sym_table->get_global(type_t::make_type(sym_type)));
+	return dynamic_pointer_cast<type_base_t>(prelude_sym_table->get_global(type_base_t::make_type(sym_type)));
 }
 
 type_ptr parser_t::get_type(SYM_TYPE sym_type) {

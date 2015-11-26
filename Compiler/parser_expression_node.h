@@ -30,13 +30,15 @@ public:
 
 class expr_var_t : public expr_t {
 	shared_ptr<sym_with_type_t> variable;
+	token_ptr var_token;
 public:
 	expr_var_t();
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
-	void set_symbol(shared_ptr<sym_with_type_t> var);
+	void set_symbol(shared_ptr<sym_with_type_t> symbol, token_ptr var_token);
 	token_ptr get_token();
 	type_ptr get_type() override;
+	shared_ptr<sym_with_type_t> get_var();
 	pos_t get_pos();
 };
 
@@ -46,7 +48,8 @@ class expr_un_op_t : public expr_t {
 protected:
 	expr_t* expr;
 	token_ptr op;
-	vector<void(*)(expr_t* operand, expr_un_op_t* op)> operand_checkers;
+	vector<void(*)(expr_t* operand, expr_un_op_t* op)> and_conditions;
+	vector<bool(*)(expr_t* operand)> or_conditions;
 	vector<bool(*)(expr_t** operand, expr_un_op_t* op)> type_convertions;
 public:
 	expr_un_op_t(token_ptr op, bool lvalue = false);
@@ -56,6 +59,7 @@ public:
 	void set_operand(expr_t* operand);
 	token_ptr get_op();
 	type_ptr get_type() override;
+	pos_t get_pos();
 };
 
 class expr_prefix_un_op_t : public expr_un_op_t {
@@ -63,16 +67,19 @@ public:
 	using expr_un_op_t::expr_un_op_t;
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
+	static expr_un_op_t* make_prefix_un_op(token_ptr op);
 };
 
-class expr_addr_op_t : public expr_prefix_un_op_t {
+class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
 public:
-	expr_addr_op_t(token_ptr op);
+	expr_get_addr_un_op_t(token_ptr op);
+	type_ptr get_type() override;
 };
 
 class expr_dereference_op_t : public expr_prefix_un_op_t {
 public:
 	expr_dereference_op_t(token_ptr op);
+	type_ptr get_type();
 };
 
 class expr_prefix_inc_dec_op_t : public expr_prefix_un_op_t {
@@ -85,12 +92,13 @@ public:
 	using expr_un_op_t::expr_un_op_t;
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
+	static expr_un_op_t* make_postfix_un_op(token_ptr op);
 };
 
 class expr_postfix_inc_dec_op_t : public expr_postfix_un_op_t {
+public:
 	expr_postfix_inc_dec_op_t(token_ptr op);
 };
-
 
 //---------------BINARY_OPERATORS-------------------
 
@@ -101,7 +109,7 @@ protected:
 	token_ptr op;
 	vector<void(*)(expr_t* left, expr_t* right, expr_bin_op_t* op)> and_conditions;
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
-	vector<bool(*)(expr_t** left, expr_t** right, expr_bin_op_t* op)> type_convertions;
+	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -213,9 +221,9 @@ public:
 	expr_t* get_right();
 	token_ptr get_question_mark_token();
 	token_ptr get_colon_token();
-	void set_operands(expr_t* condition, expr_t* left, expr_t* right) {};
+	void set_operands(expr_t* condition, expr_t* left, expr_t* right);
 	type_ptr get_type() override;
-	pos_t get_pos() override { return pos_t(); };
+	pos_t get_pos() override;
 };
 
 //----------------ARRAY_INDEX----------------------
@@ -231,8 +239,9 @@ public:
 	token_ptr get_sqr_bracket_token();
 	expr_t* get_arr();
 	expr_t* get_index();
-	void set_operands(expr_t* arr, expr_t* index) {};
+	void set_operands(expr_t* arr, expr_t* index);
 	type_ptr get_type() override;
+	pos_t get_pos();
 };
 
 //----------------FUNCTION_CALL---------------
