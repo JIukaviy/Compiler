@@ -214,6 +214,12 @@ token_ptr type_t::get_token() {
 	return type->get_token();
 }
 
+type_ptr type_t::make_type(type_base_ptr base_type, bool is_const) {
+	auto res = type_ptr(new type_t(base_type, is_const));
+	res->update_name();
+	return res;
+}
+
 void type_t::set_token(token_ptr token) {
 	type->set_token(token);
 }

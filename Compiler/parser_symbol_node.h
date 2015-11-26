@@ -125,6 +125,7 @@ public:
 	void set_is_const(bool is_const);
 	bool completed() override;
 	token_ptr get_token() override;
+	static type_ptr make_type(type_base_ptr base_type, bool is_const = false);
 	void set_token(token_ptr token) override;
 	int get_size() override;
 };
