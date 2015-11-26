@@ -366,6 +366,18 @@ type_ptr sym_type_ptr_t::get_element_type() {
 	return elem_type;
 }
 
+type_ptr sym_type_ptr_t::dereference(type_ptr type) {
+	auto ptr = dynamic_pointer_cast<sym_type_ptr_t>(type->get_base_type());
+	assert(ptr);
+	return ptr->get_element_type();
+}
+
+type_ptr sym_type_ptr_t::make_ptr(type_ptr type, bool is_const) {
+	auto ptr = shared_ptr<sym_type_ptr_t>(new sym_type_ptr_t);
+	ptr->set_element_type(type);
+	return type_t::make_type(ptr, is_const);
+}
+
 //--------------------------------SYMBOL_TYPE_ARRAY-------------------------------
 
 sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const_) : symbol_t(ST_ARRAY), size(size) {}

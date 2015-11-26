@@ -195,6 +195,8 @@ public:
 	sym_type_ptr_t();
 	void print_l(ostream& os, int level) override;
 	type_ptr get_element_type();
+	static type_ptr dereference(type_ptr ref);
+	static type_ptr make_ptr(type_ptr type, bool is_const = false);
 	int get_size() override;
 };
 
