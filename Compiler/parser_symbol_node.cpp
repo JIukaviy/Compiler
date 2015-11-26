@@ -136,7 +136,7 @@ bool type_base_t::is_ariphmetic() {
 
 string type_t::_get_name() const {
 	if (_is_const) {
-		string res("c");
+		string res("c ");
 		return res + type->get_name();
 	}
 	return type->get_name();
