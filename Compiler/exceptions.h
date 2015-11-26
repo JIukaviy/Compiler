@@ -213,23 +213,28 @@ public:
 class IllegalConversion : public SemanticError {
 public:
 	IllegalConversion(type_ptr a, type_ptr b, pos_t pos) {
-		err << pos << "Can't convert from \"";
+		err << pos << "Can't convert from '";
 		a->print(err);
-		err << "\" to \"";
+		err << "' to '";
 		b->print(err);
-		err << "\"";
+		err << "'";
 	}
 };
 
 class InvalidTernOpOperands : public SemanticError {
 public:
-	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* bin_op) {
-		err << bin_op->get_colon_token()->get_pos() << "Operands of ternary operator must be the same type: \"";
-		err << " (\"";
+	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* tern_op) {
+		err << tern_op->get_colon_token()->get_pos() << "Invalid operands for ternary: \"";
+		err << " (have \'";
 		a->print(err);
-		err << "\" and \"";
+		err << "\' and \'";
 		b->print(err);
-		err << "\")";
+		err << "\')";
+	}
+	InvalidTernOpOperands(type_ptr a, expr_tern_op_t* tern_op) {
+		err << tern_op->get_colon_token()->get_pos() << "Used ";
+		a->print(err);
+		err << " where scalar is required";
 	}
 };
 
@@ -238,11 +243,11 @@ public:
 	InvalidBinOpOperands(type_ptr a, type_ptr b, expr_bin_op_t* bin_op) {
 		err << bin_op->get_pos() << "Invalid operands for binary operator: \"";
 		bin_op->get_op()->short_print(err);
-		err << "\" (\"";
+		err << "\" (have '";
 		a->print(err);
-		err << "\" and \"";
+		err << "' and '";
 		b->print(err);
-		err << "\")";
+		err << "')";
 	}
 };
 
@@ -251,9 +256,9 @@ public:
 	InvalidUnOpOperand(type_ptr a, expr_un_op_t* un_op) {
 		err << un_op->get_op()->get_pos() << "Invalid operand for unary operator: \"";
 		un_op->get_op()->short_print(err);
-		err << "\" (\"";
+		err << "\" (have '";
 		a->print(err);
-		err << "\")";
+		err << "')";
 	}
 };
 
