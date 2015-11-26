@@ -139,10 +139,14 @@ expr_t* parser_t::parser_t::postfix_op() {
 			un_op->set_operand(left);
 			left = un_op;
 		} else if (op == T_BRACKET_OPEN) {
-			//left = new expr_func_t(left, parse_func_args());
+			expr_func_t* func_call = new expr_func_t(op);
+			func_call->set_operands(left, parse_func_args());
+			left = func_call;
 		} else if (op->is(T_OP_DOT, T_OP_ARROW, 0)) {
 			la->next();
-			//left = new expr_struct_access_t(left, op, la->require(op, T_IDENTIFIER, 0));
+			expr_struct_access_t* expr_struct = new expr_struct_access_t(op);
+			expr_struct->set_operands(left, la->require(op, T_IDENTIFIER, 0));
+			left = expr_struct;
 		} else if (op == T_SQR_BRACKET_OPEN) {
 			la->next();
 			expr_t* index = right_associated_bin_op();
@@ -210,9 +214,9 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr  sym_table, b
 			throw SemanticError("Unexpected init list for function declaration", decl.estimated_ident_pos);
 		res = sym_ptr(new sym_func_t(decl.identifier, func_type, decl.func_sym_table));
 	} else {
-		if (!decl.type->completed())
-			throw InvalidIncompleteType(decl.identifier->get_pos());
-		res = sym_ptr(new sym_var_t(decl.identifier, decl.type, decl.init_list));
+		sym_var_t* var = new sym_var_t(decl.identifier);
+		var->set_type_and_init_list(decl.type, decl.init_list);
+		res = sym_ptr(var);
 	}
 
 	res->set_token(decl.identifier);

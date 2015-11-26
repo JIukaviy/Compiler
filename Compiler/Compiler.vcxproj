@@ -128,9 +128,9 @@
     <ClCompile Include="parser_symbol_node.cpp" />
     <ClCompile Include="symbol_table.cpp" />
     <ClCompile Include="tokens.cpp" />
+    <ClCompile Include="type_conversion.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="base_symbol_table.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="expression_optimizer.h" />
     <ClInclude Include="lexeme_analyzer.h" />
@@ -149,6 +149,7 @@
     <ClInclude Include="token_operator.h" />
     <ClInclude Include="token_register.h" />
     <ClInclude Include="token_string.h" />
+    <ClInclude Include="type_conversion.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

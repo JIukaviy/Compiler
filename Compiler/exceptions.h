@@ -214,9 +214,9 @@ class IllegalConversion : public SemanticError {
 public:
 	IllegalConversion(type_ptr a, type_ptr b, pos_t pos) {
 		err << pos << "Can't convert from '";
-		a->print(err);
+		a->short_print(err);
 		err << "' to '";
-		b->print(err);
+		b->short_print(err);
 		err << "'";
 	}
 };
@@ -226,14 +226,14 @@ public:
 	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* tern_op) {
 		err << tern_op->get_colon_token()->get_pos() << "Invalid operands for ternary: \"";
 		err << " (have \'";
-		a->print(err);
+		a->short_print(err);
 		err << "\' and \'";
-		b->print(err);
+		b->short_print(err);
 		err << "\')";
 	}
 	InvalidTernOpOperands(type_ptr a, expr_tern_op_t* tern_op) {
 		err << tern_op->get_colon_token()->get_pos() << "Used ";
-		a->print(err);
+		a->short_print(err);
 		err << " where scalar is required";
 	}
 };
@@ -244,9 +244,9 @@ public:
 		err << bin_op->get_pos() << "Invalid operands for binary operator: \"";
 		bin_op->get_op()->short_print(err);
 		err << "\" (have '";
-		a->print(err);
+		a->short_print(err);
 		err << "' and '";
-		b->print(err);
+		b->short_print(err);
 		err << "')";
 	}
 };
@@ -257,7 +257,7 @@ public:
 		err << un_op->get_op()->get_pos() << "Invalid operand for unary operator: \"";
 		un_op->get_op()->short_print(err);
 		err << "\" (have '";
-		a->print(err);
+		a->short_print(err);
 		err << "')";
 	}
 };
@@ -278,4 +278,28 @@ public:
 	AssignmentToReadOnly(pos_t pos) {
 		err << pos << "Assignment to read only expression";
 	}
+};
+
+class IncorrectNumberOfArguments : public SemanticError {
+public:
+	IncorrectNumberOfArguments(int actually, shared_ptr<sym_type_func_t> func, expr_t* op) {
+		int required = func->get_arg_types().size();
+		err << op->get_pos() << "Too " << (actually < required ? "few " : "many ") << "arguments to function";
+	}
+};
+
+class StructHasNoMember : public SemanticError {
+public:
+	StructHasNoMember(sym_type_struct_t* structure, token_ptr member) {
+		err << member->get_pos() << '\'';
+		structure->short_print(err);
+		err << "' has no member '";
+		member->short_print(err);
+		err << '\'';
+	}
+};
+
+class InvalidInitListSize : public SemanticError {
+public:
+	InvalidInitListSize(pos_t pos) : SemanticError("Too many init arguments", pos) {}
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "parser_symbol_node.h"
+#include <vector>
 #include <map>
 
 class sym_table_t : public vector<sym_ptr>, public node_t {

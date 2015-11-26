@@ -4,6 +4,7 @@
 #include <vector>
 
 class expr_t : public node_t {
+protected:
 	bool lvalue;
 public:
 	expr_t(bool lvalue = false);
@@ -249,29 +250,33 @@ public:
 class expr_func_t : public expr_t {
 	expr_t* func;
 	vector<expr_t*> args;
+	token_ptr brace;
 public:
-	expr_func_t(expr_t* expr, vector<expr_t*> args);
+	expr_func_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
-	void set_operands(expr_t* f, vector<expr_t*> args_) { func = f;  args = args_; };
+	void set_operands(expr_t* f, vector<expr_t*> args_);
 	type_ptr get_type() override;
+	pos_t get_pos() override;
 };
 
 //----------------STRUCT_ACCESS-------------------
 
 class expr_struct_access_t : public expr_t {
-	expr_t* expr;
+	expr_t* struct_expr;
 	token_ptr op;
+	shared_ptr<sym_type_struct_t> structure;
 	shared_ptr<sym_var_t> member;
 public:
 	expr_struct_access_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 	expr_t* get_expr();
-	void set_operands(expr_t* expr, token_ptr member) {};
+	void set_operands(expr_t* expr, token_ptr member);
 	token_ptr get_op();
-	token_ptr get_member() { return token_ptr(); };
+	token_ptr get_member();
 	type_ptr get_type() override;
+	pos_t get_pos() override;
 };
 
 //----------------CAST-------------------

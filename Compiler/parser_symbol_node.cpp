@@ -1,6 +1,7 @@
 #include "symbol_table.h"
 #include "exceptions.h"
 #include "parser.h"
+#include "type_conversion.h"
 #include <vector>
 #include <map>
 
@@ -306,6 +307,8 @@ int sym_type_double_t::get_size() {
 
 //--------------------------------SYMBOL_WITH_TYPE-------------------------------
 
+sym_with_type_t::sym_with_type_t() : symbol_t(ST_VOID, token_ptr()) {}
+
 sym_with_type_t::sym_with_type_t(type_ptr type) : symbol_t(ST_VOID, token_ptr()), type(type) {}
 
 type_ptr sym_with_type_t::get_type() {
@@ -318,8 +321,35 @@ string sym_with_type_t::_get_name() const {
 
 //--------------------------------SYMBOL_VAR-------------------------------
 
-sym_var_t::sym_var_t(token_ptr identifier, type_ptr type, vector<expr_t*> init_list) : sym_with_type_t(type), init_list(init_list), symbol_t(ST_VAR, identifier) {
+sym_var_t::sym_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier) {
 	update_name();
+}
+
+void sym_var_t::set_type_and_init_list(type_ptr type_, vector<expr_t*> init_list_) {
+	type = type_;
+	if (init_list_.size() > 0) {
+		auto arr = dynamic_pointer_cast<sym_type_array_t>(type_->get_base_type());
+		if (type_ != ST_STRUCT && !arr && init_list_.size() > 1)
+			throw InvalidInitListSize(init_list_[1]->get_pos());
+		if (arr) {
+			if (arr->get_element_type() == ST_CHAR && init_list_[0]->get_type() == ST_STRING) {
+				size_t str_literal_size = dynamic_pointer_cast<sym_type_str_literal_t>(init_list_[0]->get_type()->get_base_type())->get_size();
+				if (arr->completed() && arr->get_size() < str_literal_size)
+					throw SemanticError("Initializer string for array of chars is too long", init_list_[0]->get_pos());
+				arr->set_size(str_literal_size);
+				return;
+			}
+			if (arr->completed() && arr->get_size() < init_list_.size())
+				InvalidInitListSize(init_list_[1]->get_pos());
+			arr->set_size(init_list_.size());
+			init_list.resize(init_list_.size());
+			for (int i = 0; i < init_list_.size(); i++)
+				init_list[i] = auto_convert(init_list_[i], arr->get_element_type());
+		} else
+			init_list.push_back(auto_convert(init_list_[0], type));
+	}
+	if (!type_->completed())
+		throw InvalidIncompleteType(token->get_pos());
 }
 
 void sym_var_t::print_l(ostream& os, int level) {
@@ -358,7 +388,7 @@ string sym_type_ptr_t::_get_name() const {
 }
 
 void sym_type_ptr_t::print_l(ostream& os, int level) {
-	os << "pointer to ";;
+	os << "pointer to ";
 	elem_type->print_l(os, level);
 }
 
@@ -380,13 +410,10 @@ type_ptr sym_type_ptr_t::make_ptr(type_ptr type, bool is_const) {
 
 //--------------------------------SYMBOL_TYPE_ARRAY-------------------------------
 
-sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const_) : symbol_t(ST_ARRAY), size(size) {}
+sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const_) : symbol_t(ST_ARRAY), size_expr(size) {}
 
 int sym_type_array_t::get_size() {
-	/*if (type)
-	return type->get_size() * size;
-	else*/
-	return sizeof(void*);
+	return size;
 }
 
 string sym_type_array_t::_get_name() const {
@@ -397,13 +424,17 @@ string sym_type_array_t::_get_name() const {
 void sym_type_array_t::print_l(ostream& os, int level) {
 	os << "array[";
 	if (size)
-		size->short_print(os);
+		os << size;
 	os << "] with elems: ";
 	elem_type->print(os);
 }
 
 bool sym_type_array_t::completed() {
 	return size;
+}
+
+void sym_type_array_t::set_size(size_t size_) {
+	size = size_;
 }
 
 type_ptr sym_type_array_t::get_element_type() {
@@ -485,7 +516,7 @@ shared_ptr<sym_type_func_t> sym_func_t::get_func_type() {
 	return static_pointer_cast<sym_type_func_t>(type->get_base_type());
 }
 
-void sym_func_t::set_block(node_ptr b) {
+void sym_func_t::set_block(stmt_ptr b) {
 	block = b;
 }
 
@@ -610,6 +641,13 @@ void sym_type_struct_t::set_sym_table(sym_table_ptr  s) {
 
 sym_table_ptr  sym_type_struct_t::get_sym_table() {
 	return sym_table;
+}
+
+shared_ptr<sym_var_t> sym_type_struct_t::get_member(token_ptr member) {
+	auto res = dynamic_pointer_cast<sym_var_t>(sym_table->find_global(member));
+	if (!res)
+		throw StructHasNoMember(this, member);
+	return res;
 }
 
 bool sym_type_struct_t::completed() {

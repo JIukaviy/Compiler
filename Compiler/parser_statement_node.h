@@ -60,7 +60,6 @@ public:
 
 template<TOKEN T>
 inline void stmt_named_t<T>::short_print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "statement: \"" << token_t::get_name_by_id(T) << "\" ";
 }
 
@@ -118,7 +117,6 @@ void stmt_jump_t<T, typename pT>::print_l(ostream& os, int level) {
 	short_print_l(os, level);
 	os << "for ";
 	parent->short_print(os);
-	os << endl;
 }
 
 class stmt_break_t : public stmt_jump_t<T_KWRD_BREAK, shared_ptr<stmt_loop_t>> {

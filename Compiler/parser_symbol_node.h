@@ -135,6 +135,7 @@ protected:
 	type_ptr type;
 	string _get_name() const override;
 public:
+	sym_with_type_t();
 	sym_with_type_t(type_ptr type);
 	type_ptr get_type();
 };
@@ -143,7 +144,8 @@ class sym_var_t : public sym_with_type_t {
 protected:
 	vector<expr_t*> init_list;
 public:
-	sym_var_t(token_ptr identifier, type_ptr type, vector<expr_t*> init_list);
+	sym_var_t(token_ptr identifier);
+	void set_type_and_init_list(type_ptr type, vector<expr_t*> init_list);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 };
@@ -202,13 +204,15 @@ public:
 
 class sym_type_array_t : public updatable_base_type_t {
 protected:
-	expr_t* size;
+	expr_t* size_expr;
+	size_t size;
 	string _get_name() const override;
 public:
 	sym_type_array_t(expr_t* size = nullptr, bool is_const_ = false);
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
+	void set_size(size_t size);
 	type_ptr get_element_type();
 	int get_size() override;
 };
@@ -223,6 +227,7 @@ public:
 	sym_type_struct_t(token_ptr identifier);
 	void set_sym_table(sym_table_ptr  s);
 	sym_table_ptr  get_sym_table();
+	shared_ptr<sym_var_t> get_member(token_ptr member);
 	bool completed() override;
 	int get_size() override;
 	void print_l(ostream& os, int level) override;
@@ -244,12 +249,12 @@ public:
 
 class sym_func_t : public sym_with_type_t {
 protected:
-	node_ptr block;
+	stmt_ptr block;
 	sym_table_ptr sym_table;
 public:
 	sym_func_t(token_ptr ident, shared_ptr<sym_type_func_t> func_type, sym_table_ptr sym_table);
 	shared_ptr<sym_type_func_t> get_func_type();
-	void set_block(node_ptr b);
+	void set_block(stmt_ptr b);
 	void set_sym_table(sym_table_ptr sym_table);
 	sym_table_ptr get_sym_table();
 	void clear_sym_table();

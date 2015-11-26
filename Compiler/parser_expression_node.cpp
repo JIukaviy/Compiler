@@ -31,6 +31,8 @@ void expr_var_t::set_symbol(shared_ptr<sym_with_type_t> symbol_, token_ptr var_t
 	assert(symbol_->is(ST_VAR) || symbol_->is(ST_FUNC));
 	variable = symbol_;
 	var_token = var_token_;
+	if (variable->is(ST_FUNC))
+		lvalue = false;
 }
 
 token_ptr expr_var_t::get_token() {
@@ -39,15 +41,10 @@ token_ptr expr_var_t::get_token() {
 
 type_ptr expr_var_t::get_type() {
 	if (variable->get_type() == ST_ARRAY) {
-		auto ptr = shared_ptr<sym_type_ptr_t>(new sym_type_ptr_t());
 		bool is_const = variable->get_type()->is_const();
-		ptr->set_element_type(type_t::make_type(static_pointer_cast<sym_type_array_t>(variable->get_type()->get_base_type())->get_element_type(), is_const));
-		return type_t::make_type(ptr, true);
-	} else if (variable->get_type() == ST_FUNC) {
-		auto ptr = shared_ptr<sym_type_ptr_t>(new sym_type_ptr_t());
-		ptr->set_element_type(type_t::make_type(variable->get_type()));
-		return type_t::make_type(ptr, true);
-	}
+		return sym_type_ptr_t::make_ptr(type_t::make_type(static_pointer_cast<sym_type_array_t>(variable->get_type()->get_base_type())->get_element_type(), is_const));
+	} else if (variable->get_type() == ST_FUNC)
+		return sym_type_ptr_t::make_ptr(variable->get_type(), true);
 	return variable->get_type();
 }
 
@@ -215,7 +212,7 @@ expr_dereference_op_t::expr_dereference_op_t(token_ptr op) : expr_prefix_un_op_t
 }
 
 type_ptr expr_dereference_op_t::get_type() {
-	return static_pointer_cast<sym_type_ptr_t>(expr->get_type()->get_base_type())->get_element_type();
+	return sym_type_ptr_t::dereference(expr->get_type());
 }
 
 //-----------------------------------PREFIX_INC_DEC-----------------------------------
@@ -655,40 +652,63 @@ pos_t expr_arr_index_t::get_pos() {
 
 //-----------------------------------STRUCT_ACCESS-----------------------------------
 
-expr_struct_access_t::expr_struct_access_t(token_ptr op) : op(op) {}
+expr_struct_access_t::expr_struct_access_t(token_ptr op) : expr_t(true), op(op) {}
 
 void expr_struct_access_t::print_l(ostream& os, int level) {
-	expr->print_l(os, level + 1);
+	struct_expr->print_l(os, level + 1);
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
 	print_level(os, level + 1);
-	member->short_print(os);
+	member->get_token()->short_print(os);
 	os << endl;
 }
 
 void expr_struct_access_t::short_print_l(ostream& os, int level) {
 	print_level(os, level);
-	expr->short_print(os);
+	struct_expr->short_print(os);
 	op->short_print(os);
-	member->short_print(os);
+	member->get_token()->short_print(os);
 }
 
 expr_t* expr_struct_access_t::get_expr() {
-	return expr;
+	return struct_expr;
+}
+
+void expr_struct_access_t::set_operands(expr_t* expr_, token_ptr member_token) {
+	if (op == T_OP_DOT) {
+		if (expr_->get_type() != ST_STRUCT)
+			throw SemanticError("Expected struct as left operand of '.'", expr_->get_pos());
+		structure = static_pointer_cast<sym_type_struct_t>(expr_->get_type()->get_base_type());
+	} else {
+		assert(op == T_OP_ARROW);
+		if (expr_->get_type() != ST_PTR || sym_type_ptr_t::dereference(expr_->get_type()) != ST_STRUCT)
+			throw SemanticError("Expected pointer to struct as left operand of '->'", expr_->get_pos());
+		structure = static_pointer_cast<sym_type_struct_t>(sym_type_ptr_t::dereference(expr_->get_type())->get_base_type());
+	}
+	member = structure->get_member(member_token);
+	struct_expr = expr_;
 }
 
 token_ptr expr_struct_access_t::get_op() {
 	return op;
 }
 
+token_ptr expr_struct_access_t::get_member() {
+	return member->get_token();
+}
+
 type_ptr expr_struct_access_t::get_type() {
 	return member->get_type();
 }
 
+pos_t expr_struct_access_t::get_pos() {
+	return op->get_pos();
+}
+
 //-----------------------------------FUNCTION_CALL-----------------------------------
 
-expr_func_t::expr_func_t(expr_t * expr_, vector<expr_t*> args_) : func(expr_), args(args_) {}
+expr_func_t::expr_func_t(token_ptr op) : brace(op) {}
 
 void expr_func_t::print_l(ostream &os, int level) {
 	func->print_l(os, level + 1);
@@ -710,12 +730,26 @@ void expr_func_t::short_print_l(ostream& os, int level) {
 	os << ")";
 }
 
-void expr_func_t::set_operands(expr_t * f, vector<expr_t*> args_) {
-
+void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
+	if (func_->get_type() != ST_PTR ||
+		sym_type_ptr_t::dereference(func_->get_type()) != ST_FUNC)
+		throw SemanticError("Called object is not a function or function pointer");
+	func = func_;
+	auto func_type = dynamic_pointer_cast<sym_type_func_t>(sym_type_ptr_t::dereference(func_->get_type())->get_base_type());
+	auto func_args = func_type->get_arg_types();
+	if (func_args.size() != args_.size())
+		throw IncorrectNumberOfArguments(args_.size(), func_type, this);
+	args.resize(func_args.size());
+	for (int i = 0; i < func_args.size(); i++)
+		args[i] = auto_convert(args_[i], func_args[i]);
 }
 
 type_ptr expr_func_t::get_type() {
 	return func->get_type();
+}
+
+pos_t expr_func_t::get_pos() {
+	return brace->get_pos();
 }
 
 //-----------------------------------CAST_OPERATOR-----------------------------------
