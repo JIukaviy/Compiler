@@ -359,7 +359,7 @@ string sym_type_ptr_t::_get_name() const {
 
 void sym_type_ptr_t::print_l(ostream& os, int level) {
 	os << "pointer to ";;
-	elem_type->print(os);
+	elem_type->print_l(os, level);
 }
 
 type_ptr sym_type_ptr_t::get_element_type() {
