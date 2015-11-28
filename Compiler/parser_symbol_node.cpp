@@ -121,7 +121,7 @@ bool type_base_t::is_integer(SYM_TYPE sym_type) {
 	return (sym_type == ST_CHAR) || (sym_type == ST_INTEGER);
 }
 
-bool type_base_t::is_ariphmetic(SYM_TYPE sym_type) {
+bool type_base_t::is_arithmetic(SYM_TYPE sym_type) {
 	return is_integer(sym_type) || sym_type == ST_DOUBLE;
 }
 
@@ -129,8 +129,8 @@ bool type_base_t::is_integer() {
 	return is_integer(symbol_type);
 }
 
-bool type_base_t::is_ariphmetic() {
-	return is_ariphmetic(symbol_type);
+bool type_base_t::is_arithmetic() {
+	return is_arithmetic(symbol_type);
 }
 
 //--------------------------------TYPE-------------------------------
@@ -203,8 +203,8 @@ bool type_t::is_integer() {
 	return type->is_integer();
 }
 
-bool type_t::is_ariphmetic() {
-	return type->is_ariphmetic();
+bool type_t::is_arithmetic() {
+	return type->is_arithmetic();
 }
 
 void type_t::set_is_const(bool is_const) {
@@ -219,6 +219,14 @@ type_ptr type_t::make_type(type_base_ptr base_type, bool is_const) {
 	auto res = type_ptr(new type_t(base_type, is_const));
 	res->update_name();
 	return res;
+}
+
+type_ptr type_t::make_type(SYM_TYPE sym_type, bool is_const) {
+	return make_type(type_base_t::make_type(sym_type), is_const);
+}
+
+type_ptr type_t::make_type(type_base_t* base_type, bool is_const) {
+	return make_type(type_base_ptr(base_type), is_const);
 }
 
 void type_t::set_token(token_ptr token) {
@@ -262,7 +270,7 @@ sym_type_str_literal_t::sym_type_str_literal_t(token_ptr str) : symbol_t(ST_STRI
 }
 
 int sym_type_str_literal_t::get_size() {
-	return static_cast<token_with_value_t<string>*>(str.get())->get_value().length();
+	return static_pointer_cast<token_with_value_t<string>>(str)->get_value().length();
 }
 
 void sym_type_str_literal_t::print_l(ostream& os, int level) {
@@ -332,15 +340,18 @@ void sym_var_t::set_type_and_init_list(type_ptr type_, vector<expr_t*> init_list
 		if (type_ != ST_STRUCT && !arr && init_list_.size() > 1)
 			throw InvalidInitListSize(init_list_[1]->get_pos());
 		if (arr) {
-			if (arr->get_element_type() == ST_CHAR && init_list_[0]->get_type() == ST_STRING) {
-				size_t str_literal_size = dynamic_pointer_cast<sym_type_str_literal_t>(init_list_[0]->get_type()->get_base_type())->get_size();
+			if (arr->get_element_type() == ST_CHAR && 
+				typeid(*init_list_[0]) == typeid(expr_const_t) &&
+				static_cast<expr_const_t*>(init_list_[0])->get_token() == T_STRING) 
+			{
+				size_t str_literal_size = init_list_[0]->get_type()->get_size();
 				if (arr->completed() && arr->get_size() < str_literal_size)
-					throw SemanticError("Initializer string for array of chars is too long", init_list_[0]->get_pos());
+					throw SemanticError("Initializer string for array of char is too long", init_list_[0]->get_pos());
 				arr->set_size(str_literal_size);
 				return;
 			}
 			if (arr->completed() && arr->get_size() < init_list_.size())
-				InvalidInitListSize(init_list_[1]->get_pos());
+				throw InvalidInitListSize(init_list_[1]->get_pos());
 			arr->set_size(init_list_.size());
 			init_list.resize(init_list_.size());
 			for (int i = 0; i < init_list_.size(); i++)
@@ -353,9 +364,9 @@ void sym_var_t::set_type_and_init_list(type_ptr type_, vector<expr_t*> init_list
 }
 
 void sym_var_t::print_l(ostream& os, int level) {
-	os << "variable: \"";
+	os << "variable: ";
 	token->short_print(os);
-	os << "\", type: ";
+	os << ", type: ";
 	type->print_l(os, level);
 	if (!init_list.empty()) {
 		os << ", init list: {";
@@ -410,7 +421,10 @@ type_ptr sym_type_ptr_t::make_ptr(type_ptr type, bool is_const) {
 
 //--------------------------------SYMBOL_TYPE_ARRAY-------------------------------
 
-sym_type_array_t::sym_type_array_t(expr_t* size, bool is_const_) : symbol_t(ST_ARRAY), size_expr(size) {}
+sym_type_array_t::sym_type_array_t(expr_t* size_expr) : symbol_t(ST_ARRAY), size_expr(size_expr) {
+	if (size_expr)
+		size = 1; // ƒобавить вычисление константных выражений
+}
 
 int sym_type_array_t::get_size() {
 	return size;
@@ -441,13 +455,17 @@ type_ptr sym_type_array_t::get_element_type() {
 	return elem_type;
 }
 
+type_ptr sym_type_array_t::get_ptr_to_elem_type() {
+	return sym_type_ptr_t::make_ptr(elem_type);
+}
+
 void sym_type_array_t::set_element_type(type_ptr type) {
 	if (!type)
 		return;
 	if (type == ST_FUNC)
 		throw SemanticError("Array can't contain functions", type->get_token()->get_pos());
 	if (!type->completed())
-		throw SemanticError("Array can contatin only completed types", type->get_token()->get_pos());
+		throw SemanticError("Array type has incomplete element type", type->get_token()->get_pos());
 
 	elem_type = type;
 }

@@ -89,9 +89,9 @@ public:
 	static type_base_ptr make_type(SYM_TYPE s);
 	virtual int get_size();
 	static bool is_integer(SYM_TYPE sym_type);
-	static bool is_ariphmetic(SYM_TYPE sym_type);
+	static bool is_arithmetic(SYM_TYPE sym_type);
 	virtual bool is_integer();
-	virtual bool is_ariphmetic();
+	virtual bool is_arithmetic();
 };
 
 class updatable_base_type_t : public type_base_t {
@@ -121,11 +121,13 @@ public:
 	bool is(type_ptr type) const;
 	bool is_const();
 	bool is_integer() override;
-	bool is_ariphmetic() override;
+	bool is_arithmetic() override;
 	void set_is_const(bool is_const);
 	bool completed() override;
 	token_ptr get_token() override;
 	static type_ptr make_type(type_base_ptr base_type, bool is_const = false);
+	static type_ptr make_type(SYM_TYPE sym_type, bool is_const = false);
+	static type_ptr make_type(type_base_t* base_type, bool is_const = false);
 	void set_token(token_ptr token) override;
 	int get_size() override;
 };
@@ -208,12 +210,13 @@ protected:
 	size_t size;
 	string _get_name() const override;
 public:
-	sym_type_array_t(expr_t* size = nullptr, bool is_const_ = false);
+	sym_type_array_t(expr_t* size = nullptr);
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
 	void set_size(size_t size);
 	type_ptr get_element_type();
+	type_ptr get_ptr_to_elem_type();
 	int get_size() override;
 };
 
@@ -266,7 +269,7 @@ public:
 class sym_type_alias_t : public type_base_t, public sym_with_type_t {
 public:
 	sym_type_alias_t::sym_type_alias_t(token_ptr identifier, type_ptr type);
-	virtual void update_name();
+	void update_name() override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
 };
