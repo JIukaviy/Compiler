@@ -299,17 +299,12 @@ decl_raw_t parser_t::parse_declaration_raw() {
 	bool is_ptr = false;
 	res.init_decl_is_empty = !(chain || chain.identifier);
 	type_ptr type(new type_t(base_type));
+	type->set_is_const(has_const);
 	if (chain) {
-		is_ptr = chain.last->is(ST_PTR);
-		if (is_ptr)
-			type->set_is_const(has_const);
 		static_pointer_cast<updatable_base_type_t>(chain.last->get_base_type())->set_element_type(type);
 		type = chain.last;
 	} else
 		res.type = type;
-
-	if (!is_ptr)
-		type->set_is_const(has_const && res.type != ST_FUNC);
 
 	res.init_list = parse_initializer_list();
 	res.type_def = has_typedef;
