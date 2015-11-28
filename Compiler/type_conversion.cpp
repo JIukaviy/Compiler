@@ -6,9 +6,14 @@
 #include <set>
 
 bool eq_types(type_base_ptr a, type_base_ptr b) {
-	return a == b || a == ST_PTR && b == ST_PTR && 
-		static_pointer_cast<sym_type_ptr_t>(a)->get_element_type() ==
-		static_pointer_cast<sym_type_ptr_t>(b)->get_element_type();
+	return 
+		a == b ||
+		a == ST_ARRAY && b == ST_ARRAY &&
+		static_pointer_cast<sym_type_array_t>(a)->get_element_type()->get_base_type() ==
+		static_pointer_cast<sym_type_array_t>(b)->get_element_type()->get_base_type() ||
+		a == ST_PTR && b == ST_PTR && 
+		static_pointer_cast<sym_type_ptr_t>(a)->get_element_type()->get_base_type() ==
+		static_pointer_cast<sym_type_ptr_t>(b)->get_element_type()->get_base_type();
 }
 
 expr_t* add_cast(expr_t* src, type_ptr dst) {
@@ -35,8 +40,8 @@ type_ptr get_max_type(type_ptr left, type_ptr right) {
 	if (left->get_base_type() == right->get_base_type())
 		return left;
 
-	assert(left->is_ariphmetic());
-	assert(right->is_ariphmetic());
+	assert(left->is_arithmetic());
+	assert(right->is_arithmetic());
 
 	return  
 		left == ST_DOUBLE ? left :

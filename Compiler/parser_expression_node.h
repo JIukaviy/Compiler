@@ -111,6 +111,7 @@ protected:
 	vector<void(*)(expr_t* left, expr_t* right, expr_bin_op_t* op)> and_conditions;
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
+	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -139,32 +140,32 @@ public:
 	expr_integer_assign_bin_op_t(token_ptr token);
 };
 
-class expr_ariphmetic_bin_op_t : public expr_bin_op_t {
+class expr_arithmetic_bin_op_t : public expr_bin_op_t {
 public:
-	expr_ariphmetic_bin_op_t(token_ptr token);
+	expr_arithmetic_bin_op_t(token_ptr token);
 };
 
-class expr_ariphmetic_assign_bin_op_t : public expr_assign_bin_op_t {
+class expr_arithmetic_assign_bin_op_t : public expr_assign_bin_op_t {
 public:
-	expr_ariphmetic_assign_bin_op_t(token_ptr token);
+	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
 
-class expr_add_bin_op_t : public expr_bin_op_t {
+class expr_add_bin_op_t : public expr_arithmetic_bin_op_t {
 public:
 	expr_add_bin_op_t(token_ptr op);
 };
 
-class expr_add_assign_bin_op_t : public expr_assign_bin_op_t {
+class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
 
-class expr_sub_bin_op_t : public expr_bin_op_t {
+class expr_sub_bin_op_t : public expr_arithmetic_bin_op_t {
 public:
 	expr_sub_bin_op_t(token_ptr op);
 };
 
-class expr_sub_assign_bin_op_t : public expr_assign_bin_op_t {
+class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
@@ -179,7 +180,7 @@ public:
 	expr_mod_assign_bin_op_t(token_ptr op);
 };
 
-class expr_relational_bin_op_t : public expr_ariphmetic_bin_op_t {
+class expr_relational_bin_op_t : public expr_arithmetic_bin_op_t {
 public:
 	expr_relational_bin_op_t(token_ptr op);
 	type_ptr get_type() override;
