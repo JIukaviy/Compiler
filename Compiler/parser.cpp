@@ -188,7 +188,7 @@ sym_ptr parser_t::parse_declaration(bool abstract_decl) {
 	return parse_declaration(parse_declaration_raw(), sym_table, abstract_decl);
 }
 
-sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr  sym_table, bool abstract_decl) {
+sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bool abstract_decl) {
 	sym_ptr res;
 
 	optimize_type(decl.type);
@@ -199,8 +199,8 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr  sym_table, b
 		else
 			return sym_ptr();
 
-	if (decl.type->is_const() && decl.init_list.empty() && !decl.type_def)
-		throw SemanticError("For constant variable initializer is needed");
+	/*if (decl.type->is_const() && decl.init_list.empty() && !decl.type_def)
+		throw SemanticError("For constant variable initializer is needed");*/
 
 	auto func_type = dynamic_pointer_cast<sym_type_func_t>(decl.type->get_base_type());
 	if (decl.type_def) {
@@ -292,7 +292,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 	}
 
 	if (!type_spec)
-		throw SyntaxError("Type specifier is expected", la->get()->get_pos());
+		throw TypeSpecIsExpected(la->get());
 	
 	type_chain_t chain = parse_declarator();
 	decl_raw_t res(chain);
@@ -726,8 +726,8 @@ type_base_ptr parser_t::get_base_type(SYM_TYPE sym_type) {
 	return dynamic_pointer_cast<type_base_t>(prelude_sym_table->get_global(type_base_t::make_type(sym_type)));
 }
 
-type_ptr parser_t::get_type(SYM_TYPE sym_type) {
-	return type_ptr(new type_t(get_base_type(sym_type)));
+type_ptr parser_t::get_type(SYM_TYPE sym_type, bool is_const) {
+	return type_t::make_type(get_base_type(sym_type), is_const);
 }
 
 void set_operator_priority(TOKEN op, int priority) {

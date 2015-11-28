@@ -100,5 +100,5 @@ public:
 	void print_statements(ostream&);
 	static sym_table_ptr get_prelude_sym_table();
 	static type_base_ptr get_base_type(SYM_TYPE sym_type);
-	static type_ptr get_type(SYM_TYPE sym_type);
+	static type_ptr get_type(SYM_TYPE sym_type, bool is_const = false);
 };
