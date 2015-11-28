@@ -45,9 +45,6 @@
     <ClCompile Include="symbol_table.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
-    <ClCompile Include="expression_optimizer.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
     <ClCompile Include="type_conversion.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
@@ -103,9 +100,6 @@
     </ClInclude>
     <ClInclude Include="token_register.h">
       <Filter>Заголовочные файлы\tokens</Filter>
-    </ClInclude>
-    <ClInclude Include="expression_optimizer.h">
-      <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="type_conversion.h">
       <Filter>Заголовочные файлы</Filter>

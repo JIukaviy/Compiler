@@ -118,7 +118,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="expression_optimizer.cpp" />
     <ClCompile Include="lexeme_analyzer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="parser.cpp" />
@@ -132,7 +131,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exceptions.h" />
-    <ClInclude Include="expression_optimizer.h" />
     <ClInclude Include="lexeme_analyzer.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="parser_base_node.h" />

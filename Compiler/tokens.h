@@ -107,12 +107,23 @@ bool token_with_value_t<T>::operator==(const token_t& token_) const {
 template<typename T>
 void token_with_value_t<T>::print_l(ostream& os, int level) {
 	token_t::print_l(os, level);
-	os << ", value: " << value;
+	os << ", value: ";
+	short_print_l(os, level);
 }
 
 template<typename T>
 void token_with_value_t<T>::short_print_l(ostream& os, int level) {
 	os << value;
+}
+
+template<>
+inline void token_with_value_t<char>::short_print_l(ostream& os, int level) {
+	os << '\'' << value << '\'';
+}
+
+template<>
+inline void token_with_value_t<string>::short_print_l(ostream& os, int level) {
+	os << '\"' << value << '\"';
 }
 
 template<typename T>
