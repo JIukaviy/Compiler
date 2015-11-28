@@ -465,7 +465,6 @@ void sym_type_func_t::update_name() {
 
 string sym_type_func_t::_get_name() const {
 	string res;
-	res += elem_type->get_name();
 	res += '(';
 	for (int i = 0; i < arg_types.size(); i++) {
 		res += arg_types[i]->get_name();
@@ -473,6 +472,7 @@ string sym_type_func_t::_get_name() const {
 			res += ',';
 	}
 	res += ')';
+	res += elem_type->get_name();
 	return res;
 }
 
