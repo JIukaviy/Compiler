@@ -53,3 +53,13 @@ void arithmetic_conversion(expr_t** left, expr_t** right) {
 	*left = auto_convert(*left, max_type);
 	*right = auto_convert(*right, max_type);
 }
+
+expr_t* array_to_ptr(expr_t* arr) {
+	assert(arr->get_type() == ST_ARRAY);
+	return add_cast(arr, static_pointer_cast<sym_type_array_t>(arr->get_type()->get_base_type())->get_ptr_to_elem_type());
+}
+
+expr_t* func_to_ptr(expr_t* func) {
+	assert(func->get_type() == ST_FUNC);
+	return add_cast(func, sym_type_ptr_t::make_ptr(func->get_type()));
+}
