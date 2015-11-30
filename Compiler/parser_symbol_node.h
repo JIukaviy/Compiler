@@ -1,8 +1,7 @@
 #pragma once
 #include "tokens.h"
 #include "parser_base_node.h"
-#include "parser_expression_node.h"
-#include "base_symbol_table.h"
+#include <vector>
 
 enum SYM_TYPE {
 	ST_INTEGER,
@@ -60,10 +59,10 @@ protected:
 	SYM_TYPE symbol_type;
 	token_ptr token;
 public:
-	symbol_t();
 	symbol_t(SYM_TYPE symbol_type);
+	symbol_t(SYM_TYPE symbol_type, token_ptr token);
 	virtual void update_name();
-	const string& get_name() const;
+	virtual const string& get_name() const;
 	bool lower(sym_ptr s) const;
 	bool equal(sym_ptr s) const;
 	bool unequal(sym_ptr s) const;
@@ -83,19 +82,23 @@ template<> struct less<sym_ptr> {
 	}
 };
 
-class type_base_t : public symbol_t {
+class type_base_t : public virtual symbol_t {
 public:
-	type_base_t(SYM_TYPE symbol_type);
+	type_base_t();
 	virtual bool completed();
 	static type_base_ptr make_type(SYM_TYPE s);
 	virtual int get_size();
+	static bool is_integer(SYM_TYPE sym_type);
+	static bool is_arithmetic(SYM_TYPE sym_type);
+	virtual bool is_integer();
+	virtual bool is_arithmetic();
 };
 
 class updatable_base_type_t : public type_base_t {
 protected:
 	type_ptr elem_type;
 public:
-	using type_base_t::type_base_t;
+	updatable_base_type_t();
 	virtual void set_element_type(type_ptr type);
 	virtual type_ptr get_element_type();
 	void update_name() override;
@@ -112,25 +115,39 @@ public:
 	void print_l(ostream& os, int level) override;
 	type_base_ptr get_base_type();
 	void update_name() override;
+	//const string& get_name() const override;
 	void set_base_type(type_base_ptr type);
 	bool is(SYM_TYPE sym_type) const override;
+	bool is(type_ptr type) const;
 	bool is_const();
+	bool is_integer() override;
+	bool is_arithmetic() override;
 	void set_is_const(bool is_const);
 	bool completed() override;
 	token_ptr get_token() override;
+	static type_ptr make_type(type_base_ptr base_type, bool is_const = false);
+	static type_ptr make_type(SYM_TYPE sym_type, bool is_const = false);
+	static type_ptr make_type(type_base_t* base_type, bool is_const = false);
 	void set_token(token_ptr token) override;
 	int get_size() override;
 };
 
-class sym_var_t : public symbol_t {
+class sym_with_type_t : public virtual symbol_t {
 protected:
-	token_ptr identifier;
-	vector<expr_t*> init_list;
 	type_ptr type;
 	string _get_name() const override;
 public:
-	sym_var_t(token_ptr identifier, type_ptr type, vector<expr_t*> init_list);
+	sym_with_type_t();
+	sym_with_type_t(type_ptr type);
 	type_ptr get_type();
+};
+
+class sym_var_t : public sym_with_type_t {
+protected:
+	vector<expr_t*> init_list;
+public:
+	sym_var_t(token_ptr identifier);
+	void set_type_and_init_list(type_ptr type, vector<expr_t*> init_list);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 };
@@ -175,32 +192,37 @@ public:
 	int get_size() override;
 };
 
-class sym_type_ptr : public updatable_base_type_t {
+class sym_type_ptr_t : public updatable_base_type_t {
 protected:
 	string _get_name() const override;
 public:
-	sym_type_ptr();
+	sym_type_ptr_t();
 	void print_l(ostream& os, int level) override;
 	type_ptr get_element_type();
+	static type_ptr dereference(type_ptr ref);
+	static type_ptr make_ptr(type_ptr type, bool is_const = false);
 	int get_size() override;
 };
 
 class sym_type_array_t : public updatable_base_type_t {
 protected:
-	expr_t* size;
+	expr_t* size_expr;
+	size_t size;
 	string _get_name() const override;
 public:
-	sym_type_array_t(expr_t* size = nullptr, bool is_const_ = false);
+	sym_type_array_t(expr_t* size = nullptr);
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
+	void set_size(size_t size);
 	type_ptr get_element_type();
+	type_ptr get_ptr_to_elem_type();
 	int get_size() override;
 };
 
 class sym_type_struct_t : public type_base_t {
 protected:
-	sym_table_ptr  sym_table;
+	sym_table_ptr sym_table;
 	token_ptr identifier;
 	string _get_name() const override;
 public:
@@ -208,6 +230,7 @@ public:
 	sym_type_struct_t(token_ptr identifier);
 	void set_sym_table(sym_table_ptr  s);
 	sym_table_ptr  get_sym_table();
+	shared_ptr<sym_var_t> get_member(token_ptr member);
 	bool completed() override;
 	int get_size() override;
 	void print_l(ostream& os, int level) override;
@@ -222,21 +245,19 @@ public:
 	sym_type_func_t(const vector<type_ptr> &at);
 	virtual void update_name();
 	void set_arg_types(const vector<type_ptr> &at);
+	vector<type_ptr> get_arg_types();
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 };
 
-class sym_func_t : public symbol_t {
+class sym_func_t : public sym_with_type_t {
 protected:
-	node_ptr block;
-	token_ptr identifier;
+	stmt_ptr block;
 	sym_table_ptr sym_table;
-	shared_ptr<sym_type_func_t> func_type;
-	string _get_name() const override;
 public:
 	sym_func_t(token_ptr ident, shared_ptr<sym_type_func_t> func_type, sym_table_ptr sym_table);
 	shared_ptr<sym_type_func_t> get_func_type();
-	void set_block(node_ptr b);
+	void set_block(stmt_ptr b);
 	void set_sym_table(sym_table_ptr sym_table);
 	sym_table_ptr get_sym_table();
 	void clear_sym_table();
@@ -245,15 +266,10 @@ public:
 	void print_l(ostream& os, int level) override;
 };
 
-class sym_type_alias_t : public type_base_t {
-protected:
-	type_ptr type;
-	token_ptr identifier;
-	string _get_name() const override;
+class sym_type_alias_t : public type_base_t, public sym_with_type_t {
 public:
 	sym_type_alias_t::sym_type_alias_t(token_ptr identifier, type_ptr type);
-	virtual void update_name();
+	void update_name() override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
-	type_ptr get_type();
 };

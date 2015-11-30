@@ -14,17 +14,19 @@ stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr, stmt_
 stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr) : init_expr(init_expr), condition(condition), expr(expr) {}
 
 void stmt_block_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << '{' << endl;
 	if (!sym_table->empty()) {
 		sym_table->print_l(os, level + 1);
 		if (!statements.empty())
 			os << endl;
 	}
-	for each (auto var in statements)
+	for each (auto var in statements) {
+		print_level(os, level + 1);
 		var->print_l(os, level + 1);
+		os << endl;
+	}
 	print_level(os, level);
-	os << '}' << endl;
+	os << '}';
 }
 
 void stmt_block_t::add_statement(stmt_ptr stmt) {
@@ -36,33 +38,44 @@ sym_table_ptr  stmt_block_t::get_sym_table() {
 }
 
 void stmt_expr_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "expression: ";
 	expression->short_print(os);
-	os << ';' << endl;
+	os << ';';
 }
 
 void stmt_decl_t::print_l(ostream& os, int level) {
-	print_level(os, level);
 	os << "declaration: ";
-	symbol->short_print(os);
-	os << ';' << endl;
+	symbol->short_print_l(os, level);
+	os << ';';
 }
 
 void stmt_if_t::print_l(ostream& os, int level) {
 	short_print_l(os, level);
 	os << " (";
 	condition->short_print(os);
-	os << ')';
+	os << ") ";
 	if (then_stmt) {
-		os << endl;
-		then_stmt->print_l(os, level + 1);
+		if (typeid(*then_stmt.get()) != typeid(stmt_block_t)) {
+			os << endl;
+			print_level(os, level + 1);
+			then_stmt->print_l(os, level + 1);
+		} else
+			then_stmt->print_l(os, level);
 	} else
-		os << ';' << endl;
+		os << ';';
 	if (else_stmt) {
-		print_level(os, level);
-		os << "else" << endl;
-		else_stmt->print_l(os, level+1);
+		if (typeid(*then_stmt.get()) != typeid(stmt_block_t)) {
+			os << endl;
+			print_level(os, level);
+		} else
+			os << ' ';
+		os << "else ";
+		if (typeid(*else_stmt.get()) != typeid(stmt_block_t)) {
+			os << endl;
+			print_level(os, level + 1);
+			else_stmt->print_l(os, level + 1);
+		} else 
+			else_stmt->print_l(os, level);
 	}
 }
 
@@ -71,13 +84,16 @@ void stmt_loop_t::set_statement(stmt_ptr statement) {
 }
 
 void stmt_while_t::print_l(ostream& os, int level) {
-	short_print_l(os, level);
 	os << " (";
 	condition->short_print(os);
-	os << ')';
+	os << ") ";
 	if (stmt) {
-		os << endl;
-		stmt->print_l(os, level + 1);
+		if (typeid(*stmt.get()) != typeid(stmt_block_t)) {
+			os << endl;
+			print_level(os, level + 1);
+			stmt->print_l(os, level + 1);
+		} else
+			stmt->print_l(os, level);
 	} else
 		os << ';' << endl;
 }
@@ -93,10 +109,14 @@ void stmt_for_t::print_l(ostream& os, int level) {
 	os << "; ";
 	if (expr)
 		expr->short_print(os);
-	os << ')';
+	os << ") ";
 	if (stmt) {
-		os << endl;
-		stmt->print_l(os, level + 1);
+		if (typeid(*stmt.get()) != typeid(stmt_block_t)) {
+			os << endl;
+			print_level(os, level + 1);
+			stmt->print_l(os, level + 1);
+		} else
+			stmt->print_l(os, level);
 	} else
 		os << ';' << endl;
 }

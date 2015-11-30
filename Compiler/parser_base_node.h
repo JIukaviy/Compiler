@@ -23,6 +23,8 @@ class sym_table_t;
 
 typedef shared_ptr<sym_table_t> sym_table_ptr;
 
+class expr_t;
+
 /*class expr_t;
 class symbol_t;
 class type_t;

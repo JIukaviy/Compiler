@@ -1,14 +1,313 @@
-#include "parser_expression_node.h"
+#include "parser.h"
+#include "exceptions.h"
+#include "type_conversion.h"
 
-expr_bin_op_t::expr_bin_op_t(expr_t* left_, expr_t* right_, token_ptr op_) : left(left_), right(right_), op(op_) {}
-expr_un_op_t::expr_un_op_t(expr_t* expr_, token_ptr op_) : expr(expr_), op(op_) {}
-expr_func_t::expr_func_t(expr_t * expr_, vector<expr_t*> args_) : func(expr_), args(args_) {}
-expr_struct_access_t::expr_struct_access_t(expr_t* expr_, token_ptr op_, token_ptr ident_) : expr(expr_), op(op_), member(ident_) {}
-expr_arr_index_t::expr_arr_index_t(expr_t * left_, expr_t * right_, token_ptr sqr_bracket) : arr(left_), index(right_), sqr_bracket(sqr_bracket) {}
-expr_var_t::expr_var_t(token_ptr variable_) : variable(variable_) {}
+//-----------------------------------EXPRESSIONS-----------------------------------
+
+expr_t::expr_t(bool lvalue) : lvalue(lvalue) {}
+
+bool expr_t::is_lvalue() {
+	return lvalue;
+}
+
+//-----------------------------------VARIABLE-----------------------------------
+
+expr_var_t::expr_var_t() : expr_t(true) {}
+
+void expr_var_t::print_l(ostream& os, int level) {
+	print_level(os, level);
+	variable->short_print(os);
+	os << endl;
+}
+
+void expr_var_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
+	os << variable->get_name();
+}
+
+void expr_var_t::set_symbol(shared_ptr<sym_with_type_t> symbol_, token_ptr var_token_) {
+	if (symbol_->is(ST_ALIAS))
+		throw ExpressionIsExpected(symbol_);
+	assert(symbol_->is(ST_VAR) || symbol_->is(ST_FUNC));
+	variable = symbol_;
+	var_token = var_token_;
+	if (variable->is(ST_FUNC))
+		lvalue = false;
+}
+
+token_ptr expr_var_t::get_token() {
+	return variable->get_token();
+}
+
+type_ptr expr_var_t::get_type() {
+	return variable->get_type();
+}
+
+shared_ptr<sym_with_type_t> expr_var_t::get_var() {
+	return variable;
+}
+
+pos_t expr_var_t::get_pos() {
+	return var_token->get_pos();
+}
+
+//-----------------------------------CONSTANT-----------------------------------
+
 expr_const_t::expr_const_t(token_ptr constant_) : constant(constant_) {}
-expr_tern_op_t::expr_tern_op_t(expr_t* left_, expr_t* middle_, expr_t* right_, token_ptr qm, token_ptr c) : left(left_), middle(middle_), right(right_), question_mark(qm), colon(c) {}
-expr_cast_t::expr_cast_t(expr_t* expr, node_ptr type) : expr(expr), type(type) {}
+
+void expr_const_t::print_l(ostream& os, int level) {
+	print_level(os, level);
+	constant->short_print(os);
+	os << endl;
+}
+
+void expr_const_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
+	constant->short_print(os);
+}
+
+token_ptr expr_const_t::get_token() {
+	return constant;
+}
+
+type_ptr expr_const_t::get_type() {
+	if (constant == T_STRING) {
+		auto arr = shared_ptr<sym_type_array_t>(new sym_type_array_t());
+		arr->set_element_type(type_t::make_type(parser_t::get_base_type(ST_CHAR), true));
+		arr->set_size(static_pointer_cast<token_with_value_t<string>>(constant)->get_value().length() + 1);
+		return type_t::make_type(arr);
+	}
+	return parser_t::get_type(symbol_t::token_to_sym_type(constant->get_token_id()));
+}
+
+pos_t expr_const_t::get_pos() {
+	return constant->get_pos();
+}
+
+bool expr_const_t::is_null() {
+	return static_pointer_cast<token_base_with_value_t>(constant)->is_null();
+}
+
+//-----------------------------------UNARY_OPERATOR-----------------------------------
+
+expr_un_op_t::expr_un_op_t(token_ptr op, bool lvalue) : op(op), expr_t(lvalue) {}
+
+void expr_un_op_t::print_l(ostream& os, int level) {
+	print_level(os, level);
+	op->short_print(os);
+	os << endl;
+	expr->print_l(os, level + 1);
+}
+
+void expr_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
+	op->short_print(os);
+	expr->short_print(os);
+}
+
+expr_t * expr_un_op_t::get_expr() {
+	return expr;
+}
+
+void expr_un_op_t::set_operand(expr_t* operand) {
+	for each (auto type_cast in pre_check_type_convertions)
+		if (type_cast(&operand))
+			break;
+	bool or_passed = or_conditions.empty();
+	for each (auto condition in and_conditions)
+		condition(operand, this);
+	for each (auto condition in or_conditions)
+		if (or_passed = condition(operand))
+			break;
+	if (!or_passed)
+		throw InvalidUnOpOperand(operand->get_type(), this);
+	for each (auto type_cast in type_convertions)
+		if (type_cast(&operand))
+			break;
+	expr = operand;
+}
+
+token_ptr expr_un_op_t::get_op() {
+	return op;
+}
+
+type_ptr expr_un_op_t::get_type() {
+	return expr->get_type();
+}
+
+pos_t expr_un_op_t::get_pos() {
+	return expr->get_pos();
+}
+
+//-----------------------------------OPERAND_CHECKERS---------------------------------
+
+void oc_uo_is_lvalue(expr_t* operand, expr_t* op) {
+	if (!operand->is_lvalue())
+		throw ExprMustBeLValue(operand->get_pos());
+}
+
+void oc_uo_not_constant(expr_t* operand, expr_t* op) {
+	if (operand->get_type()->is_const())
+		throw AssignmentToReadOnly(operand->get_pos());
+}
+
+bool oc_uo_is_integer(expr_t* operand) {
+	return operand->get_type()->is_integer();
+}
+
+bool oc_uo_is_arithmetic(expr_t* operand) {
+	return operand->get_type()->is_arithmetic();
+}
+
+bool oc_uo_is_ptr(expr_t* operand) {
+	return operand->get_type() == ST_PTR;
+}
+
+//-----------------------------------TYPE_CONVERTIONS---------------------------------
+
+bool tc_uo_arr_func_to_ptr(expr_t** operand) {
+	if ((*operand)->get_type() == ST_ARRAY)
+		*operand = array_to_ptr(*operand);
+	else if ((*operand)->get_type() == ST_FUNC)
+		*operand = func_to_ptr(*operand);
+	return false;
+}
+
+bool tc_uo_integer_increase(expr_t** operand) {
+	if (!(*operand)->get_type()->is_integer())
+		return false;
+	*operand = integer_increase(*operand);
+	return true;
+}
+
+bool tc_uo_ptr_to_arithmetic(expr_t** operand) {
+	if (oc_uo_is_ptr(*operand))
+		*operand = auto_convert(*operand, parser_t::get_type(ST_INTEGER));
+	return false;
+}
+
+//-----------------------------------PREFIX_UNARY_OPERATOR-----------------------------------
+
+void expr_prefix_un_op_t::print_l(ostream& os, int level) {
+	print_level(os, level);
+	os << "prefix ";
+	op->short_print(os);
+	os << endl;
+	expr->print_l(os, level + 1);
+}
+
+void expr_prefix_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
+	op->short_print(os);
+	expr->short_print(os);
+}
+
+template<class T>
+expr_un_op_t* new_un_op(token_ptr op) {
+	return new T(op);
+}
+
+expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
+	return
+		op == T_OP_BIT_AND ? new_un_op<expr_get_addr_un_op_t>(op) :
+		op == T_OP_MUL ? new_un_op<expr_dereference_op_t>(op) :
+		op->is(T_OP_INC, T_OP_DEC, 0) ? new_un_op<expr_prefix_inc_dec_op_t>(op) :
+		op->is(T_OP_ADD, T_OP_SUB, 0) ? new_un_op<expr_prefix_add_sub_un_op_t>(op) :
+		op == T_OP_NOT ? new_un_op<expr_prefix_not_un_op_t>(op) :
+		op == T_OP_BIT_NOT ? new_un_op<expr_prefix_bit_not_un_op_t>(op) :
+		(assert(false), nullptr);
+}
+
+//-----------------------------------GET_ADRESS-----------------------------------
+
+expr_get_addr_un_op_t::expr_get_addr_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	and_conditions.push_back(oc_uo_is_lvalue);
+}
+
+type_ptr expr_get_addr_un_op_t::get_type() {
+	return sym_type_ptr_t::make_ptr(expr->get_type());
+}
+
+//-----------------------------------DEREFERENCE-----------------------------------
+
+expr_dereference_op_t::expr_dereference_op_t(token_ptr op) : expr_prefix_un_op_t(op, true) {
+	pre_check_type_convertions.push_back(tc_uo_arr_func_to_ptr);
+	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+type_ptr expr_dereference_op_t::get_type() {
+	return sym_type_ptr_t::dereference(expr->get_type());
+}
+
+//-----------------------------------PREFIX_INC_DEC-----------------------------------
+
+expr_prefix_inc_dec_op_t::expr_prefix_inc_dec_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	and_conditions.push_back(oc_uo_is_lvalue);
+	and_conditions.push_back(oc_uo_not_constant);
+	or_conditions.push_back(oc_uo_is_arithmetic);
+	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+//-----------------------------------PREFIX_ADD_SUB-----------------------------------
+
+expr_prefix_add_sub_un_op_t::expr_prefix_add_sub_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	or_conditions.push_back(oc_uo_is_arithmetic);
+	type_convertions.push_back(tc_uo_integer_increase);
+}
+
+//-----------------------------------PREFIX_LOGICAL_NOT-----------------------------------
+
+expr_prefix_not_un_op_t::expr_prefix_not_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	pre_check_type_convertions.push_back(tc_uo_arr_func_to_ptr);
+	or_conditions.push_back(oc_uo_is_arithmetic);
+	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+type_ptr expr_prefix_not_un_op_t::get_type() {
+	return parser_t::get_type(ST_INTEGER);
+}
+
+//-----------------------------------PREFIX_BIT_NOT-----------------------------------
+
+expr_prefix_bit_not_un_op_t::expr_prefix_bit_not_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	or_conditions.push_back(oc_uo_is_integer);
+	type_convertions.push_back(tc_uo_integer_increase);
+}
+
+//-----------------------------------POSTFIX_UNARY_OPERATOR-----------------------------------
+
+void expr_postfix_un_op_t::print_l(ostream& os, int level) {
+	print_level(os, level);
+	os << "postfix ";
+	op->short_print(os);
+	os << endl;
+	expr->print_l(os, level + 1);
+}
+
+void expr_postfix_un_op_t::short_print_l(ostream& os, int level) {
+	print_level(os, level);
+	expr->short_print(os);
+	op->short_print(os);
+}
+
+expr_un_op_t * expr_postfix_un_op_t::make_postfix_un_op(token_ptr op) {
+	return
+		op->is(T_OP_INC, T_OP_DEC, 0) ? new_un_op<expr_postfix_inc_dec_op_t>(op) :
+		(assert(false), nullptr);
+}
+
+//-----------------------------------POSTFIX_INC_DEC-----------------------------------
+
+expr_postfix_inc_dec_op_t::expr_postfix_inc_dec_op_t(token_ptr op) : expr_postfix_un_op_t(op) {
+	and_conditions.push_back(oc_uo_is_lvalue);
+	and_conditions.push_back(oc_uo_not_constant);
+	or_conditions.push_back(oc_uo_is_arithmetic);
+	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+//-----------------------------------BINARY_OPERATORS-----------------------------------
+
+expr_bin_op_t::expr_bin_op_t(token_ptr op) : left(0), right(0), op(op) {}
 
 void expr_bin_op_t::print_l(ostream& os, int level) {
 	left->print_l(os, level + 1);
@@ -33,12 +332,23 @@ expr_t* expr_bin_op_t::get_right() {
 	return right;
 }
 
-void expr_bin_op_t::set_left(expr_t* e) {
-	left = e;
-}
-
-void expr_bin_op_t::set_right(expr_t* e) {
-	right = e;
+void expr_bin_op_t::set_operands(expr_t* left_, expr_t* right_) {
+	for (int i = pre_check_type_convertions.size() - 1; i >= 0; i--)
+		if (pre_check_type_convertions[i](&left_, &right_))
+			break;
+	bool or_passed = or_conditions.empty();
+	for each (auto operands_checker in and_conditions)
+		operands_checker(left_, right_, this);
+	for each (auto operands_checker in or_conditions)
+		if (or_passed = operands_checker(left_, right_))
+			break;
+	if (!or_passed)
+		throw InvalidBinOpOperands(left_->get_type(), right_->get_type(), this);
+	for (int i = type_convertions.size() - 1; i >= 0; i--)
+		if (type_convertions[i](&left_, &right_))
+			break;
+	left = left_;
+	right = right_;
 }
 
 token_ptr expr_bin_op_t::get_op() {
@@ -49,11 +359,257 @@ pos_t expr_bin_op_t::get_pos() {
 	return op->get_pos();
 }
 
+type_ptr expr_bin_op_t::get_type() {
+	return right->get_type();
+}
+
+template<class T>
+inline expr_bin_op_t* new_bin_op(token_ptr op) {
+	return new T(op);
+}
+
+expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
+	return
+		op == T_OP_ASSIGN ? new_bin_op<expr_assign_bin_op_t>(op) :
+		op->is(T_OP_MUL, T_OP_DIV, 0) ? new_bin_op<expr_arithmetic_bin_op_t>(op) :
+		op->is(T_OP_MUL_ASSIGN, T_OP_DIV_ASSIGN, 0) ? new_bin_op<expr_arithmetic_assign_bin_op_t>(op) :
+		op == T_OP_ADD ? new_bin_op<expr_add_bin_op_t>(op) :
+		op == T_OP_SUB ? new_bin_op<expr_sub_bin_op_t>(op) :
+		op == T_OP_MOD ? new_bin_op<expr_mod_bin_op_t>(op) :
+		op == T_OP_ADD_ASSIGN ? new_bin_op<expr_add_assign_bin_op_t>(op) :
+		op == T_OP_SUB_ASSIGN ? new_bin_op<expr_sub_assign_bin_op_t>(op) :
+		op == T_OP_MOD_ASSIGN ? new_bin_op<expr_mod_assign_bin_op_t>(op) :
+		op->is(T_OP_L, T_OP_LE, T_OP_G, T_OP_GE, 0) ? new_bin_op<expr_relational_bin_op_t>(op) :
+		op->is(T_OP_EQ, T_OP_NEQ, 0) ? new_bin_op<expr_equality_bin_op_t>(op) :
+		op->is(T_OP_AND, T_OP_OR) ? new_bin_op<expr_logical_bin_op_t>(op) :
+		op->is(T_OP_BIT_AND, T_OP_BIT_OR, T_OP_XOR) ? new_bin_op<expr_integer_bin_op_t>(op) :
+		op->is(T_OP_BIT_AND_ASSIGN, T_OP_BIT_OR_ASSIGN, T_OP_XOR_ASSIGN) ? new_bin_op<expr_integer_assign_bin_op_t>(op) :
+		op->is(T_OP_LEFT, T_OP_RIGHT, 0) ? new_bin_op<expr_shift_bin_op_t>(op) :
+		op->is(T_OP_LEFT_ASSIGN, T_OP_RIGHT_ASSIGN, 0) ? new_bin_op<expr_shift_assign_bin_op_t>(op) :
+		(assert(false), nullptr);
+}
+
+//-------------------------------OPERANDS_CHECKERS--------------------------------
+
+void oc_bo_is_lvalue(expr_t* left, expr_t* right, expr_t* op) {
+	oc_uo_is_lvalue(left, op);
+}
+
+void oc_bo_not_constant(expr_t* left, expr_t* right, expr_t* op) {
+	oc_uo_not_constant(left, op);
+}
+
+bool oc_bo_is_integer(expr_t* left, expr_t* right) {
+	return oc_uo_is_integer(left) && oc_uo_is_integer(right);
+}
+
+bool oc_bo_is_arithmetic(expr_t* left, expr_t* right) {
+	return oc_uo_is_integer(left) && oc_uo_is_integer(right);
+}
+
+bool oc_bo_is_ptrs_to_same_types(expr_t* left, expr_t* right) {
+	return 
+		(oc_uo_is_ptr(left) && oc_uo_is_ptr(right)) &&
+		(static_pointer_cast<sym_type_ptr_t>(left->get_type()->get_base_type())->get_element_type()->get_base_type() == 
+		 static_pointer_cast<sym_type_ptr_t>(right->get_type()->get_base_type())->get_element_type()->get_base_type());
+}
+
+bool oc_bo_is_arithmetic_or_ptr(expr_t* left, expr_t* right) {
+	return 
+		(oc_uo_is_ptr(left) || oc_uo_is_arithmetic(left)) &&
+		(oc_uo_is_ptr(right) || oc_uo_is_arithmetic(right));
+}
+
+bool oc_bo_ptr_and_integer(expr_t* left, expr_t* right) {
+	return oc_uo_is_ptr(left) && oc_uo_is_integer(right);
+}
+
+bool oc_bo_integer_and_ptr(expr_t* left, expr_t* right) {
+	return oc_uo_is_integer(left) && oc_uo_is_ptr(right);
+}
+
+//--------------------------------TYPE_CONVERTIONS--------------------------------
+
+bool tc_bo_arithmetic_conversion(expr_t** left, expr_t** right) {
+	arithmetic_conversion(left, right);
+	return true;
+}
+
+bool tc_bo_left_to_right_type(expr_t** left, expr_t** right) {
+	*right = auto_convert(*right, (*left)->get_type());
+	return true;
+}
+
+bool tc_bo_integer_increase(expr_t** left, expr_t** right) {
+	tc_uo_integer_increase(left);
+	tc_uo_integer_increase(right);
+	return true;
+}
+
+bool tc_bo_integer_and_ptr(expr_t** left, expr_t** right) {
+	if (oc_uo_is_ptr(*left) || oc_uo_is_ptr(*right)) {
+		tc_uo_integer_increase(left);
+		tc_uo_integer_increase(right);
+		return true;
+	}
+	return false;
+}
+
+bool tc_bo_pass_ptrs(expr_t** left, expr_t** right) {
+	return oc_uo_is_ptr(*left) && oc_uo_is_ptr(*right);
+}
+
+bool tc_bo_int_to_ptr(expr_t** left, expr_t** right) {
+	if (oc_uo_is_ptr(*left) || oc_uo_is_ptr(*right)) {
+		type_ptr ptr = oc_uo_is_ptr(*left) ? (*left)->get_type() : (*right)->get_type();
+		*left = auto_convert(*left, ptr);
+		*right = auto_convert(*right, ptr);
+		return true;
+	}
+	return false;
+}
+
+bool tc_bo_ptr_to_arithmetic(expr_t** left, expr_t** right) {
+	tc_uo_ptr_to_arithmetic(left);
+	tc_uo_ptr_to_arithmetic(right);
+	return false;
+}
+
+bool tc_bo_arr_func_to_ptr(expr_t** left, expr_t** right) {
+	tc_uo_arr_func_to_ptr(left);
+	tc_uo_arr_func_to_ptr(right);
+	return false;
+}
+
+bool tc_bo_right_arr_func_to_ptr(expr_t** left, expr_t** right) {
+	tc_uo_arr_func_to_ptr(right);
+	return false;
+}
+
+//-----------------------------------ASSIGN---------------------------------------------
+
+expr_assign_bin_op_t::expr_assign_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_right_arr_func_to_ptr);
+	and_conditions.push_back(oc_bo_is_lvalue);
+	and_conditions.push_back(oc_bo_not_constant);
+	type_convertions.push_back(tc_bo_left_to_right_type);
+}
+
+//-----------------------------------INTEGER_OPERATORS-----------------------------------
+
+expr_integer_bin_op_t::expr_integer_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_integer);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
+}
+
+expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
+	or_conditions.push_back(oc_bo_is_integer);
+}
+
+//-----------------------------------ARITHMETIC_OPERATORS-----------------------------------
+
+expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_arithmetic);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
+}
+
+expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
+	or_conditions.push_back(oc_bo_is_arithmetic);
+}
+
+//--------------------------------------ADD----------------------------------------------
+
+expr_add_bin_op_t::expr_add_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_ptr_and_integer);
+	or_conditions.push_back(oc_bo_integer_and_ptr);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
+	type_convertions.push_back(tc_bo_pass_ptrs);
+}
+
+expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_ptr_and_integer);
+	or_conditions.push_back(oc_bo_integer_and_ptr);
+}
+
+//--------------------------------------SUB----------------------------------------------
+
+expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
+	or_conditions.push_back(oc_bo_ptr_and_integer);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
+	type_convertions.push_back(tc_bo_pass_ptrs);
+}
+
+expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
+	or_conditions.push_back(oc_bo_ptr_and_integer);
+}
+
+//--------------------------------------MOD----------------------------------------------
+
+expr_mod_bin_op_t::expr_mod_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_integer);
+	type_convertions.push_back(tc_bo_integer_increase);
+}
+
+expr_mod_assign_bin_op_t::expr_mod_assign_bin_op_t(token_ptr op) : expr_assign_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_is_integer);
+}
+
+//--------------------------------------RELATIONAL_OPERATORS----------------------------------------------
+
+expr_relational_bin_op_t::expr_relational_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
+	type_convertions.push_back(tc_bo_int_to_ptr);
+	type_convertions.push_back(tc_bo_pass_ptrs);
+}
+
+type_ptr expr_relational_bin_op_t::get_type() {
+	return parser_t::get_type(ST_INTEGER);
+}
+
+//--------------------------------------EQUALITY_OPERATORS----------------------------------------------
+
+expr_equality_bin_op_t::expr_equality_bin_op_t(token_ptr op) : expr_relational_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_ptr_and_integer);
+	or_conditions.push_back(oc_bo_integer_and_ptr);
+}
+
+//--------------------------------------LOGICAL_OPERATORS----------------------------------------------
+
+expr_logical_bin_op_t::expr_logical_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_arithmetic_or_ptr);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
+	type_convertions.push_back(tc_bo_ptr_to_arithmetic);
+}
+
+//--------------------------------------SHIFT_OPERATORS----------------------------------------------
+
+expr_shift_bin_op_t::expr_shift_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
+	or_conditions.push_back(oc_bo_is_integer);
+	type_convertions.push_back(tc_bo_integer_increase);
+}
+
+expr_shift_assign_bin_op_t::expr_shift_assign_bin_op_t(token_ptr op) : expr_assign_bin_op_t(op) {
+	or_conditions.push_back(oc_bo_is_integer);
+}
+
+//-----------------------------------TERNARY_OPERATOR-----------------------------------
+
+expr_tern_op_t::expr_tern_op_t(token_ptr qm, token_ptr c) : question_mark(qm), colon(c) {}
+
 void expr_tern_op_t::print_l(ostream& os, int level) {
-	left->print_l(os, level + 1);
+	condition->print_l(os, level + 1);
 	print_level(os, level);
 	os << "?" << endl;
-	middle->print_l(os, level + 1);
+	left->print_l(os, level + 1);
 	print_level(os, level);
 	os << ":" << endl;
 	right->print_l(os, level + 1);
@@ -61,22 +617,22 @@ void expr_tern_op_t::print_l(ostream& os, int level) {
 
 void expr_tern_op_t::short_print_l(ostream& os, int level) {
 	print_level(os, level);
-	left->short_print(os);
+	condition->short_print(os);
 	os << " ? ";
-	middle->short_print(os);
+	left->short_print(os);
 	os << " : ";
 	right->short_print(os);
 }
 
-expr_t * expr_tern_op_t::get_left() {
+expr_t* expr_tern_op_t::get_condition() {
+	return condition;
+}
+
+expr_t* expr_tern_op_t::get_left() {
 	return left;
 }
 
-expr_t * expr_tern_op_t::get_middle() {
-	return middle;
-}
-
-expr_t * expr_tern_op_t::get_right() {
+expr_t* expr_tern_op_t::get_right() {
 	return right;
 }
 
@@ -88,100 +644,41 @@ token_ptr expr_tern_op_t::get_colon_token() {
 	return colon;
 }
 
-void expr_tern_op_t::set_left(expr_t* e) {
-	left = e;
+void expr_tern_op_t::set_operands(expr_t* condition_, expr_t* left_, expr_t* right_) {
+	tc_uo_arr_func_to_ptr(&condition_);
+	if (condition_->get_type() == ST_PTR)
+		condition_ = auto_convert(condition_, parser_t::get_type(ST_INTEGER));
+	if (!condition_->get_type()->is_arithmetic())
+		throw InvalidTernOpOperands(condition_->get_type(), this);
+		
+	condition = condition_;
+	if (!(oc_bo_integer_and_ptr(left_, right_) ||
+		oc_bo_ptr_and_integer(left_, right_) ||
+		oc_bo_is_ptrs_to_same_types(left_, right_) ||
+		oc_bo_is_arithmetic(left_, right_)))
+	{
+		throw InvalidTernOpOperands(left_->get_type(), right_->get_type(), this);
+	}
+
+	tc_bo_int_to_ptr(&left_, &right_) ||
+	tc_bo_pass_ptrs(&left_, &right_) ||
+	tc_bo_arithmetic_conversion(&left_, &right_);
+
+	left = left_;
+	right = right_;
 }
 
-void expr_tern_op_t::set_middle(expr_t* e) {
-	middle = e;
+type_ptr expr_tern_op_t::get_type() {
+	return left->get_type();
 }
 
-void expr_tern_op_t::set_right(expr_t * e) {
-	right = e;
+pos_t expr_tern_op_t::get_pos() {
+	return question_mark->get_pos();
 }
 
-void expr_var_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	variable->short_print(os);
-	os << endl;
-}
+//-----------------------------------ARRAY_INDEX-----------------------------------
 
-void expr_var_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	variable->short_print(os);
-}
-
-token_ptr expr_var_t::get_token() {
-	return variable;
-}
-
-void expr_const_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	constant->short_print(os);
-	os << endl;
-}
-
-void expr_const_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	constant->short_print(os);
-}
-
-token_ptr expr_const_t::get_token() {
-	return constant;
-}
-
-void expr_un_op_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	op->short_print(os);
-	os << endl;
-	expr->print_l(os, level + 1);
-}
-
-void expr_un_op_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	op->short_print(os);
-	expr->short_print(os);
-}
-
-expr_t * expr_un_op_t::get_expr() {
-	return expr;
-}
-
-void expr_un_op_t::set_expr(expr_t* e) {
-	expr = e;
-}
-
-token_ptr expr_un_op_t::get_op() {
-	return op;
-}
-
-void expr_prefix_un_op_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	os << "prefix ";
-	op->short_print(os);
-	os << endl;
-	expr->print_l(os, level + 1);
-}
-
-void expr_prefix_un_op_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	op->short_print(os);
-	expr->short_print(os);
-}
-
-void expr_postfix_un_op_t::print_l(ostream& os, int level) {
-	print_level(os, level);
-	os << "postfix ";
-	op->short_print(os);
-	os << endl;
-	expr->print_l(os, level + 1);
-}
-
-void expr_postfix_un_op_t::short_print_l(ostream& os, int level) {
-	print_level(os, level);
-	expr->short_print(os);
-	op->short_print(os);
-}
+expr_arr_index_t::expr_arr_index_t(token_ptr sqr_bracket) : expr_t(true), sqr_bracket(sqr_bracket) {}
 
 void expr_arr_index_t::print_l(ostream& os, int level) {
 	arr->print_l(os, level + 1);
@@ -210,37 +707,64 @@ expr_t * expr_arr_index_t::get_index() {
 	return index;
 }
 
-void expr_arr_index_t::set_index(expr_t* e) {
-	index = e;
+void expr_arr_index_t::set_operands(expr_t* arr_, expr_t* index_) {
+	if (arr_->get_type() == ST_ARRAY)
+		arr_ = array_to_ptr(arr_);
+	if (arr_->get_type() != ST_PTR)
+		throw SemanticError("Subscripted value is neither array nor pointer", arr_->get_pos());
+	if (!index_->get_type()->is_integer())
+		throw SemanticError("Array subscript is not an integer", index_->get_pos());
+	
+	arr = arr_;
+	index = index_;
 }
 
-void expr_arr_index_t::set_arr(expr_t * e) {
-	arr = e;
+type_ptr expr_arr_index_t::get_type() {
+	return static_pointer_cast<sym_type_ptr_t>(arr->get_type()->get_base_type())->get_element_type();
 }
+
+pos_t expr_arr_index_t::get_pos() {
+	return sqr_bracket->get_pos();
+}
+
+//-----------------------------------STRUCT_ACCESS-----------------------------------
+
+expr_struct_access_t::expr_struct_access_t(token_ptr op) : expr_t(true), op(op) {}
 
 void expr_struct_access_t::print_l(ostream& os, int level) {
-	expr->print_l(os, level + 1);
+	struct_expr->print_l(os, level + 1);
 	print_level(os, level);
 	op->short_print(os);
 	os << endl;
 	print_level(os, level + 1);
-	member->short_print(os);
+	member->get_token()->short_print(os);
 	os << endl;
 }
 
 void expr_struct_access_t::short_print_l(ostream& os, int level) {
 	print_level(os, level);
-	expr->short_print(os);
+	struct_expr->short_print(os);
 	op->short_print(os);
-	member->short_print(os);
+	member->get_token()->short_print(os);
 }
 
-expr_t * expr_struct_access_t::get_expr() {
-	return expr;
+expr_t* expr_struct_access_t::get_expr() {
+	return struct_expr;
 }
 
-void expr_struct_access_t::set_expr(expr_t* e) {
-	expr = e;
+void expr_struct_access_t::set_operands(expr_t* expr_, token_ptr member_token) {
+	if (op == T_OP_DOT) {
+		if (expr_->get_type() != ST_STRUCT)
+			throw SemanticError("Expected struct as left operand of '.'", expr_->get_pos());
+		structure = static_pointer_cast<sym_type_struct_t>(expr_->get_type()->get_base_type());
+	} else {
+		assert(op == T_OP_ARROW);
+		if (expr_->get_type() != ST_PTR || sym_type_ptr_t::dereference(expr_->get_type()) != ST_STRUCT)
+			throw SemanticError("Expected pointer to struct as left operand of '->'", expr_->get_pos());
+		structure = static_pointer_cast<sym_type_struct_t>(sym_type_ptr_t::dereference(expr_->get_type())->get_base_type());
+	}
+	member = structure->get_member(member_token);
+	struct_expr = expr_;
 }
 
 token_ptr expr_struct_access_t::get_op() {
@@ -248,8 +772,20 @@ token_ptr expr_struct_access_t::get_op() {
 }
 
 token_ptr expr_struct_access_t::get_member() {
-	return member;
+	return member->get_token();
 }
+
+type_ptr expr_struct_access_t::get_type() {
+	return member->get_type();
+}
+
+pos_t expr_struct_access_t::get_pos() {
+	return op->get_pos();
+}
+
+//-----------------------------------FUNCTION_CALL-----------------------------------
+
+expr_func_t::expr_func_t(token_ptr op) : brace(op) {}
 
 void expr_func_t::print_l(ostream &os, int level) {
 	func->print_l(os, level + 1);
@@ -271,18 +807,69 @@ void expr_func_t::short_print_l(ostream& os, int level) {
 	os << ")";
 }
 
+void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
+	if (func_->get_type() != ST_FUNC && (func_->get_type() != ST_PTR ||
+		sym_type_ptr_t::dereference(func_->get_type()) != ST_FUNC))
+			throw SemanticError("Called object is not a function or function pointer");
+	func = func_;
+	auto func_type = 
+		func_->get_type() == ST_FUNC ? dynamic_pointer_cast<sym_type_func_t>(func_->get_type()->get_base_type()) :
+		dynamic_pointer_cast<sym_type_func_t>(sym_type_ptr_t::dereference(func_->get_type())->get_base_type());
+	auto func_args = func_type->get_arg_types();
+	if (func_args.size() != args_.size())
+		throw IncorrectNumberOfArguments(args_.size(), func_type, this);
+	args.resize(func_args.size());
+	for (int i = 0; i < func_args.size(); i++)
+		args[i] = auto_convert(args_[i], func_args[i]);
+}
+
+type_ptr expr_func_t::get_type() {
+	return func->get_type();
+}
+
+pos_t expr_func_t::get_pos() {
+	return brace->get_pos();
+}
+
+//-----------------------------------CAST_OPERATOR-----------------------------------
+
+expr_cast_t::expr_cast_t() : expr(0) {}
+
 void expr_cast_t::print_l(ostream& os, int level) {
 	print_level(os, level);
 	os << "cast to (";
 	type->print(os);
-	os << ')' << endl;
+	os << ")(" << endl;
 	expr->print_l(os, level + 1);
+	os << ')';
 }
 
 void expr_cast_t::short_print_l(ostream& os, int level) {
 	print_level(os, level);
-	os << "(";
+	os << '(';
 	type->short_print(os);
-	os << ") ";
+	os << ")(";
 	expr->short_print(os);
+	os << ')';
+}
+
+void expr_cast_t::set_operand(expr_t* expr_, type_ptr dst_type) {
+	type_ptr src_type = expr_->get_type();
+	if (src_type == ST_PTR && (dst_type == ST_PTR || dst_type->is_arithmetic()) ||
+		src_type->is_arithmetic() && dst_type->is_arithmetic() ||
+		src_type->is_integer() && dst_type == ST_PTR ||
+		(src_type == ST_ARRAY || src_type == ST_FUNC) && dst_type == ST_PTR)
+	{
+		expr = expr_;
+		type = dst_type;
+	} else
+		throw IllegalConversion(expr_->get_type(), dst_type, expr_->get_pos());
+}
+
+type_ptr expr_cast_t::get_type() {
+	return type;
+}
+
+pos_t expr_cast_t::get_pos() {
+	return expr->get_pos();
 }

@@ -50,10 +50,9 @@ class parser_t {
 
 	sym_table_ptr sym_table;
 	sym_table_ptr top_sym_table;
-	sym_table_ptr prelude_sym_table;
+	static sym_table_ptr prelude_sym_table;
 	stack<shared_ptr<stmt_loop_t>> loop_stack;
 	stack<shared_ptr<sym_func_t>> func_stack;
-	set<shared_ptr<sym_type_struct_t>> declared_structs;
 
 	sym_table_ptr  new_namespace();
 	void exit_namespace();
@@ -99,4 +98,7 @@ public:
 	void print_decl(ostream&);
 	void print_statement(ostream&);
 	void print_statements(ostream&);
+	static sym_table_ptr get_prelude_sym_table();
+	static type_base_ptr get_base_type(SYM_TYPE sym_type);
+	static type_ptr get_type(SYM_TYPE sym_type, bool is_const = false);
 };

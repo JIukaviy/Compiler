@@ -1,6 +1,6 @@
 #pragma once
 #include "tokens.h"
-#include "parser_symbol_node.h"
+#include "parser_expression_node.h"
 #include <assert.h>
 #include <sstream>
 
@@ -139,6 +139,19 @@ public:
 		token->print_pos(err);
 		err << "Operator: \"" << token->get_name() << "\" expecting expression" << endl;
 	};
+	ExpressionIsExpected(sym_ptr symbol) {
+		symbol->get_token()->print_pos(err);
+		err << "Expected expression before symbol: \"" << symbol << '\"' << endl;
+	};
+};
+
+class TypeSpecIsExpected : public SyntaxError {
+public:
+	TypeSpecIsExpected(token_ptr token) {
+		err << token->get_pos() << "Expected type specifier before '";
+		token->short_print(err);
+		err << '\'';
+	}
 };
 
 class CloseBracketExpected : public SyntaxError {
@@ -148,7 +161,11 @@ public:
 
 class InvalidCombinationOfSpecifiers : public SyntaxError {
 public:
-	InvalidCombinationOfSpecifiers(pos_t pos) : SyntaxError("Invalid combination of specifiers", pos) {};
+	InvalidCombinationOfSpecifiers(token_ptr token) {
+		err << token->get_pos() << "Invalid combination of specifiers: \"";
+		token->short_print(err);
+		err << "\"";
+	};
 };
 
 class SemanticError : public CompileError {
@@ -162,15 +179,15 @@ public:
 	InvalidIncompleteType(pos_t pos) : SemanticError("Invalid incomplete type", pos) {};
 };
 
-class RedefenitionOfSymbol : public SemanticError {
+class RedefinitionOfSymbol : public SemanticError {
 public:
-	RedefenitionOfSymbol(token_ptr token) {
-		err << token->get_pos() << "Redefenition of symbol \"";
+	RedefinitionOfSymbol(token_ptr token) {
+		err << token->get_pos() << "Redefinition of symbol \"";
 		token->short_print(err);
 		err << "\"";
 	}
-	RedefenitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
-		err << redef_symbol->get_token()->get_pos() << "Redefenition of symbol \"";
+	RedefinitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
+		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol \"";
 		orig_symbol->short_print(err);
 		err << "\", first defenition was here: ";
 		pos_t pos = orig_symbol->get_token()->get_pos();
@@ -205,23 +222,28 @@ public:
 class IllegalConversion : public SemanticError {
 public:
 	IllegalConversion(type_ptr a, type_ptr b, pos_t pos) {
-		err << pos << "Can't convert from \"";
-		a->print(err);
-		err << "\" to \"";
-		b->print(err);
-		err << "\"";
+		err << pos << "Can't convert from '";
+		a->short_print(err);
+		err << "' to '";
+		b->short_print(err);
+		err << "'";
 	}
 };
 
 class InvalidTernOpOperands : public SemanticError {
 public:
-	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* bin_op) {
-		err << bin_op->get_colon_token()->get_pos() << "Operands of ternary operator must be the same type: \"";
-		err << " (\"";
-		a->print(err);
-		err << "\" and \"";
-		b->print(err);
-		err << "\")";
+	InvalidTernOpOperands(type_ptr a, type_ptr b, expr_tern_op_t* tern_op) {
+		err << tern_op->get_colon_token()->get_pos() << "Invalid operands for ternary: \"";
+		err << " (have \'";
+		a->short_print(err);
+		err << "\' and \'";
+		b->short_print(err);
+		err << "\')";
+	}
+	InvalidTernOpOperands(type_ptr a, expr_tern_op_t* tern_op) {
+		err << tern_op->get_colon_token()->get_pos() << "Used ";
+		a->short_print(err);
+		err << " where scalar is required";
 	}
 };
 
@@ -230,11 +252,11 @@ public:
 	InvalidBinOpOperands(type_ptr a, type_ptr b, expr_bin_op_t* bin_op) {
 		err << bin_op->get_pos() << "Invalid operands for binary operator: \"";
 		bin_op->get_op()->short_print(err);
-		err << "\" (\"";
-		a->print(err);
-		err << "\" and \"";
-		b->print(err);
-		err << "\")";
+		err << "\" (have '";
+		a->short_print(err);
+		err << "' and '";
+		b->short_print(err);
+		err << "')";
 	}
 };
 
@@ -243,15 +265,50 @@ public:
 	InvalidUnOpOperand(type_ptr a, expr_un_op_t* un_op) {
 		err << un_op->get_op()->get_pos() << "Invalid operand for unary operator: \"";
 		un_op->get_op()->short_print(err);
-		err << "\" (\"";
-		a->print(err);
-		err << "\")";
+		err << "\" (have '";
+		a->short_print(err);
+		err << "')";
 	}
 };
 
-class ExprMustBeLeftHandValue : public SemanticError {
+class ExprMustBeLValue : public SemanticError {
 public:
-	ExprMustBeLeftHandValue(pos_t pos) {
-		err << pos << "Expression must be the left-hand value";
+	ExprMustBeLValue(pos_t pos) {
+		err << pos << "Expression must be lvalue";
 	}
+};
+
+class AssignmentToReadOnly : public SemanticError {
+public:
+	/*AssignmentToReadOnly(expr_t* expr) {
+		err << expr->get_pos() << "Assignment to read only ";
+		err << (typeid(*expr) == typeid(expr_bin_op_t)) ? "location" : "expression";
+	}*/
+	AssignmentToReadOnly(pos_t pos) {
+		err << pos << "Assignment to read only expression";
+	}
+};
+
+class IncorrectNumberOfArguments : public SemanticError {
+public:
+	IncorrectNumberOfArguments(int actually, shared_ptr<sym_type_func_t> func, expr_t* op) {
+		int required = func->get_arg_types().size();
+		err << op->get_pos() << "Too " << (actually < required ? "few " : "many ") << "arguments to function";
+	}
+};
+
+class StructHasNoMember : public SemanticError {
+public:
+	StructHasNoMember(sym_type_struct_t* structure, token_ptr member) {
+		err << member->get_pos() << '\'';
+		structure->short_print(err);
+		err << "' has no member '";
+		member->short_print(err);
+		err << '\'';
+	}
+};
+
+class InvalidInitListSize : public SemanticError {
+public:
+	InvalidInitListSize(pos_t pos) : SemanticError("Too many init arguments", pos) {}
 };
