@@ -141,14 +141,18 @@ pos_t expr_un_op_t::get_pos() {
 
 //-----------------------------------OPERAND_CHECKERS---------------------------------
 
-void oc_uo_is_lvalue(expr_t* operand, expr_un_op_t* op) {
+void oc_uo_is_lvalue(expr_t* operand, expr_t* op) {
 	if (!operand->is_lvalue())
 		throw ExprMustBeLValue(operand->get_pos());
 }
 
-void oc_uo_not_constant(expr_t* operand, expr_un_op_t* op) {
+void oc_uo_not_constant(expr_t* operand, expr_t* op) {
 	if (operand->get_type()->is_const())
 		throw AssignmentToReadOnly(operand->get_pos());
+}
+
+bool oc_uo_is_integer(expr_t* operand) {
+	return operand->get_type()->is_integer();
 }
 
 bool oc_uo_is_arithmetic(expr_t* operand) {
@@ -174,6 +178,12 @@ bool tc_uo_integer_increase(expr_t** operand) {
 		return false;
 	*operand = integer_increase(*operand);
 	return true;
+}
+
+bool tc_uo_ptr_to_arithmetic(expr_t** operand) {
+	if (oc_uo_is_ptr(*operand))
+		*operand = auto_convert(*operand, parser_t::get_type(ST_INTEGER));
+	return false;
 }
 
 //-----------------------------------PREFIX_UNARY_OPERATOR-----------------------------------
@@ -360,43 +370,41 @@ expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
 
 //-------------------------------OPERANDS_CHECKERS--------------------------------
 
-void oc_bo_is_lvalue(expr_t* left, expr_t* right, expr_bin_op_t* op) {
-	if (!left->is_lvalue())
-		throw ExprMustBeLValue(left->get_pos());
+void oc_bo_is_lvalue(expr_t* left, expr_t* right, expr_t* op) {
+	oc_uo_is_lvalue(left, op);
 }
 
-void oc_bo_not_constant(expr_t* left, expr_t* right, expr_bin_op_t* op) {
-	if (left->get_type()->is_const())
-		throw AssignmentToReadOnly(left->get_pos());
+void oc_bo_not_constant(expr_t* left, expr_t* right, expr_t* op) {
+	oc_uo_not_constant(left, op);
 }
 
 bool oc_bo_is_integer(expr_t* left, expr_t* right) {
-	return left->get_type()->is_integer() && right->get_type()->is_integer();
+	return oc_uo_is_integer(left) && oc_uo_is_integer(right);
 }
 
 bool oc_bo_is_arithmetic(expr_t* left, expr_t* right) {
-	return left->get_type()->is_arithmetic() && right->get_type()->is_arithmetic();
+	return oc_uo_is_integer(left) && oc_uo_is_integer(right);
 }
 
 bool oc_bo_is_ptrs_to_same_types(expr_t* left, expr_t* right) {
 	return 
-		(left->get_type() == ST_PTR && right->get_type() == ST_PTR) && 
+		(oc_uo_is_ptr(left) && oc_uo_is_ptr(right)) &&
 		(static_pointer_cast<sym_type_ptr_t>(left->get_type()->get_base_type())->get_element_type()->get_base_type() == 
 		 static_pointer_cast<sym_type_ptr_t>(right->get_type()->get_base_type())->get_element_type()->get_base_type());
 }
 
 bool oc_bo_is_arithmetic_or_ptr(expr_t* left, expr_t* right) {
 	return 
-		(left->get_type() == ST_PTR || left->get_type()->is_arithmetic()) &&
-		(right->get_type() == ST_PTR || right->get_type()->is_arithmetic());
+		(oc_uo_is_ptr(left) || oc_uo_is_arithmetic(left)) &&
+		(oc_uo_is_ptr(right) || oc_uo_is_arithmetic(right));
 }
 
 bool oc_bo_ptr_and_integer(expr_t* left, expr_t* right) {
-	return left->get_type() == ST_PTR && right->get_type()->is_integer();
+	return oc_uo_is_ptr(left) && oc_uo_is_integer(right);
 }
 
 bool oc_bo_integer_and_ptr(expr_t* left, expr_t* right) {
-	return left->get_type()->is_integer() && right->get_type() == ST_PTR;
+	return oc_uo_is_integer(left) && oc_uo_is_ptr(right);
 }
 
 //--------------------------------TYPE_CONVERTIONS--------------------------------
@@ -418,7 +426,7 @@ bool tc_bo_integer_increase(expr_t** left, expr_t** right) {
 }
 
 bool tc_bo_integer_and_ptr(expr_t** left, expr_t** right) {
-	if ((*left)->get_type() == ST_PTR || (*right)->get_type() == ST_PTR) {
+	if (oc_uo_is_ptr(*left) || oc_uo_is_ptr(*right)) {
 		tc_uo_integer_increase(left);
 		tc_uo_integer_increase(right);
 		return true;
@@ -427,12 +435,12 @@ bool tc_bo_integer_and_ptr(expr_t** left, expr_t** right) {
 }
 
 bool tc_bo_pass_ptrs(expr_t** left, expr_t** right) {
-	return (*left)->get_type() == ST_PTR && (*right)->get_type() == ST_PTR;
+	return oc_uo_is_ptr(*left) && oc_uo_is_ptr(*right);
 }
 
 bool tc_bo_int_to_ptr(expr_t** left, expr_t** right) {
-	if ((*left)->get_type() == ST_PTR || (*right)->get_type() == ST_PTR) {
-		type_ptr ptr = (*left)->get_type() == ST_PTR ? (*left)->get_type() : (*right)->get_type();
+	if (oc_uo_is_ptr(*left) || oc_uo_is_ptr(*right)) {
+		type_ptr ptr = oc_uo_is_ptr(*left) ? (*left)->get_type() : (*right)->get_type();
 		*left = auto_convert(*left, ptr);
 		*right = auto_convert(*right, ptr);
 		return true;
@@ -441,10 +449,8 @@ bool tc_bo_int_to_ptr(expr_t** left, expr_t** right) {
 }
 
 bool tc_bo_ptr_to_arithmetic(expr_t** left, expr_t** right) {
-	if ((*left)->get_type() == ST_PTR)
-		*left = auto_convert(*left, parser_t::get_type(ST_INTEGER));
-	if ((*right)->get_type() == ST_PTR)
-		*right = auto_convert(*right, parser_t::get_type(ST_INTEGER));
+	tc_uo_ptr_to_arithmetic(left);
+	tc_uo_ptr_to_arithmetic(right);
 	return false;
 }
 

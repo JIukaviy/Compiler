@@ -49,7 +49,7 @@ class expr_un_op_t : public expr_t {
 protected:
 	expr_t* expr;
 	token_ptr op;
-	vector<void(*)(expr_t* operand, expr_un_op_t* op)> and_conditions;
+	vector<void(*)(expr_t* operand, expr_t* op)> and_conditions;
 	vector<bool(*)(expr_t* operand)> or_conditions;
 	vector<bool(*)(expr_t** operand)> pre_check_type_convertions;
 	vector<bool(*)(expr_t** operand)> type_convertions;
@@ -114,7 +114,7 @@ protected:
 	expr_t* left;
 	expr_t* right;
 	token_ptr op;
-	vector<void(*)(expr_t* left, expr_t* right, expr_bin_op_t* op)> and_conditions;
+	vector<void(*)(expr_t* left, expr_t* right, expr_t* op)> and_conditions;
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
