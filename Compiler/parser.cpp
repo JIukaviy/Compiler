@@ -1,7 +1,6 @@
 #include "parser.h"
 #include <map>
 #include <assert.h>
-#include "expression_optimizer.h"
 
 sym_table_ptr parser_t::prelude_sym_table;
 
