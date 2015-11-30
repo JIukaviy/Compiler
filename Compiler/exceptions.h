@@ -145,6 +145,15 @@ public:
 	};
 };
 
+class TypeSpecIsExpected : public SyntaxError {
+public:
+	TypeSpecIsExpected(token_ptr token) {
+		err << token->get_pos() << "Expected type specifier before '";
+		token->short_print(err);
+		err << '\'';
+	}
+};
+
 class CloseBracketExpected : public SyntaxError {
 public:
 	CloseBracketExpected() : SyntaxError("Close bracket is expected") {};
