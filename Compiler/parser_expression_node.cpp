@@ -381,9 +381,9 @@ expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
 		op == T_OP_MOD_ASSIGN ? new_bin_op<expr_mod_assign_bin_op_t>(op) :
 		op->is(T_OP_L, T_OP_LE, T_OP_G, T_OP_GE, 0) ? new_bin_op<expr_relational_bin_op_t>(op) :
 		op->is(T_OP_EQ, T_OP_NEQ, 0) ? new_bin_op<expr_equality_bin_op_t>(op) :
-		op->is(T_OP_AND, T_OP_OR) ? new_bin_op<expr_logical_bin_op_t>(op) :
-		op->is(T_OP_BIT_AND, T_OP_BIT_OR, T_OP_XOR) ? new_bin_op<expr_integer_bin_op_t>(op) :
-		op->is(T_OP_BIT_AND_ASSIGN, T_OP_BIT_OR_ASSIGN, T_OP_XOR_ASSIGN) ? new_bin_op<expr_integer_assign_bin_op_t>(op) :
+		op->is(T_OP_AND, T_OP_OR, 0) ? new_bin_op<expr_logical_bin_op_t>(op) :
+		op->is(T_OP_BIT_AND, T_OP_BIT_OR, T_OP_XOR, 0) ? new_bin_op<expr_integer_bin_op_t>(op) :
+		op->is(T_OP_BIT_AND_ASSIGN, T_OP_BIT_OR_ASSIGN, T_OP_XOR_ASSIGN, 0) ? new_bin_op<expr_integer_assign_bin_op_t>(op) :
 		op->is(T_OP_LEFT, T_OP_RIGHT, 0) ? new_bin_op<expr_shift_bin_op_t>(op) :
 		op->is(T_OP_LEFT_ASSIGN, T_OP_RIGHT_ASSIGN, 0) ? new_bin_op<expr_shift_assign_bin_op_t>(op) :
 		(assert(false), nullptr);
