@@ -202,6 +202,7 @@ expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
 		op == T_OP_BIT_AND ? new_un_op<expr_get_addr_un_op_t>(op) :
 		op == T_OP_MUL ? new_un_op<expr_dereference_op_t>(op) :
 		op->is(T_OP_INC, T_OP_DEC, 0) ? new_un_op<expr_prefix_inc_dec_op_t>(op) :
+		op->is(T_OP_ADD, T_OP_SUB, 0) ? new_un_op<expr_prefix_add_sub_un_op_t>(op) :
 		(assert(false), nullptr);
 }
 
@@ -233,6 +234,13 @@ expr_prefix_inc_dec_op_t::expr_prefix_inc_dec_op_t(token_ptr op) : expr_prefix_u
 	and_conditions.push_back(oc_uo_not_constant);
 	or_conditions.push_back(oc_uo_is_arithmetic);
 	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+//-----------------------------------PREFIX_ADD_SUB-----------------------------------
+
+expr_prefix_add_sub_un_op_t::expr_prefix_add_sub_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	or_conditions.push_back(oc_uo_is_arithmetic);
+	type_convertions.push_back(tc_uo_integer_increase);
 }
 
 //-----------------------------------POSTFIX_UNARY_OPERATOR-----------------------------------
@@ -489,13 +497,13 @@ expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token
 expr_add_bin_op_t::expr_add_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_ptr_and_integer);
 	or_conditions.push_back(oc_bo_integer_and_ptr);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
 	type_convertions.push_back(tc_bo_pass_ptrs);
 }
 
 expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_ptr_and_integer);
 	or_conditions.push_back(oc_bo_integer_and_ptr);
-	type_convertions.push_back(tc_bo_integer_and_ptr);
 }
 
 //--------------------------------------SUB----------------------------------------------
@@ -503,13 +511,13 @@ expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmet
 expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
 	or_conditions.push_back(oc_bo_ptr_and_integer);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
 	type_convertions.push_back(tc_bo_pass_ptrs);
 }
 
 expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
 	or_conditions.push_back(oc_bo_ptr_and_integer);
-	type_convertions.push_back(tc_bo_integer_and_ptr);
 }
 
 //--------------------------------------MOD----------------------------------------------
