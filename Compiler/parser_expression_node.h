@@ -94,6 +94,12 @@ public:
 	expr_prefix_add_sub_un_op_t(token_ptr op);
 };
 
+class expr_prefix_not_un_op_t : public expr_prefix_un_op_t {
+public:
+	expr_prefix_not_un_op_t(token_ptr op);
+	type_ptr get_type() override;
+};
+
 class expr_postfix_un_op_t : public expr_un_op_t {
 public:
 	using expr_un_op_t::expr_un_op_t;
