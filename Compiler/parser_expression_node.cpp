@@ -214,6 +214,7 @@ expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
 		op->is(T_OP_INC, T_OP_DEC, 0) ? new_un_op<expr_prefix_inc_dec_op_t>(op) :
 		op->is(T_OP_ADD, T_OP_SUB, 0) ? new_un_op<expr_prefix_add_sub_un_op_t>(op) :
 		op == T_OP_NOT ? new_un_op<expr_prefix_not_un_op_t>(op) :
+		op == T_OP_BIT_NOT ? new_un_op<expr_prefix_bit_not_un_op_t>(op) :
 		(assert(false), nullptr);
 }
 
@@ -264,6 +265,13 @@ expr_prefix_not_un_op_t::expr_prefix_not_un_op_t(token_ptr op) : expr_prefix_un_
 
 type_ptr expr_prefix_not_un_op_t::get_type() {
 	return parser_t::get_type(ST_INTEGER);
+}
+
+//-----------------------------------PREFIX_BIT_NOT-----------------------------------
+
+expr_prefix_bit_not_un_op_t::expr_prefix_bit_not_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
+	or_conditions.push_back(oc_uo_is_integer);
+	type_convertions.push_back(tc_uo_integer_increase);
 }
 
 //-----------------------------------POSTFIX_UNARY_OPERATOR-----------------------------------
