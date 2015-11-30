@@ -265,7 +265,7 @@ public:
 class ExprMustBeLValue : public SemanticError {
 public:
 	ExprMustBeLValue(pos_t pos) {
-		err << pos << "Expression must be the lvalue";
+		err << pos << "Expression must be lvalue";
 	}
 };
 
