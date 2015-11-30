@@ -51,7 +51,8 @@ protected:
 	token_ptr op;
 	vector<void(*)(expr_t* operand, expr_un_op_t* op)> and_conditions;
 	vector<bool(*)(expr_t* operand)> or_conditions;
-	vector<bool(*)(expr_t** operand, expr_un_op_t* op)> type_convertions;
+	vector<bool(*)(expr_t** operand)> pre_check_type_convertions;
+	vector<bool(*)(expr_t** operand)> type_convertions;
 public:
 	expr_un_op_t(token_ptr op, bool lvalue = false);
 	void print_l(ostream& os, int level) override;

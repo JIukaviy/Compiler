@@ -110,6 +110,9 @@ expr_t * expr_un_op_t::get_expr() {
 }
 
 void expr_un_op_t::set_operand(expr_t* operand) {
+	for each (auto type_cast in pre_check_type_convertions)
+		if (type_cast(&operand))
+			break;
 	bool or_passed = or_conditions.empty();
 	for each (auto condition in and_conditions)
 		condition(operand, this);
@@ -119,7 +122,7 @@ void expr_un_op_t::set_operand(expr_t* operand) {
 	if (!or_passed)
 		throw InvalidUnOpOperand(operand->get_type(), this);
 	for each (auto type_cast in type_convertions)
-		if (type_cast(&operand, this))
+		if (type_cast(&operand))
 			break;
 	expr = operand;
 }
@@ -166,6 +169,13 @@ bool tc_uo_arr_func_to_ptr(expr_t** operand) {
 	return false;
 }
 
+bool tc_uo_integer_increase(expr_t** operand) {
+	if (!(*operand)->get_type()->is_integer())
+		return false;
+	*operand = integer_increase(*operand);
+	return true;
+}
+
 //-----------------------------------PREFIX_UNARY_OPERATOR-----------------------------------
 
 void expr_prefix_un_op_t::print_l(ostream& os, int level) {
@@ -208,6 +218,7 @@ type_ptr expr_get_addr_un_op_t::get_type() {
 //-----------------------------------DEREFERENCE-----------------------------------
 
 expr_dereference_op_t::expr_dereference_op_t(token_ptr op) : expr_prefix_un_op_t(op, true) {
+	pre_check_type_convertions.push_back(tc_uo_arr_func_to_ptr);
 	or_conditions.push_back(oc_uo_is_ptr);
 }
 
@@ -382,8 +393,8 @@ bool oc_bo_integer_and_ptr(expr_t* left, expr_t* right) {
 
 //--------------------------------TYPE_CONVERTIONS--------------------------------
 
-bool tc_bo_align_types(expr_t** left, expr_t** right) {
-	align_types(left, right);
+bool tc_bo_arithmetic_conversion(expr_t** left, expr_t** right) {
+	arithmetic_conversion(left, right);
 	return true;
 }
 
@@ -393,13 +404,22 @@ bool tc_bo_left_to_right_type(expr_t** left, expr_t** right) {
 }
 
 bool tc_bo_integer_increase(expr_t** left, expr_t** right) {
-	*left = integer_increase(*left);
-	*right = integer_increase(*right);
+	tc_uo_integer_increase(left);
+	tc_uo_integer_increase(right);
 	return true;
 }
 
+bool tc_bo_integer_and_ptr(expr_t** left, expr_t** right) {
+	if ((*left)->get_type() == ST_PTR || (*right)->get_type() == ST_PTR) {
+		tc_uo_integer_increase(left);
+		tc_uo_integer_increase(right);
+		return true;
+	}
+	return false;
+}
+
 bool tc_bo_pass_ptrs(expr_t** left, expr_t** right) {
-	return (*left)->get_type() == ST_PTR || (*right)->get_type() == ST_PTR;
+	return (*left)->get_type() == ST_PTR && (*right)->get_type() == ST_PTR;
 }
 
 bool tc_bo_int_to_ptr(expr_t** left, expr_t** right) {
@@ -445,7 +465,7 @@ expr_assign_bin_op_t::expr_assign_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 expr_integer_bin_op_t::expr_integer_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_integer);
-	type_convertions.push_back(tc_bo_align_types);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
 expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
@@ -457,7 +477,7 @@ expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : ex
 expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_arithmetic);
-	type_convertions.push_back(tc_bo_align_types);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
 expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
@@ -475,7 +495,7 @@ expr_add_bin_op_t::expr_add_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op
 expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_ptr_and_integer);
 	or_conditions.push_back(oc_bo_integer_and_ptr);
-	type_convertions.push_back(tc_bo_pass_ptrs);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
 }
 
 //--------------------------------------SUB----------------------------------------------
@@ -489,7 +509,7 @@ expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op
 expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
 	or_conditions.push_back(oc_bo_ptr_and_integer);
-	type_convertions.push_back(tc_bo_pass_ptrs);
+	type_convertions.push_back(tc_bo_integer_and_ptr);
 }
 
 //--------------------------------------MOD----------------------------------------------
@@ -509,7 +529,9 @@ expr_mod_assign_bin_op_t::expr_mod_assign_bin_op_t(token_ptr op) : expr_assign_b
 expr_relational_bin_op_t::expr_relational_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
 	type_convertions.push_back(tc_bo_int_to_ptr);
+	type_convertions.push_back(tc_bo_pass_ptrs);
 }
 
 type_ptr expr_relational_bin_op_t::get_type() {
@@ -528,7 +550,7 @@ expr_equality_bin_op_t::expr_equality_bin_op_t(token_ptr op) : expr_relational_b
 expr_logical_bin_op_t::expr_logical_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_arithmetic_or_ptr);
-	type_convertions.push_back(tc_bo_align_types);
+	type_convertions.push_back(tc_bo_arithmetic_conversion);
 	type_convertions.push_back(tc_bo_ptr_to_arithmetic);
 }
 
@@ -595,18 +617,18 @@ void expr_tern_op_t::set_operands(expr_t* condition_, expr_t* left_, expr_t* rig
 		throw InvalidTernOpOperands(condition_->get_type(), this);
 		
 	condition = condition_;
-	if (!(
-		oc_bo_integer_and_ptr(left_, right_) ||
+	if (!(oc_bo_integer_and_ptr(left_, right_) ||
 		oc_bo_ptr_and_integer(left_, right_) ||
 		oc_bo_is_ptrs_to_same_types(left_, right_) ||
-		oc_bo_is_arithmetic(left_, right_)
-		)) 
+		oc_bo_is_arithmetic(left_, right_)))
 	{
 		throw InvalidTernOpOperands(left_->get_type(), right_->get_type(), this);
 	}
-	!tc_bo_int_to_ptr(&left_, &right_) &&
-	!tc_bo_pass_ptrs(&left_, &right_) &&
-	!tc_bo_align_types(&left_, &right_);
+
+	tc_bo_int_to_ptr(&left_, &right_) ||
+	tc_bo_pass_ptrs(&left_, &right_) ||
+	tc_bo_arithmetic_conversion(&left_, &right_);
+
 	left = left_;
 	right = right_;
 }
