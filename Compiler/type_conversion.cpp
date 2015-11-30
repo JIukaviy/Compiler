@@ -36,27 +36,20 @@ expr_t* integer_increase(expr_t* src) {
 	return add_cast(src, parser_t::get_type(ST_INTEGER));
 }
 
-type_ptr get_max_type(type_ptr left, type_ptr right) {
-	if (left->get_base_type() == right->get_base_type())
-		return left;
-
-	assert(left->is_arithmetic());
-	assert(right->is_arithmetic());
-
-	return  
-		left == ST_DOUBLE ? left :
-		right == ST_DOUBLE ? right :
-		left == ST_INTEGER ? left : right;
-}
-
-void align_types(expr_t** left, expr_t** right) {
+void arithmetic_conversion(expr_t** left, expr_t** right) {
 	type_ptr left_type = (*left)->get_type();
 	type_ptr right_type = (*right)->get_type();
 
-	if (eq_types(left_type->get_base_type(), right_type->get_base_type()))
-		return;
+	assert(left_type->is_arithmetic());
+	assert(right_type->is_arithmetic());
 
-	type_ptr max_type = get_max_type(left_type, right_type);
+	type_ptr max_type = 
+		left_type == ST_DOUBLE ? left_type :
+		right_type == ST_DOUBLE ? right_type :
+		left_type == ST_INTEGER ? left_type :
+		right_type == ST_INTEGER ? right_type :
+		parser_t::get_type(ST_INTEGER);
+
 	*left = auto_convert(*left, max_type);
 	*right = auto_convert(*right, max_type);
 }

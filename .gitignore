@@ -221,3 +221,4 @@ Compiler/types.cpp
 Compiler/types.h
 Compiler/data.txt
 Compiler/data.txt
+Compiler/expression_optimizer.cpp
