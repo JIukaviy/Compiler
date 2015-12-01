@@ -10,6 +10,10 @@ bool expr_t::is_lvalue() {
 	return lvalue;
 }
 
+void expr_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	assert(false);
+}
+
 //-----------------------------------VARIABLE-----------------------------------
 
 expr_var_t::expr_var_t() : expr_t(true) {}
@@ -86,6 +90,10 @@ pos_t expr_const_t::get_pos() {
 
 bool expr_const_t::is_null() {
 	return static_pointer_cast<token_base_with_value_t>(constant)->is_null();
+}
+
+void expr_const_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->push(constant);
 }
 
 //-----------------------------------UNARY_OPERATOR-----------------------------------
@@ -387,6 +395,23 @@ expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
 		op->is(T_OP_LEFT, T_OP_RIGHT, 0) ? new_bin_op<expr_shift_bin_op_t>(op) :
 		op->is(T_OP_LEFT_ASSIGN, T_OP_RIGHT_ASSIGN, 0) ? new_bin_op<expr_shift_assign_bin_op_t>(op) :
 		(assert(false), nullptr);
+}
+
+void expr_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->_push_bin_oprtr(
+		op == T_OP_ADD ? ABO_ADD :
+		op == T_OP_SUB ? ABO_SUB :
+		(assert(false), ABO_ADD), 
+		AR_EAX, AR_EBX);
+}
+
+void expr_bin_op_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	left->generate_asm_code(cmd_list);
+	right->generate_asm_code(cmd_list);
+	cmd_list->pop(AR_EBX);
+	cmd_list->pop(AR_EAX);
+	_generate_asm_code(cmd_list);
+	cmd_list->push(AR_EAX);
 }
 
 //-------------------------------OPERANDS_CHECKERS--------------------------------

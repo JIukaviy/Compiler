@@ -48,6 +48,9 @@
     <ClCompile Include="type_conversion.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="asm_generator.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
@@ -102,6 +105,9 @@
       <Filter>Заголовочные файлы\tokens</Filter>
     </ClInclude>
     <ClInclude Include="type_conversion.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_generator.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

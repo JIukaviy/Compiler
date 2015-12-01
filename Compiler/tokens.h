@@ -61,7 +61,6 @@ public:
 	bool is(TOKEN first, ...);
 	bool is(set<TOKEN>&);
 	static bool is(TOKEN token, set<TOKEN>&);
-	//static bool is(TOKEN token, TOKEN first, ...);
 	static bool is(TOKEN token, TOKEN *first);
 	static string get_name_by_id(TOKEN token_id);
 	int get_line();

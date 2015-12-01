@@ -1,7 +1,9 @@
 #pragma once
 #include "parser_symbol_node.h"
+#include "asm_generator.h"
 #include "tokens.h"
 #include <vector>
+#include "asm_generator.h"
 
 class expr_t : public node_t {
 protected:
@@ -11,6 +13,7 @@ public:
 	bool is_lvalue();
 	virtual pos_t get_pos() = 0;
 	virtual type_ptr get_type() = 0;
+	virtual void generate_asm_code(asm_cmd_list_ptr cmd_list);
 };
 
 //-------------CONSTANT------------
@@ -25,6 +28,7 @@ public:
 	type_ptr get_type() override;
 	pos_t get_pos();
 	bool is_null();
+	void generate_asm_code(asm_cmd_list_ptr cmd_list);
 };
 
 //------------VARIABLE_OR_FUNCTION----------
@@ -129,6 +133,7 @@ protected:
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
+	virtual void _generate_asm_code(asm_cmd_list_ptr cmd_list);
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -140,6 +145,7 @@ public:
 	pos_t get_pos() override;
 	type_ptr get_type() override;
 	static expr_bin_op_t* make_bin_op(token_ptr op);
+	void generate_asm_code(asm_cmd_list_ptr cmd_list) override;
 };
 
 class expr_assign_bin_op_t : public expr_bin_op_t {
