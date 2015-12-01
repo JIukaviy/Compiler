@@ -117,3 +117,29 @@ void asm_cmd_list_t::print(ostream& os) {
 	}
 }
 
+//------------------------------ASM_COMANNDS_LIST-------------------------------------------
+
+asm_generator_t::asm_generator_t(asm_cmd_list_ptr cmd_list) : cmd_list(cmd_list) {}
+
+void asm_generator_t::print(ostream& os) {
+	os <<
+		".386" << endl <<
+		".model flat, C" << endl <<
+		"option casemap : none" << endl <<
+		"include \\masm32\\include\\msvcrt.inc" << endl <<
+		"includelib \\masm32\\lib\\msvcrt.lib" << endl;
+
+	os <<
+		".DATA" << endl <<
+		"printf_format_str BYTE \"%d\", 10, 13, 0" << endl;
+
+	os << ".CODE" << endl;
+
+	os << "main:" << endl;
+	cmd_list->print(os);
+	os <<
+		"pop eax" << endl <<
+		"invoke crt_printf, ADDR printf_format_str, eax" << endl <<
+		"invoke crt__exit, 0" << endl;
+	os << "end main" << endl;
+}

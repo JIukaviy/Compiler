@@ -722,7 +722,8 @@ void parser_t::print_asm_code(ostream& os) {
 		expr_t* expr = parse_expr();
 		asm_cmd_list_ptr cmd_list(new asm_cmd_list_t());
 		expr->generate_asm_code(cmd_list);
-		cmd_list->print(os);
+		asm_generator_ptr gen(new asm_generator_t(cmd_list));
+		gen->print(os);
 	}
 }
 

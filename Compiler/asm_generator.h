@@ -3,17 +3,19 @@
 #include "tokens.h"
 #include <memory>
 #include <vector>
-#include <ostream>
+#include <iostream>
 
 using namespace std;
 
 class asm_cmd_t;
 class asm_cmd_list_t;
 class asm_operand_t;
+class asm_generator_t;
 
 typedef shared_ptr<asm_cmd_t> asm_cmd_ptr;
 typedef shared_ptr<asm_operand_t> asm_oprnd_ptr;
 typedef shared_ptr<asm_cmd_list_t> asm_cmd_list_ptr;
+typedef shared_ptr<asm_generator_t> asm_generator_ptr;
 
 enum ASM_REGISTER {
 	AR_EAX,
@@ -117,4 +119,11 @@ public:
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
 	void print(ostream& os) override;
+};
+
+class asm_generator_t : public asm_t {
+	asm_cmd_list_ptr cmd_list;
+public:
+	asm_generator_t(asm_cmd_list_ptr cmd_list);
+	void print(ostream& os);
 };
