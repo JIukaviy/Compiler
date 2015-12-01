@@ -32,7 +32,8 @@ asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) : op(o
 void asm_un_oprtr_t::print(ostream& os) {
 	os << (
 		op == AUO_PUSH ? "push" :
-		op == AUO_POP ? "pop" : (assert(false), nullptr));
+		op == AUO_POP ? "pop" : 
+		op == AUO_DIV ? "div" : (assert(false), nullptr));
 	os << ' ';
 	operand->print(os);
 }
@@ -47,7 +48,7 @@ void asm_bin_oprtr_t::print(ostream& os) {
 		op == ABO_ADD ? "add" :
 		op == ABO_SUB ? "sub" :
 		op == ABO_IMUL ? "imul" :
-		op == ABO_DIV ? "div" : (assert(false), nullptr));
+		op == ABO_XOR? "xor" : (assert(false), nullptr));
 	os << ' ';
 	left_operand->print(os);
 	os << ", ";
@@ -56,6 +57,26 @@ void asm_bin_oprtr_t::print(ostream& os) {
 
 
 //------------------------------ASM_COMANNDS_LIST-------------------------------------------
+
+void asm_cmd_list_t::add(ASM_REGISTER left, ASM_REGISTER right) {
+	_push_bin_oprtr(ABO_ADD, left, right);
+}
+
+void asm_cmd_list_t::sub(ASM_REGISTER left, ASM_REGISTER right) {
+	_push_bin_oprtr(ABO_SUB, left, right);
+}
+
+void asm_cmd_list_t::imul(ASM_REGISTER left, ASM_REGISTER right) {
+	_push_bin_oprtr(ABO_IMUL, left, right);
+}
+
+void asm_cmd_list_t::xor_(ASM_REGISTER left, ASM_REGISTER right) {
+	_push_bin_oprtr(ABO_XOR, left, right);
+}
+
+void asm_cmd_list_t::div(ASM_REGISTER reg) {
+	_push_un_oprtr(AUO_DIV, reg);
+}
 
 void asm_cmd_list_t::push(ASM_REGISTER operand) {
 	_push_un_oprtr(AUO_PUSH, operand);

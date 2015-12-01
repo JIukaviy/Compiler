@@ -534,6 +534,16 @@ expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : ex
 
 //-----------------------------------ARITHMETIC_OPERATORS-----------------------------------
 
+void expr_arithmetic_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	assert(op->is(T_OP_MUL, T_OP_DIV, 0));
+	if (op == T_OP_MUL)
+		cmd_list->imul(AR_EAX, AR_EBX);
+	else if (op == T_OP_DIV) {
+		cmd_list->xor_(AR_EDX, AR_EDX);
+		cmd_list->div(AR_EBX);
+	}
+}
+
 expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_arithmetic);
@@ -558,6 +568,10 @@ expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmet
 	or_conditions.push_back(oc_bo_integer_and_ptr);
 }
 
+void expr_add_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->add(AR_EAX, AR_EBX);
+}
+
 //--------------------------------------SUB----------------------------------------------
 
 expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
@@ -570,6 +584,10 @@ expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op
 expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_ptrs_to_same_types);
 	or_conditions.push_back(oc_bo_ptr_and_integer);
+}
+
+void expr_sub_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->sub(AR_EAX, AR_EBX);
 }
 
 //--------------------------------------MOD----------------------------------------------

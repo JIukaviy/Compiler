@@ -164,6 +164,7 @@ public:
 };
 
 class expr_arithmetic_bin_op_t : public expr_bin_op_t {
+	void _generate_asm_code(asm_cmd_list_ptr) override;
 public:
 	expr_arithmetic_bin_op_t(token_ptr token);
 };
@@ -174,6 +175,7 @@ public:
 };
 
 class expr_add_bin_op_t : public expr_arithmetic_bin_op_t {
+	void _generate_asm_code(asm_cmd_list_ptr) override;
 public:
 	expr_add_bin_op_t(token_ptr op);
 };
@@ -184,6 +186,7 @@ public:
 };
 
 class expr_sub_bin_op_t : public expr_arithmetic_bin_op_t {
+	void _generate_asm_code(asm_cmd_list_ptr) override;
 public:
 	expr_sub_bin_op_t(token_ptr op);
 };

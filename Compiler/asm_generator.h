@@ -26,14 +26,15 @@ enum ASM_REGISTER {
 
 enum ASM_UN_OPERATOR {
 	AUO_PUSH,
-	AUO_POP
+	AUO_POP,
+	AUO_DIV,
 };
 
 enum ASM_BIN_OPERATOR {
 	ABO_ADD,
 	ABO_SUB,
 	ABO_IMUL,
-	ABO_DIV
+	ABO_XOR
 };
 
 class asm_t {
@@ -100,10 +101,11 @@ class asm_cmd_list_t : public asm_t {
 protected:
 	vector<asm_cmd_ptr> commands;
 public:
-	void add();
-	void sub();
-	void imul();
-	void div();
+	void add(ASM_REGISTER left, ASM_REGISTER right);
+	void sub(ASM_REGISTER left, ASM_REGISTER right);
+	void imul(ASM_REGISTER left, ASM_REGISTER right);
+	void xor_(ASM_REGISTER left, ASM_REGISTER right);
+	void div(ASM_REGISTER reg);
 	void push(ASM_REGISTER reg);
 	void push(token_ptr constant);
 	void pop(ASM_REGISTER reg);
