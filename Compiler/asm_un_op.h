@@ -1,3 +1,3 @@
-register_un_op(PUSH)
-register_un_op(POP)
-register_un_op(DIV)
+register_un_op(PUSH, push)
+register_un_op(POP, pop)
+register_un_op(DIV, div)

@@ -90,6 +90,13 @@ public:
 	void print(ostream& os) override;
 };
 
+class asm_int_oprnd_t : public asm_operand_t {
+	int val;
+public:
+	asm_int_oprnd_t(int val);
+	void print(ostream& os) override;
+};
+
 class asm_global_vars : public asm_t {
 
 };
@@ -102,11 +109,21 @@ class asm_cmd_list_t : public asm_t {
 protected:
 	vector<asm_cmd_ptr> commands;
 public:
+/*#define register_bin_op(op_name, op_incode_name) void op_incode_name(ASM_REGISTER left, ASM_REGISTER right);
+#include "asm_bin_op.h"
+#undef register_bin_op
+#define register_un_op(op_name, op_incode_name) void op_incode_name(ASM_REGISTER operand);
+#include "asm__op.h"
+#undef register_un_op*/
 	void add(ASM_REGISTER left, ASM_REGISTER right);
 	void sub(ASM_REGISTER left, ASM_REGISTER right);
 	void imul(ASM_REGISTER left, ASM_REGISTER right);
 	void mov(ASM_REGISTER left, ASM_REGISTER right);
 	void xor_(ASM_REGISTER left, ASM_REGISTER right);
+	void shl(ASM_REGISTER left, int right);
+	void shl(ASM_REGISTER left, token_ptr right);
+	void shr(ASM_REGISTER left, int right);
+	void shr(ASM_REGISTER left, token_ptr right);
 	void div(ASM_REGISTER reg);
 	void push(ASM_REGISTER reg);
 	void push(token_ptr constant);
@@ -118,6 +135,7 @@ public:
 
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
+	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int right);
 	void print(ostream& os) override;
 };
 
