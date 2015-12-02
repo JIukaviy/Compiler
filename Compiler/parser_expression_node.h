@@ -197,6 +197,7 @@ public:
 };
 
 class expr_mod_bin_op_t : public expr_bin_op_t {
+	void _generate_asm_code(asm_cmd_list_ptr) override;
 public:
 	expr_mod_bin_op_t(token_ptr op);
 };
@@ -318,4 +319,5 @@ public:
 	void set_operand(expr_t* expr, type_ptr type);
 	type_ptr get_type() override;
 	pos_t get_pos() override;
+	void generate_asm_code(asm_cmd_list_ptr cmd_list);
 };

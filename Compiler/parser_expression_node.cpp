@@ -592,6 +592,12 @@ void expr_sub_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
 
 //--------------------------------------MOD----------------------------------------------
 
+void expr_mod_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->xor_(AR_EDX, AR_EDX);
+	cmd_list->div(AR_EBX);
+	cmd_list->mov(AR_EAX, AR_EDX);
+}
+
 expr_mod_bin_op_t::expr_mod_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_integer);
