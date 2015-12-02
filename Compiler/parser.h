@@ -98,6 +98,7 @@ public:
 	void print_decl(ostream&);
 	void print_statement(ostream&);
 	void print_statements(ostream&);
+	void print_asm_code(ostream&);
 	static sym_table_ptr get_prelude_sym_table();
 	static type_base_ptr get_base_type(SYM_TYPE sym_type);
 	static type_ptr get_type(SYM_TYPE sym_type, bool is_const = false);

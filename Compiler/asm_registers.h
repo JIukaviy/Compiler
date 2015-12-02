@@ -1,0 +1,6 @@
+register_register(EAX)
+register_register(EBX)
+register_register(EDX)
+register_register(ECX)
+register_register(EBP)
+register_register(ESP)

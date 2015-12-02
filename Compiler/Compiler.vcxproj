@@ -118,6 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="asm_generator.cpp" />
     <ClCompile Include="lexeme_analyzer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="parser.cpp" />
@@ -130,6 +131,9 @@
     <ClCompile Include="type_conversion.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asm_bin_op.h" />
+    <ClInclude Include="asm_generator.h" />
+    <ClInclude Include="asm_un_op.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="lexeme_analyzer.h" />
     <ClInclude Include="parser.h" />
@@ -137,6 +141,7 @@
     <ClInclude Include="parser_expression_node.h" />
     <ClInclude Include="parser_statement_node.h" />
     <ClInclude Include="parser_symbol_node.h" />
+    <ClInclude Include="asm_registers.h" />
     <ClInclude Include="symbol_table.h" />
     <ClInclude Include="tokens.h" />
     <ClInclude Include="token_char.h" />

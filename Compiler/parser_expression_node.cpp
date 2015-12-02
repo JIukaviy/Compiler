@@ -10,6 +10,10 @@ bool expr_t::is_lvalue() {
 	return lvalue;
 }
 
+void expr_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	assert(false);
+}
+
 //-----------------------------------VARIABLE-----------------------------------
 
 expr_var_t::expr_var_t() : expr_t(true) {}
@@ -86,6 +90,10 @@ pos_t expr_const_t::get_pos() {
 
 bool expr_const_t::is_null() {
 	return static_pointer_cast<token_base_with_value_t>(constant)->is_null();
+}
+
+void expr_const_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->push(constant);
 }
 
 //-----------------------------------UNARY_OPERATOR-----------------------------------
@@ -389,6 +397,23 @@ expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
 		(assert(false), nullptr);
 }
 
+void expr_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->_push_bin_oprtr(
+		op == T_OP_ADD ? ABO_ADD :
+		op == T_OP_SUB ? ABO_SUB :
+		(assert(false), ABO_ADD), 
+		AR_EAX, AR_EBX);
+}
+
+void expr_bin_op_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	left->generate_asm_code(cmd_list);
+	right->generate_asm_code(cmd_list);
+	cmd_list->pop(AR_EBX);
+	cmd_list->pop(AR_EAX);
+	_generate_asm_code(cmd_list);
+	cmd_list->push(AR_EAX);
+}
+
 //-------------------------------OPERANDS_CHECKERS--------------------------------
 
 void oc_bo_is_lvalue(expr_t* left, expr_t* right, expr_t* op) {
@@ -509,6 +534,16 @@ expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : ex
 
 //-----------------------------------ARITHMETIC_OPERATORS-----------------------------------
 
+void expr_arithmetic_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	assert(op->is(T_OP_MUL, T_OP_DIV, 0));
+	if (op == T_OP_MUL)
+		cmd_list->imul(AR_EAX, AR_EBX);
+	else if (op == T_OP_DIV) {
+		cmd_list->xor_(AR_EDX, AR_EDX);
+		cmd_list->div(AR_EBX);
+	}
+}
+
 expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_op_t(token) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_arithmetic);
@@ -533,6 +568,10 @@ expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmet
 	or_conditions.push_back(oc_bo_integer_and_ptr);
 }
 
+void expr_add_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->add(AR_EAX, AR_EBX);
+}
+
 //--------------------------------------SUB----------------------------------------------
 
 expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {
@@ -547,7 +586,17 @@ expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmet
 	or_conditions.push_back(oc_bo_ptr_and_integer);
 }
 
+void expr_sub_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->sub(AR_EAX, AR_EBX);
+}
+
 //--------------------------------------MOD----------------------------------------------
+
+void expr_mod_bin_op_t::_generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->xor_(AR_EDX, AR_EDX);
+	cmd_list->div(AR_EBX);
+	cmd_list->mov(AR_EAX, AR_EDX);
+}
 
 expr_mod_bin_op_t::expr_mod_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
@@ -872,4 +921,8 @@ type_ptr expr_cast_t::get_type() {
 
 pos_t expr_cast_t::get_pos() {
 	return expr->get_pos();
+}
+
+void expr_cast_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	expr->generate_asm_code(cmd_list);
 }

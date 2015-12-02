@@ -717,6 +717,16 @@ void parser_t::print_statements(ostream& os) {
 	}
 }
 
+void parser_t::print_asm_code(ostream& os) {
+	if (la->next() != T_EMPTY) {
+		expr_t* expr = parse_expr();
+		asm_cmd_list_ptr cmd_list(new asm_cmd_list_t());
+		expr->generate_asm_code(cmd_list);
+		asm_generator_ptr gen(new asm_generator_t(cmd_list));
+		gen->print(os);
+	}
+}
+
 sym_table_ptr parser_t::get_prelude_sym_table() {
 	return prelude_sym_table;
 }
