@@ -5,6 +5,7 @@
 #include <vector>
 #include "lexeme_analyzer.h"
 #include "parser.h"
+#include "asm_generator.h"
 
 using namespace std;
 
@@ -12,6 +13,7 @@ int main(int argc, char** argv) {
 	tokens_init();
 	lexeme_analyzer_init();
 	parser_init();
+	asm_generator_init();
 	if (argc == 3) {
 		ifstream fin(argv[2]);
 		if (!fin) {
@@ -21,37 +23,23 @@ int main(int argc, char** argv) {
 		ofstream fout("output.txt");
 		lexeme_analyzer_t la(fin);
 		parser_t parser(&la);
-		if (argv[1][0] == 'l') {
-			try {
+		try {
+			if (argv[1][0] == 'l') {
 				while (!la.eof())
 					fout << la.next() << endl;
-			} catch (CompileError& e) {
-				fout << e;
-			}
-		} else if (argv[1][0] == 'e') {
-			try {
+			} else if (argv[1][0] == 'e') {
 				parser.print_expr(fout);
-			} catch (CompileError& e) {
-				fout << e;
-			}
-		} else if (argv[1][0] == 't') {
-			try {
+			} else if (argv[1][0] == 't') {
 				parser.print_type(fout);
-			} catch (CompileError& e) {
-				fout << e;
-			} 
-		} else if (argv[1][0] == 'd') {
-			try {
+			} else if (argv[1][0] == 'd') {
 				parser.print_statements(fout);
-			} catch (CompileError& e) {
-				fout << e;
+			} else if (argv[1][0] == 's') {
+				parser.print_statements(fout);
+			} else if (argv[1][0] == 'a') {
+				parser.print_asm_code(fout);
 			}
-		} else if (argv[1][0] == 's') {
-			try {
-				parser.print_statement(fout);
-			} catch (CompileError& e) {
-				fout << e;
-			}
+		} catch (CompileError& e) {
+			fout << e;
 		}
 		return 0;
 	}
@@ -59,9 +47,7 @@ int main(int argc, char** argv) {
 	lexeme_analyzer_t la(fin);
 	parser_t parser(&la);
 	try {
-		//parser.print_statements(cout);
-		while (!la.eof())
-			cout << la.next() << endl;
+		parser.print_asm_code(cout);
 	} catch (LexemeAnalyzeError& e) {
 		cerr << "Lexeme analyzer error: " << e << endl;
 	} catch (SyntaxError& e) {

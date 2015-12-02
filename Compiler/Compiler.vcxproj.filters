@@ -16,6 +16,12 @@
     <Filter Include="Заголовочные файлы\tokens">
       <UniqueIdentifier>{37938e45-9645-4a85-be09-fff94db6fa17}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\asm">
+      <UniqueIdentifier>{ef4016e9-b37b-494e-8d7b-ed455eede140}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Заголовочные файлы\parser_nodes">
+      <UniqueIdentifier>{2b7ea36d-fa52-4dee-8188-531ef00af979}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -65,18 +71,6 @@
     <ClInclude Include="exceptions.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="parser_base_node.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="parser_expression_node.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="parser_symbol_node.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
-    <ClInclude Include="parser_statement_node.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
     <ClInclude Include="symbol_table.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
@@ -109,6 +103,27 @@
     </ClInclude>
     <ClInclude Include="asm_generator.h">
       <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_registers.h">
+      <Filter>Заголовочные файлы\asm</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_base_node.h">
+      <Filter>Заголовочные файлы\parser_nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_expression_node.h">
+      <Filter>Заголовочные файлы\parser_nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_statement_node.h">
+      <Filter>Заголовочные файлы\parser_nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="parser_symbol_node.h">
+      <Filter>Заголовочные файлы\parser_nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_bin_op.h">
+      <Filter>Заголовочные файлы\asm</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_un_op.h">
+      <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

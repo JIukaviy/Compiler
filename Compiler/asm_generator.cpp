@@ -1,18 +1,17 @@
 #include "asm_generator.h"
 #include <assert.h>
+#include <map>
+
+map<ASM_REGISTER, string> asm_reg_to_str;
+map<ASM_BIN_OPERATOR, string> asm_bin_op_to_str;
+map<ASM_UN_OPERATOR, string> asm_un_op_to_str;
 
 //------------------------------ASM_REGISTER_OPERAND-------------------------------------------
 
 asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg) : reg(reg) {}
 
 void asm_reg_oprnd_t::print(ostream& os) {
-	os << (
-		reg == AR_EAX ? "eax" :
-		reg == AR_EBX ? "ebx" :
-		reg == AR_ECX ? "ecx" :
-		reg == AR_EDX ? "edx" :
-		reg == AR_EBP ? "ebp" :
-		reg == AR_ESP ? "esp" : (assert(false), nullptr));
+	os << asm_reg_to_str.at(reg);
 }
 
 //------------------------------ASM_CONSTANT_OPERAND-------------------------------------------
@@ -30,10 +29,7 @@ void asm_const_oprnd_t::print(ostream& os) {
 asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) : op(op), operand(operand) {}
 
 void asm_un_oprtr_t::print(ostream& os) {
-	os << (
-		op == AUO_PUSH ? "push" :
-		op == AUO_POP ? "pop" : 
-		op == AUO_DIV ? "div" : (assert(false), nullptr));
+	os << asm_un_op_to_str.at(op);
 	os << ' ';
 	operand->print(os);
 }
@@ -44,11 +40,7 @@ asm_bin_oprtr_t::asm_bin_oprtr_t(ASM_BIN_OPERATOR op, asm_oprnd_ptr left_operand
 	op(op), left_operand(left_operand), right_operand(right_operand) {}
 
 void asm_bin_oprtr_t::print(ostream& os) {
-	os << (
-		op == ABO_ADD ? "add" :
-		op == ABO_SUB ? "sub" :
-		op == ABO_IMUL ? "imul" :
-		op == ABO_XOR? "xor" : (assert(false), nullptr));
+	os << asm_bin_op_to_str.at(op);
 	os << ' ';
 	left_operand->print(os);
 	os << ", ";
@@ -142,4 +134,22 @@ void asm_generator_t::print(ostream& os) {
 		"invoke crt_printf, ADDR printf_format_str, eax" << endl <<
 		"invoke crt__exit, 0" << endl;
 	os << "end main" << endl;
+}
+
+static string lower_case(char cstr[]) {
+	string res(cstr);
+	transform(res.begin(), res.end(), res.begin(), tolower);
+	return res;
+}
+
+void asm_generator_init() {
+#define register_register(reg_name) asm_reg_to_str[AR_##reg_name] = lower_case(#reg_name);
+#define register_un_op(op_name) asm_un_op_to_str[AUO_##op_name] = lower_case(#op_name);
+#define register_bin_op(op_name) asm_bin_op_to_str[ABO_##op_name] = lower_case(#op_name);
+#include "asm_registers.h"
+#include "asm_un_op.h"
+#include "asm_bin_op.h"
+#undef register_register
+#undef register_un_op
+#undef register_bin_op
 }

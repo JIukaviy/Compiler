@@ -4,8 +4,11 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
+
+void asm_generator_init();
 
 class asm_cmd_t;
 class asm_cmd_list_t;
@@ -18,25 +21,21 @@ typedef shared_ptr<asm_cmd_list_t> asm_cmd_list_ptr;
 typedef shared_ptr<asm_generator_t> asm_generator_ptr;
 
 enum ASM_REGISTER {
-	AR_EAX,
-	AR_EBX,
-	AR_ECX,
-	AR_EDX,
-	AR_EBP,
-	AR_ESP
+#define register_register(reg_name) AR_##reg_name,
+#include "asm_registers.h"
+#undef register_register
 };
 
 enum ASM_UN_OPERATOR {
-	AUO_PUSH,
-	AUO_POP,
-	AUO_DIV,
+#define register_un_op(op_name) AUO_##op_name,
+#include "asm_un_op.h"
+#undef register_un_op
 };
 
 enum ASM_BIN_OPERATOR {
-	ABO_ADD,
-	ABO_SUB,
-	ABO_IMUL,
-	ABO_XOR
+#define register_bin_op(op_name) ABO_##op_name,
+#include "asm_bin_op.h"
+#undef register_bin_op
 };
 
 class asm_t {
