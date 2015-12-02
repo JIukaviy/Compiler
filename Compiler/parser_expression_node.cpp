@@ -922,3 +922,7 @@ type_ptr expr_cast_t::get_type() {
 pos_t expr_cast_t::get_pos() {
 	return expr->get_pos();
 }
+
+void expr_cast_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
+	expr->generate_asm_code(cmd_list);
+}
