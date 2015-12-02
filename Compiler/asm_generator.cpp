@@ -62,6 +62,10 @@ void asm_cmd_list_t::imul(ASM_REGISTER left, ASM_REGISTER right) {
 	_push_bin_oprtr(ABO_IMUL, left, right);
 }
 
+void asm_cmd_list_t::mov(ASM_REGISTER left, ASM_REGISTER right) {
+	_push_bin_oprtr(ABO_MOV, left, right);
+}
+
 void asm_cmd_list_t::xor_(ASM_REGISTER left, ASM_REGISTER right) {
 	_push_bin_oprtr(ABO_XOR, left, right);
 }

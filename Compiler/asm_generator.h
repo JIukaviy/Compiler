@@ -105,6 +105,7 @@ public:
 	void add(ASM_REGISTER left, ASM_REGISTER right);
 	void sub(ASM_REGISTER left, ASM_REGISTER right);
 	void imul(ASM_REGISTER left, ASM_REGISTER right);
+	void mov(ASM_REGISTER left, ASM_REGISTER right);
 	void xor_(ASM_REGISTER left, ASM_REGISTER right);
 	void div(ASM_REGISTER reg);
 	void push(ASM_REGISTER reg);
