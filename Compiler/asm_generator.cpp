@@ -58,64 +58,30 @@ void asm_bin_oprtr_t::print(ostream& os) {
 
 //------------------------------ASM_COMANNDS_LIST-------------------------------------------
 
-/*#define register_bin_op(op_name, op_incode_name) void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
-													_push_bin_oprtr(ABO_##op_name, left, right); \
-												 }
+#define register_bin_op(op_name, op_incode_name) \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
+		_push_bin_oprtr(ABO_##op_name, left, right); \
+	} \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, int right) { \
+		_push_bin_oprtr(ABO_##op_name, left, right); \
+	} \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, token_ptr right) { \
+		_push_bin_oprtr(ABO_##op_name, left, right); \
+	}
 #include "asm_bin_op.h"
 #undef register_bin_op
-#define register_un_op(op_name, op_incode_name) void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
-													_push_un_oprtr(AUO_##op_name, operand); \
-												 }
+#define register_un_op(op_name, op_incode_name) \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
+		_push_un_oprtr(AUO_##op_name, operand); \
+	} \
+	void asm_cmd_list_t::op_incode_name(int operand) { \
+		_push_un_oprtr(AUO_##op_name, operand); \
+	} \
+	void asm_cmd_list_t::op_incode_name(token_ptr operand) { \
+		_push_un_oprtr(AUO_##op_name, operand); \
+	}
 #include "asm_un_op.h"
-#undef register_un_op*/
-
-void asm_cmd_list_t::add(ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(ABO_ADD, left, right);
-}
-
-void asm_cmd_list_t::sub(ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(ABO_SUB, left, right);
-}
-
-void asm_cmd_list_t::imul(ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(ABO_IMUL, left, right);
-}
-
-void asm_cmd_list_t::mov(ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(ABO_MOV, left, right);
-}
-
-void asm_cmd_list_t::xor_(ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(ABO_XOR, left, right);
-}
-
-void asm_cmd_list_t::shl(ASM_REGISTER left, int right) {
-	_push_bin_oprtr(ABO_SHL, left, right);
-}
-
-void asm_cmd_list_t::shl(ASM_REGISTER left, token_ptr right) {
-	_push_bin_oprtr(ABO_SHL, left, right);
-}
-
-void asm_cmd_list_t::shr(ASM_REGISTER left, token_ptr right) {
-	_push_bin_oprtr(ABO_SHL, left, right);
-}
-
-void asm_cmd_list_t::div(ASM_REGISTER reg) {
-	_push_un_oprtr(AUO_DIV, reg);
-}
-
-void asm_cmd_list_t::push(ASM_REGISTER operand) {
-	_push_un_oprtr(AUO_PUSH, operand);
-}
-
-void asm_cmd_list_t::pop(ASM_REGISTER operand) {
-	_push_un_oprtr(AUO_POP, operand);
-}
-
-void asm_cmd_list_t::push(token_ptr constant) {
-	_push_un_oprtr(AUO_PUSH, constant);
-}
+#undef register_un_op
 
 void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) {
 	commands.push_back(asm_cmd_ptr(new asm_un_oprtr_t(op, operand)));
@@ -129,12 +95,20 @@ void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, token_ptr operand) {
 	_push_un_oprtr(op, asm_oprnd_ptr(new asm_const_oprnd_t(operand)));
 }
 
+void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, int operand) {
+	_push_un_oprtr(op, asm_oprnd_ptr(new asm_int_oprnd_t(operand)));
+}
+
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
 	commands.push_back(asm_cmd_ptr(new asm_bin_oprtr_t(op, left, right)));
 }
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right) {
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+}
+
+void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, token_ptr right) {
+	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
 }
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int right) {
