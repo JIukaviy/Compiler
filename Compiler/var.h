@@ -3,6 +3,7 @@
 #include <ostream>
 #include <memory>
 #include <assert.h>
+#include <string>
 
 using namespace std;
 
@@ -48,12 +49,12 @@ public:
 	var_ptr operator/(var_ptr) override;
 	var_ptr operator<<(var_ptr) override;
 	var_ptr operator>>(var_ptr) override;
-	T get_val();
+	T& get_val();
 	void print(ostream& os) override;
 };
 
 template<typename T>
-inline T var_t<T>::get_val() {
+inline T& var_t<T>::get_val() {
 	return val;
 }
 
@@ -65,6 +66,11 @@ inline void var_t<T>::print(ostream& os) {
 template<>
 inline void var_t<char>::print(ostream& os) {
 	os << '\'' << val << '\'';
+}
+
+template<>
+inline void var_t<string>::print(ostream& os) {
+	os << '\"' << val << '\"';
 }
 
 template<typename T>
@@ -85,19 +91,36 @@ define_operator(/);
 define_operator(<<);
 define_operator(>>);
 
-template<> 
-inline var_ptr var_t<double>::operator<<(var_ptr e) {
+#undef define_operator
+
+#define forbid_operand(op, operand) \
+template<> \
+inline var_ptr var_t<operand>::operator##op(var_ptr e) {\
+	assert(false);\
+	return nullptr;\
+}
+
+forbid_operand(<<, double);
+forbid_operand(>>, double);
+
+forbid_operand(+, string);
+forbid_operand(-, string);
+forbid_operand(*, string);
+forbid_operand(/, string);
+forbid_operand(<<, string);
+forbid_operand(>>, string);
+
+template<>
+inline var_ptr var_t<string>::operator+() {
 	assert(false);
 	return nullptr;
 }
 
 template<>
-inline var_ptr var_t<double>::operator>>(var_ptr e) {
+inline var_ptr var_t<string>::operator-() {
 	assert(false);
 	return nullptr;
 }
-
-#undef define_operator
 
 template<typename T>
 inline var_ptr var_t<T>::operator+() {
