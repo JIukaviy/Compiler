@@ -14,6 +14,11 @@ void expr_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
 	assert(false);
 }
 
+var_ptr expr_t::eval() {
+	throw ExprMustBeEval(get_pos());
+	return var_ptr();
+}
+
 //-----------------------------------VARIABLE-----------------------------------
 
 expr_var_t::expr_var_t() : expr_t(true) {}
@@ -55,6 +60,20 @@ pos_t expr_var_t::get_pos() {
 	return var_token->get_pos();
 }
 
+var_ptr expr_var_t::eval() {
+	if (variable->get_type() == ST_FUNC ||
+		variable->get_type() == ST_ARRAY)
+			throw ExprMustBeEval(get_pos());
+	auto init_list = static_pointer_cast<sym_var_t>(variable)->get_init_list();
+	if (init_list.empty())
+		throw ExprMustBeEval(get_pos());
+	try {
+		return init_list[0]->eval();
+	} catch (...) {
+		throw ExprMustBeEval(get_pos());
+	}
+}
+
 //-----------------------------------CONSTANT-----------------------------------
 
 expr_const_t::expr_const_t(token_ptr constant_) : constant(constant_) {}
@@ -78,7 +97,7 @@ type_ptr expr_const_t::get_type() {
 	if (constant == T_STRING) {
 		auto arr = shared_ptr<sym_type_array_t>(new sym_type_array_t());
 		arr->set_element_type(type_t::make_type(parser_t::get_base_type(ST_CHAR), true));
-		arr->set_size(static_pointer_cast<token_with_value_t<string>>(constant)->get_value().length() + 1);
+		arr->set_len(static_pointer_cast<token_with_value_t<string>>(constant)->get_value().length() + 1);
 		return type_t::make_type(arr);
 	}
 	return parser_t::get_type(symbol_t::token_to_sym_type(constant->get_token_id()));
@@ -94,6 +113,10 @@ bool expr_const_t::is_null() {
 
 void expr_const_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
 	cmd_list->push(constant);
+}
+
+var_ptr expr_const_t::eval() {
+	return static_pointer_cast<token_base_with_value_t>(constant)->get_var();
 }
 
 //-----------------------------------UNARY_OPERATOR-----------------------------------
@@ -113,7 +136,7 @@ void expr_un_op_t::short_print_l(ostream& os, int level) {
 	expr->short_print(os);
 }
 
-expr_t * expr_un_op_t::get_expr() {
+expr_t* expr_un_op_t::get_expr() {
 	return expr;
 }
 
@@ -224,6 +247,13 @@ expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
 		op == T_OP_NOT ? new_un_op<expr_prefix_not_un_op_t>(op) :
 		op == T_OP_BIT_NOT ? new_un_op<expr_prefix_bit_not_un_op_t>(op) :
 		(assert(false), nullptr);
+}
+
+var_ptr expr_prefix_un_op_t::eval() {
+	if (op == T_OP_ADD)
+		return expr->eval();
+	else if (op == T_OP_SUB)
+		return -expr->eval();
 }
 
 //-----------------------------------GET_ADRESS-----------------------------------
@@ -412,6 +442,36 @@ void expr_bin_op_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
 	cmd_list->pop(AR_EAX);
 	_generate_asm_code(cmd_list);
 	cmd_list->push(AR_EAX);
+}
+
+
+
+var_ptr expr_bin_op_t::eval() {
+	var_ptr lv = left->eval();
+	var_ptr rv = right->eval();
+#define reg_bin_op(token, o) op == token ? lv o rv :
+	return
+		reg_bin_op(T_OP_ADD, +)
+		reg_bin_op(T_OP_SUB, -)
+		reg_bin_op(T_OP_MUL, *)
+		reg_bin_op(T_OP_DIV, /)
+		reg_bin_op(T_OP_MOD, %)
+
+		reg_bin_op(T_OP_AND, &&)
+		reg_bin_op(T_OP_OR, ||)
+		reg_bin_op(T_OP_BIT_AND, &)
+		reg_bin_op(T_OP_BIT_OR, |)
+		reg_bin_op(T_OP_LEFT, <<)
+		reg_bin_op(T_OP_RIGHT, >>)
+
+		reg_bin_op(T_OP_L, <)
+		reg_bin_op(T_OP_LE, <=)
+		reg_bin_op(T_OP_EQ, ==)
+		reg_bin_op(T_OP_NEQ, !=)
+		reg_bin_op(T_OP_GE, >=)
+		reg_bin_op(T_OP_G, >)
+		reg_bin_op(T_OP_L, <)
+		expr_t::eval();
 }
 
 //-------------------------------OPERANDS_CHECKERS--------------------------------
@@ -725,6 +785,10 @@ pos_t expr_tern_op_t::get_pos() {
 	return question_mark->get_pos();
 }
 
+var_ptr expr_tern_op_t::eval() {
+	return condition->eval() ? left->eval() : right->eval();
+}
+
 //-----------------------------------ARRAY_INDEX-----------------------------------
 
 expr_arr_index_t::expr_arr_index_t(token_ptr sqr_bracket) : expr_t(true), sqr_bracket(sqr_bracket) {}
@@ -925,4 +989,12 @@ pos_t expr_cast_t::get_pos() {
 
 void expr_cast_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
 	expr->generate_asm_code(cmd_list);
+}
+
+var_ptr expr_cast_t::eval() {
+	return
+		type == ST_CHAR ? var_cast<char>(expr->eval()) :
+		type == ST_INTEGER ? var_cast<int>(expr->eval()) :
+		type == ST_DOUBLE ? var_cast<double>(expr->eval()) :
+		(throw ExprMustBeEval(get_pos()), nullptr);
 }

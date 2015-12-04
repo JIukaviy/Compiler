@@ -94,6 +94,7 @@ class parser_t {
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);
+	void print_eval_expr(ostream&);
 	void print_type(ostream&);
 	void print_decl(ostream&);
 	void print_statement(ostream&);

@@ -645,25 +645,20 @@ stmt_ptr parser_t::parse_return_stmt() {
 	return stmt_ptr(new stmt_return_t(func_stack.top()));
 }
 
-//---------------------------------VALIDATE_AND_OPTIMIZE_EXPRESSIONS-------------------------------------------
-
-/*expr_t* parser_t::validate_expr(expr_t* expr) {
-	expr_bin_op_t* bin_op = dynamic_cast<expr_bin_op_t*>(expr);
-	if (bin_op) {
-
-	}
-	expr_const_t* constant = dynamic_cast<expr_const_t*>(expr);
-	if (constant) {
-		return constant;
-	}
-}*/
-
 //---------------------------------PRINT-------------------------------------------
 
 void parser_t::print_expr(ostream& os) {
 	la->next();
 	if (la->get() != T_EMPTY)
 		right_associated_bin_op()->print(os);
+}
+
+void parser_t::print_eval_expr(ostream& os) {
+	if (la->next() == T_EMPTY)
+		return;
+	expr_t* expr = parse_expr();
+	expr->eval()->print(os);
+	os << endl;
 }
 
 void parser_t::print_type(ostream& os) {
@@ -722,7 +717,7 @@ void parser_t::print_asm_code(ostream& os) {
 		expr_t* expr = parse_expr();
 		asm_cmd_list_ptr cmd_list(new asm_cmd_list_t());
 		expr->generate_asm_code(cmd_list);
-		asm_generator_ptr gen(new asm_generator_t(cmd_list));
+		asm_gen_ptr gen(new asm_generator_t(cmd_list));
 		gen->print(os);
 	}
 }

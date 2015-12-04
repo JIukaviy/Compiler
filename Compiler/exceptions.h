@@ -273,9 +273,12 @@ public:
 
 class ExprMustBeLValue : public SemanticError {
 public:
-	ExprMustBeLValue(pos_t pos) {
-		err << pos << "Expression must be lvalue";
-	}
+	ExprMustBeLValue(pos_t pos) : SemanticError("Expression must be lvalue", pos) {}
+};
+
+class ExprMustBeEval : public SemanticError {
+public:
+	ExprMustBeEval(pos_t pos) : SemanticError("Expression should be computable at compile time", pos) {}
 };
 
 class AssignmentToReadOnly : public SemanticError {

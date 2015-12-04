@@ -4,6 +4,7 @@
 #include "tokens.h"
 #include <vector>
 #include "asm_generator.h"
+#include "var.h"
 
 class expr_t : public node_t {
 protected:
@@ -14,6 +15,7 @@ public:
 	virtual pos_t get_pos() = 0;
 	virtual type_ptr get_type() = 0;
 	virtual void generate_asm_code(asm_cmd_list_ptr cmd_list);
+	virtual var_ptr eval(); //  идает исключение в случае если выражение невозможно вычислить во врем€ компил€ции
 };
 
 //-------------CONSTANT------------
@@ -29,6 +31,7 @@ public:
 	pos_t get_pos();
 	bool is_null();
 	void generate_asm_code(asm_cmd_list_ptr cmd_list);
+	var_ptr eval() override;
 };
 
 //------------VARIABLE_OR_FUNCTION----------
@@ -45,6 +48,7 @@ public:
 	type_ptr get_type() override;
 	shared_ptr<sym_with_type_t> get_var();
 	pos_t get_pos();
+	var_ptr eval() override;
 };
 
 //-----------------UNARY_OPERATORS-----------------
@@ -74,6 +78,7 @@ public:
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 	static expr_un_op_t* make_prefix_un_op(token_ptr op);
+	var_ptr eval() override;
 };
 
 class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
@@ -146,6 +151,7 @@ public:
 	type_ptr get_type() override;
 	static expr_bin_op_t* make_bin_op(token_ptr op);
 	void generate_asm_code(asm_cmd_list_ptr cmd_list) override;
+	var_ptr eval() override;
 };
 
 class expr_assign_bin_op_t : public expr_bin_op_t {
@@ -253,6 +259,7 @@ public:
 	void set_operands(expr_t* condition, expr_t* left, expr_t* right);
 	type_ptr get_type() override;
 	pos_t get_pos() override;
+	var_ptr eval() override;
 };
 
 //----------------ARRAY_INDEX----------------------
@@ -320,4 +327,5 @@ public:
 	type_ptr get_type() override;
 	pos_t get_pos() override;
 	void generate_asm_code(asm_cmd_list_ptr cmd_list);
+	var_ptr eval() override;
 };

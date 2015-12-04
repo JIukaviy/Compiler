@@ -77,7 +77,7 @@ class token_base_with_value_t : public token_t {
 public:
 	using token_t::token_t;
 	virtual bool is_null() = 0;
-	virtual var_ptr get_var() const = 0;
+	virtual var_ptr const get_var() const = 0;
 };
 
 template <typename T>
@@ -91,7 +91,7 @@ public:
 	void short_print_l(ostream& os, int level) override;
 	bool is_null() override;
 	const T& get_value() const;
-	var_ptr get_var() const override;
+	var_ptr const get_var() const override;
 };
 
 template<typename T>

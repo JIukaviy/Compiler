@@ -12,27 +12,25 @@ class var_base_t;
 class var_ptr : public shared_ptr<var_base_t> {
 public:
 	using shared_ptr<var_base_t>::shared_ptr;
-	var_ptr operator+(var_ptr);
-	var_ptr operator-(var_ptr);
-	var_ptr operator+();
-	var_ptr operator-();
-	var_ptr operator*(var_ptr);
-	var_ptr operator/(var_ptr);
-	var_ptr operator<<(var_ptr);
-	var_ptr operator>>(var_ptr);
+#define register_un_op(op) var_ptr operator##op();
+#define register_bin_op(op) var_ptr operator##op(var_ptr);
+#include "var_un_operators.h"
+#include "var_bin_operators.h"
+#undef register_un_op
+#undef register_bin_op
+	operator bool();
 	friend ostream& operator<<(ostream& os, var_ptr e);
 };
 
 class var_base_t {
 public:
-	virtual var_ptr operator+(var_ptr) = 0;
-	virtual var_ptr operator-(var_ptr) = 0;
-	virtual var_ptr operator+() = 0;
-	virtual var_ptr operator-() = 0;
-	virtual var_ptr operator*(var_ptr) = 0;
-	virtual var_ptr operator/(var_ptr) = 0;
-	virtual var_ptr operator<<(var_ptr) = 0;
-	virtual var_ptr operator>>(var_ptr) = 0;
+#define register_un_op(op) virtual var_ptr operator##op() = 0;
+#define register_bin_op(op) virtual var_ptr operator##op(var_ptr) = 0;
+#include "var_un_operators.h"
+#include "var_bin_operators.h"
+#undef register_un_op
+#undef register_bin_op
+	virtual operator bool() = 0;
 	virtual void print(ostream& os) = 0;
 };
 
@@ -41,14 +39,13 @@ class var_t : public var_base_t {
 	T val;
 public:
 	var_t(T val);
-	var_ptr operator+(var_ptr) override;
-	var_ptr operator-(var_ptr) override;
-	var_ptr operator+() override;
-	var_ptr operator-() override;
-	var_ptr operator*(var_ptr) override;
-	var_ptr operator/(var_ptr) override;
-	var_ptr operator<<(var_ptr) override;
-	var_ptr operator>>(var_ptr) override;
+#define register_un_op(op) var_ptr operator##op() override;
+#define register_bin_op(op) var_ptr operator##op(var_ptr) override;
+#include "var_un_operators.h"
+#include "var_bin_operators.h"
+#undef register_un_op
+#undef register_bin_op
+	operator bool() override;
 	T& get_val();
 	void print(ostream& os) override;
 };
@@ -76,7 +73,17 @@ inline void var_t<string>::print(ostream& os) {
 template<typename T>
 inline var_t<T>::var_t(T val) : val(val) {}
 
-#define define_operator(op) \
+template<typename T>
+inline var_t<T>::operator bool() {
+	return (bool)val;
+}
+
+template<>
+inline var_t<string>::operator bool() {
+	return val.empty();
+}
+
+#define define_bin_operator(op) \
 	template<typename T> \
 	inline var_ptr var_t<T>::operator##op (var_ptr e) { \
 		auto t = dynamic_pointer_cast<var_t<T>>(e); \
@@ -84,53 +91,52 @@ inline var_t<T>::var_t(T val) : val(val) {}
 		return var_ptr(new var_t<T>(val op t->get_val())); \
 	}
 
-define_operator(+);
-define_operator(-);
-define_operator(*);
-define_operator(/);
-define_operator(<<);
-define_operator(>>);
+#define define_un_operator(op) \
+	template<typename T> \
+	inline var_ptr var_t<T>::operator##op () { \
+		return var_ptr(new var_t<T>(op val)); \
+	}
 
-#undef define_operator
+#define register_un_op(op) define_un_operator(op);
+#define register_bin_op(op) define_bin_operator(op);
+#include "var_un_operators.h"
+#include "var_bin_operators.h"
+#undef register_un_op
+#undef register_bin_op
 
-#define forbid_operand(op, operand) \
+#undef define_un_operator
+#undef define_bin_operator
+
+#define forbid_bin_op(op, operand) \
 template<> \
 inline var_ptr var_t<operand>::operator##op(var_ptr e) {\
 	assert(false);\
 	return nullptr;\
 }
 
-forbid_operand(<<, double);
-forbid_operand(>>, double);
-
-forbid_operand(+, string);
-forbid_operand(-, string);
-forbid_operand(*, string);
-forbid_operand(/, string);
-forbid_operand(<<, string);
-forbid_operand(>>, string);
-
-template<>
-inline var_ptr var_t<string>::operator+() {
-	assert(false);
-	return nullptr;
+#define forbid_un_op(op, operand) \
+template<> \
+inline var_ptr var_t<operand>::operator##op() {\
+	assert(false);\
+	return nullptr;\
 }
 
-template<>
-inline var_ptr var_t<string>::operator-() {
-	assert(false);
-	return nullptr;
-}
+forbid_bin_op(<<, double);
+forbid_bin_op(%, double);
+forbid_bin_op(>>, double)
+forbid_bin_op(&&, double);
+forbid_bin_op(||, double);
+forbid_bin_op(&, double);
+forbid_bin_op(|, double);
+forbid_un_op(!, double);
+forbid_un_op(~, double);
 
-template<typename T>
-inline var_ptr var_t<T>::operator+() {
-	return var_ptr(this); 
-}
-
-template<typename T>
-inline var_ptr var_t<T>::operator-() {
-	return var_ptr(new var_t<T>(-val));
-}
+#define register_un_op(op) forbid_un_op(op, string);
+#define register_bin_op(op) forbid_bin_op(op, string);
+#include "var_un_operators.h"
+#include "var_bin_operators.h"
+#undef register_un_op
+#undef register_bin_op
 
 template<typename T>
 var_ptr var_cast(var_ptr e) {
@@ -140,4 +146,9 @@ var_ptr var_cast(var_ptr e) {
 		typeid(*e.get()) == typeid(var_t<double>) ? new var_t<T>(T(static_pointer_cast<var_t<double>>(e)->get_val())) :
 		(assert(false), nullptr);
 	return var_ptr(res);
+}
+
+template<typename T>
+shared_ptr<var_t<T>> var_pointer_cast(var_ptr e) {
+	return static_pointer_cast<var_t<T>>(var_cast<T>(e));
 }
