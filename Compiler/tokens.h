@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include "parser_base_node.h"
+#include "var.h"
 
 using namespace std;
 
@@ -25,13 +26,6 @@ enum TOKEN {
 #define is_op(x) ((x) >= T_OP_BRACKET_OPEN && (x) <= T_OP_BIT_NOT_ASSIGN)
 
 void tokens_init();
-
-union value_t {
-	char   ch;
-	int    i;
-	double d;
-	char* str;
-};
 
 struct pos_t {
 	int line;
@@ -83,12 +77,13 @@ class token_base_with_value_t : public token_t {
 public:
 	using token_t::token_t;
 	virtual bool is_null() = 0;
+	virtual var_ptr get_var() const = 0;
 };
 
 template <typename T>
 class token_with_value_t : public token_base_with_value_t {
 protected:
-	T value;
+	shared_ptr<var_t<T>> var;
 public:
 	token_with_value_t(int line_, int column_, TOKEN token_, T value_);
 	bool operator==(const token_t&) const override;
@@ -96,11 +91,12 @@ public:
 	void short_print_l(ostream& os, int level) override;
 	bool is_null() override;
 	const T& get_value() const;
+	var_ptr get_var() const override;
 };
 
 template<typename T>
 bool token_with_value_t<T>::operator==(const token_t& token_) const {
-	return token_ == token && static_cast<const token_with_value_t<T>&>(token_).get_value() == value;
+	return token_ == token && static_cast<const token_with_value_t<T>&>(token_).get_value() == var->get_val();
 }
 
 template<typename T>
@@ -112,35 +108,30 @@ void token_with_value_t<T>::print_l(ostream& os, int level) {
 
 template<typename T>
 void token_with_value_t<T>::short_print_l(ostream& os, int level) {
-	os << value;
-}
-
-template<>
-inline void token_with_value_t<char>::short_print_l(ostream& os, int level) {
-	os << '\'' << value << '\'';
-}
-
-template<>
-inline void token_with_value_t<string>::short_print_l(ostream& os, int level) {
-	os << '\"' << value << '\"';
+	var->print(os);
 }
 
 template<typename T>
 inline bool token_with_value_t<T>::is_null() {
-	return value == 0;
+	return var == 0;
 }
 
 template<>
 inline bool token_with_value_t<string>::is_null() {
-	return value.empty();
+	return var->get_val().empty();
 }
 
 template<typename T>
 inline const T& token_with_value_t<T>::get_value() const {
-	return value;
+	return var->get_val();
+}
+
+template<typename T>
+inline const var_ptr token_with_value_t<T>::get_var() const {
+	return var;
 }
 
 template<typename T>
 token_with_value_t<T>::token_with_value_t(int line_, int column_, TOKEN token_, T value_) : token_base_with_value_t(line_, column_, token_) {
-	value = value_;
+	var = shared_ptr<var_t<T>>(new var_t<T>(value_));
 }
