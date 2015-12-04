@@ -429,7 +429,7 @@ bool oc_bo_is_integer(expr_t* left, expr_t* right) {
 }
 
 bool oc_bo_is_arithmetic(expr_t* left, expr_t* right) {
-	return oc_uo_is_integer(left) && oc_uo_is_integer(right);
+	return oc_uo_is_arithmetic(left) && oc_uo_is_arithmetic(right);
 }
 
 bool oc_bo_is_ptrs_to_same_types(expr_t* left, expr_t* right) {
