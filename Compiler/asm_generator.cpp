@@ -5,6 +5,7 @@
 map<ASM_REGISTER, string> asm_reg_to_str;
 map<ASM_BIN_OPERATOR, string> asm_bin_op_to_str;
 map<ASM_UN_OPERATOR, string> asm_un_op_to_str;
+map<ASM_MEM_TYPE, string> asm_mt_to_str;
 
 //------------------------------ASM_REGISTER_OPERAND-------------------------------------------
 
@@ -30,7 +31,15 @@ void asm_int_oprnd_t::print(ostream& os) {
 	os << val;
 }
 
-//------------------------------ASM_OPERATORS-------------------------------------------
+//------------------------------ASM_COMMANDS-------------------------------------------
+
+//------------------------------ASM_STR_COMMAND-------------------------------------------
+
+asm_str_cmd_t::asm_str_cmd_t(string str) : str(str) {}
+
+void asm_str_cmd_t::print(ostream& os) {
+	os << str;
+}
 
 //------------------------------ASM_UNARY_OPERATOR-------------------------------------------
 
@@ -115,6 +124,10 @@ void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_int_oprnd_t(right)));
 }
 
+void asm_cmd_list_t::_push_str(string str) {
+	commands.push_back(asm_cmd_ptr(new asm_str_cmd_t(str)));
+}
+
 void asm_cmd_list_t::print(ostream& os) {
 	for each (auto cmd in commands) {
 		cmd->print(os);
@@ -126,13 +139,21 @@ void asm_cmd_list_t::print(ostream& os) {
 
 asm_generator_t::asm_generator_t(asm_cmd_list_ptr cmd_list) : cmd_list(cmd_list) {}
 
-void asm_generator_t::print(ostream& os) {
+asm_cmd_list_ptr asm_generator_t::get_cmd_list() {
+	return cmd_list;
+}
+
+void asm_generator_t::print_header(ostream& os) {
 	os <<
 		".386" << endl <<
 		".model flat, C" << endl <<
 		"option casemap : none" << endl <<
 		"include \\masm32\\include\\msvcrt.inc" << endl <<
 		"includelib \\masm32\\lib\\msvcrt.lib" << endl;
+}
+
+void asm_generator_t::print(ostream& os) {
+	print_header(os);
 
 	os <<
 		".DATA" << endl <<
@@ -159,10 +180,13 @@ void asm_generator_init() {
 #define register_register(reg_name) asm_reg_to_str[AR_##reg_name] = lower_case(#reg_name);
 #define register_un_op(op_name, op_incode_name) asm_un_op_to_str[AUO_##op_name] = lower_case(#op_name);
 #define register_bin_op(op_name, op_incode_name) asm_bin_op_to_str[ABO_##op_name] = lower_case(#op_name);
+#define register_mem_type(mt_name) asm_mt_to_str[AMT_##mt_name] = #mt_name;
 #include "asm_registers.h"
 #include "asm_un_op.h"
 #include "asm_bin_op.h"
+#include "asm_mem_type.h"
 #undef register_register
 #undef register_un_op
 #undef register_bin_op
+#undef register_mem_type
 }

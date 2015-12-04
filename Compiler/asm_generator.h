@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tokens.h"
+#include "parser_base_node.h"
 #include <memory>
 #include <vector>
 #include <iostream>
@@ -9,16 +10,6 @@
 using namespace std;
 
 void asm_generator_init();
-
-class asm_cmd_t;
-class asm_cmd_list_t;
-class asm_operand_t;
-class asm_generator_t;
-
-typedef shared_ptr<asm_cmd_t> asm_cmd_ptr;
-typedef shared_ptr<asm_operand_t> asm_oprnd_ptr;
-typedef shared_ptr<asm_cmd_list_t> asm_cmd_list_ptr;
-typedef shared_ptr<asm_generator_t> asm_generator_ptr;
 
 enum ASM_REGISTER {
 #define register_register(reg_name) AR_##reg_name,
@@ -38,17 +29,30 @@ enum ASM_BIN_OPERATOR {
 #undef register_bin_op
 };
 
+enum ASM_MEM_TYPE {
+#define register_mem_type(mt_name) AMT_##mt_name,
+#include "asm_mem_type.h"
+#undef register_mem_type
+};
+
 class asm_t {
 public:
 	virtual void print(ostream& os) {};
 };
 
 class asm_cmd_t : public asm_t {
-
+	
 };
 
 class asm_operator_t : public asm_cmd_t {
 
+};
+
+class asm_str_cmd_t : asm_cmd_t {
+	string str;
+public:
+	asm_str_cmd_t(string str);
+	void print(ostream& os) override;
 };
 
 class asm_bin_oprtr_t : public asm_operator_t {
@@ -69,7 +73,8 @@ public:
 };
 
 class asm_operand_t : public asm_t {
-
+public:
+	
 };
 
 class asm_reg_oprnd_t : public asm_operand_t {
@@ -97,12 +102,9 @@ public:
 	void print(ostream& os) override;
 };
 
-class asm_global_vars_t : public asm_t {
-
-};
-
-class asm_local_vars_t : public asm_t {
-
+class asm_global_vars_t {
+public:
+	asm_global_vars_t();
 };
 
 class asm_functions_t {
@@ -135,12 +137,17 @@ public:
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, token_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int right);
+
+	void _push_str(string str);
 	void print(ostream& os) override;
 };
 
 class asm_generator_t : public asm_t {
-	asm_cmd_list_ptr cmd_list;
+	asm_cmd_list_ptr cmd_list; 
+	void print_header(ostream& os);
 public:
 	asm_generator_t(asm_cmd_list_ptr cmd_list);
+	asm_cmd_list_ptr get_cmd_list();
+	//void add_local_var(sym_ptr var);
 	void print(ostream& os);
 };
