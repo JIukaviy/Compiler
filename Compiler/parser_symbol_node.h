@@ -150,6 +150,7 @@ public:
 	void set_type_and_init_list(type_ptr type, vector<expr_t*> init_list);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
+	const vector<expr_t*>& get_init_list();
 };
 
 class sym_built_in_type : public virtual type_base_t {
@@ -207,17 +208,18 @@ public:
 class sym_type_array_t : public updatable_base_type_t {
 protected:
 	expr_t* size_expr;
-	size_t size;
+	size_t len;
 	string _get_name() const override;
 public:
 	sym_type_array_t(expr_t* size = nullptr);
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 	bool completed() override;
-	void set_size(size_t size);
+	void set_len(size_t len);
 	type_ptr get_element_type();
 	type_ptr get_ptr_to_elem_type();
 	int get_size() override;
+	int get_len();
 };
 
 class sym_type_struct_t : public type_base_t {

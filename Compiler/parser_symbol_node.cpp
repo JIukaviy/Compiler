@@ -345,14 +345,15 @@ void sym_var_t::set_type_and_init_list(type_ptr type_, vector<expr_t*> init_list
 				static_cast<expr_const_t*>(init_list_[0])->get_token() == T_STRING) 
 			{
 				size_t str_literal_size = init_list_[0]->get_type()->get_size();
-				if (arr->completed() && arr->get_size() < str_literal_size)
+				if (arr->completed() && arr->get_len() < str_literal_size)
 					throw SemanticError("Initializer string for array of char is too long", init_list_[0]->get_pos());
-				arr->set_size(str_literal_size);
+				arr->set_len(str_literal_size);
 				return;
 			}
-			if (arr->completed() && arr->get_size() < init_list_.size())
+			if (arr->completed() && arr->get_len() < init_list_.size())
 				throw InvalidInitListSize(init_list_[1]->get_pos());
-			arr->set_size(init_list_.size());
+			if (!arr->completed())
+				arr->set_len(init_list_.size());
 			init_list.resize(init_list_.size());
 			for (int i = 0; i < init_list_.size(); i++)
 				init_list[i] = auto_convert(init_list_[i], arr->get_element_type());
@@ -384,6 +385,10 @@ void sym_var_t::short_print_l(ostream& os, int level) {
 	token->short_print(os);
 	os << "\", type: ";
 	type->short_print_l(os, level);
+}
+
+const vector<expr_t*>& sym_var_t::get_init_list() {
+	return init_list;
 }
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
@@ -423,11 +428,18 @@ type_ptr sym_type_ptr_t::make_ptr(type_ptr type, bool is_const) {
 
 sym_type_array_t::sym_type_array_t(expr_t* size_expr) : symbol_t(ST_ARRAY), size_expr(size_expr) {
 	if (size_expr)
-		size = 1; // ƒобавить вычисление константных выражений
+		if (!size_expr->get_type()->is_integer())
+			throw SemanticError("Size of array has non-integer type", size_expr->get_pos());
+		else
+			len = var_pointer_cast<int>(size_expr->eval())->get_val();
 }
 
 int sym_type_array_t::get_size() {
-	return size;
+	return len * elem_type->get_size();
+}
+
+int sym_type_array_t::get_len() {
+	return len;
 }
 
 string sym_type_array_t::_get_name() const {
@@ -437,18 +449,18 @@ string sym_type_array_t::_get_name() const {
 
 void sym_type_array_t::print_l(ostream& os, int level) {
 	os << "array[";
-	if (size)
-		os << size;
+	if (len)
+		os << len;
 	os << "] with elems: ";
 	elem_type->print(os);
 }
 
 bool sym_type_array_t::completed() {
-	return size;
+	return len;
 }
 
-void sym_type_array_t::set_size(size_t size_) {
-	size = size_;
+void sym_type_array_t::set_len(size_t len_) {
+	len = len_;
 }
 
 type_ptr sym_type_array_t::get_element_type() {
