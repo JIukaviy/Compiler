@@ -112,7 +112,7 @@ bool expr_const_t::is_null() {
 }
 
 void expr_const_t::generate_asm_code(asm_cmd_list_ptr cmd_list) {
-	cmd_list->push(constant);
+	cmd_list->push(static_pointer_cast<token_base_with_value_t>(constant)->get_var());
 }
 
 var_ptr expr_const_t::eval() {
@@ -476,6 +476,7 @@ var_ptr expr_bin_op_t::eval() {
 		reg_bin_op(T_OP_G, >)
 		reg_bin_op(T_OP_L, <)
 		expr_t::eval();
+#undef reg_bin_op
 }
 
 //-------------------------------OPERANDS_CHECKERS--------------------------------

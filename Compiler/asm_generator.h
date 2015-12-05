@@ -2,6 +2,7 @@
 
 #include "tokens.h"
 #include "parser_base_node.h"
+#include "var.h"
 #include <memory>
 #include <vector>
 #include <iostream>
@@ -48,7 +49,7 @@ class asm_operator_t : public asm_cmd_t {
 
 };
 
-class asm_str_cmd_t : asm_cmd_t {
+class asm_str_cmd_t : public asm_cmd_t {
 	string str;
 public:
 	asm_str_cmd_t(string str);
@@ -89,22 +90,22 @@ class asm_addr_oprnd_t : public asm_operand_t {
 };
 
 class asm_const_oprnd_t : public asm_operand_t {
-	token_ptr constant;
+	var_ptr var;
 public:
-	asm_const_oprnd_t(token_ptr constant);
+	asm_const_oprnd_t(var_ptr var);
 	void print(ostream& os) override;
 };
 
-class asm_int_oprnd_t : public asm_operand_t {
-	int val;
+class asm_global_var_t : public asm_t {
 public:
-	asm_int_oprnd_t(int val);
+	asm_global_var_t(string name, ASM_MEM_TYPE type, vector<var_ptr> initializers);
 	void print(ostream& os) override;
 };
 
-class asm_global_vars_t {
+class asm_global_vars_t : public asm_t {
 public:
 	asm_global_vars_t();
+
 };
 
 class asm_functions_t {
@@ -117,26 +118,22 @@ protected:
 public:
 #define register_bin_op(op_name, op_incode_name) \
 	void op_incode_name(ASM_REGISTER left, ASM_REGISTER right); \
-	void op_incode_name(ASM_REGISTER left, int right); \
-	void op_incode_name(ASM_REGISTER left, token_ptr right);
+	void op_incode_name(ASM_REGISTER left, var_ptr right);
 #include "asm_bin_op.h"
 #undef register_bin_op
 #define register_un_op(op_name, op_incode_name) \
 	void op_incode_name(ASM_REGISTER operand); \
-	void op_incode_name(int operand); \
-	void op_incode_name(token_ptr operand);
+	void op_incode_name(var_ptr operand);
 #include "asm_un_op.h"
 #undef register_un_op
 
 	void _push_un_oprtr(ASM_UN_OPERATOR op, asm_oprnd_ptr operand);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand);
-	void _push_un_oprtr(ASM_UN_OPERATOR op, token_ptr operand);
-	void _push_un_oprtr(ASM_UN_OPERATOR op, int operand);
+	void _push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand);
 
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
-	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, token_ptr right);
-	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int right);
+	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right);
 
 	void _push_str(string str);
 	void print(ostream& os) override;

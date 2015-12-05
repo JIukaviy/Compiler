@@ -17,18 +17,10 @@ void asm_reg_oprnd_t::print(ostream& os) {
 
 //------------------------------ASM_CONSTANT_OPERAND-------------------------------------------
 
-asm_const_oprnd_t::asm_const_oprnd_t(token_ptr constant) : constant(constant) {}
+asm_const_oprnd_t::asm_const_oprnd_t(var_ptr var) : var(var) {}
 
 void asm_const_oprnd_t::print(ostream& os) {
-	constant->short_print(os);
-}
-
-//------------------------------ASM_INT_OPERAND-------------------------------------------
-
-asm_int_oprnd_t::asm_int_oprnd_t(int val) : val(val) {}
-
-void asm_int_oprnd_t::print(ostream& os) {
-	os << val;
+	var->print(os);
 }
 
 //------------------------------ASM_COMMANDS-------------------------------------------
@@ -71,10 +63,7 @@ void asm_bin_oprtr_t::print(ostream& os) {
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
 	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, int right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, token_ptr right) { \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, var_ptr right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
 	}
 #include "asm_bin_op.h"
@@ -83,10 +72,7 @@ void asm_bin_oprtr_t::print(ostream& os) {
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
 		_push_un_oprtr(AUO_##op_name, operand); \
 	} \
-	void asm_cmd_list_t::op_incode_name(int operand) { \
-		_push_un_oprtr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name(token_ptr operand) { \
+	void asm_cmd_list_t::op_incode_name(var_ptr operand) { \
 		_push_un_oprtr(AUO_##op_name, operand); \
 	}
 #include "asm_un_op.h"
@@ -100,12 +86,8 @@ void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand) {
 	_push_un_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(operand)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, token_ptr operand) {
+void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand) {
 	_push_un_oprtr(op, asm_oprnd_ptr(new asm_const_oprnd_t(operand)));
-}
-
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, int operand) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_int_oprnd_t(operand)));
 }
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
@@ -116,12 +98,8 @@ void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, token_ptr right) {
+void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right) {
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
-}
-
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, int right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_int_oprnd_t(right)));
 }
 
 void asm_cmd_list_t::_push_str(string str) {
