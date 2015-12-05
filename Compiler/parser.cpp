@@ -220,7 +220,7 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bo
 
 	res->set_token(decl.identifier);
 	res->update_name();
-	if (res != ST_FUNC)
+	if (res != ST_FUNC_TYPE)
 		sym_table->insert(res);
 
 	return res;
@@ -515,7 +515,7 @@ void parser_t::parse_top_level_stmt() {
 			parse_decl_stmt();
 }
 
-void parser_t::parse_struct_decl_list(sym_table_ptr  sym_table) {
+void parser_t::parse_struct_decl_list(sym_table_ptr sym_table) {
 	la->require(T_BRACE_OPEN, 0);
 	while (la->get() != T_BRACE_CLOSE) {
 		if (la->get() == T_SEMICOLON) {
@@ -528,7 +528,7 @@ void parser_t::parse_struct_decl_list(sym_table_ptr  sym_table) {
 			throw SemanticError("Initializer list not supported in struct members declaration", decl.estimated_ident_pos);
 		if (decl.type_def)
 			throw SemanticError("Unexpected \"typedef\" in struct members declaration", decl.type_def->get_pos());
-		if (decl.type == ST_FUNC)
+		if (decl.type == ST_FUNC_TYPE)
 			throw SemanticError("Functions not supported in struct members declaration", decl.estimated_ident_pos);
 		parse_declaration(decl, sym_table);
 	}

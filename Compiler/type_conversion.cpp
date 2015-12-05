@@ -60,6 +60,6 @@ expr_t* array_to_ptr(expr_t* arr) {
 }
 
 expr_t* func_to_ptr(expr_t* func) {
-	assert(func->get_type() == ST_FUNC);
+	assert(func->get_type() == ST_FUNC_TYPE);
 	return add_cast(func, sym_type_ptr_t::make_ptr(func->get_type()));
 }

@@ -61,7 +61,7 @@ pos_t expr_var_t::get_pos() {
 }
 
 var_ptr expr_var_t::eval() {
-	if (variable->get_type() == ST_FUNC ||
+	if (variable->get_type() == ST_FUNC_TYPE ||
 		variable->get_type() == ST_ARRAY)
 			throw ExprMustBeEval(get_pos());
 	auto init_list = static_pointer_cast<sym_var_t>(variable)->get_init_list();
@@ -199,7 +199,7 @@ bool oc_uo_is_ptr(expr_t* operand) {
 bool tc_uo_arr_func_to_ptr(expr_t** operand) {
 	if ((*operand)->get_type() == ST_ARRAY)
 		*operand = array_to_ptr(*operand);
-	else if ((*operand)->get_type() == ST_FUNC)
+	else if ((*operand)->get_type() == ST_FUNC_TYPE)
 		*operand = func_to_ptr(*operand);
 	return false;
 }
@@ -926,12 +926,12 @@ void expr_func_t::short_print_l(ostream& os, int level) {
 }
 
 void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
-	if (func_->get_type() != ST_FUNC && (func_->get_type() != ST_PTR ||
+	if (func_->get_type() != ST_FUNC_TYPE && (func_->get_type() != ST_PTR ||
 		sym_type_ptr_t::dereference(func_->get_type()) != ST_FUNC))
 			throw SemanticError("Called object is not a function or function pointer");
 	func = func_;
 	auto func_type = 
-		func_->get_type() == ST_FUNC ? dynamic_pointer_cast<sym_type_func_t>(func_->get_type()->get_base_type()) :
+		func_->get_type() == ST_FUNC_TYPE ? dynamic_pointer_cast<sym_type_func_t>(func_->get_type()->get_base_type()) :
 		dynamic_pointer_cast<sym_type_func_t>(sym_type_ptr_t::dereference(func_->get_type())->get_base_type());
 	auto func_args = func_type->get_arg_types();
 	if (func_args.size() != args_.size())
@@ -976,7 +976,7 @@ void expr_cast_t::set_operand(expr_t* expr_, type_ptr dst_type) {
 	if (src_type == ST_PTR && (dst_type == ST_PTR || dst_type->is_arithmetic()) ||
 		src_type->is_arithmetic() && dst_type->is_arithmetic() ||
 		src_type->is_integer() && dst_type == ST_PTR ||
-		(src_type == ST_ARRAY || src_type == ST_FUNC) && dst_type == ST_PTR)
+		(src_type == ST_ARRAY || src_type == ST_FUNC_TYPE) && dst_type == ST_PTR)
 	{
 		expr = expr_;
 		type = dst_type;

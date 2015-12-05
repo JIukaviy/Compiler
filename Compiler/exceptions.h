@@ -315,3 +315,8 @@ class InvalidInitListSize : public SemanticError {
 public:
 	InvalidInitListSize(pos_t pos) : SemanticError("Too many init arguments", pos) {}
 };
+
+class MainFuncNotFound : public CompileError {
+public:
+	MainFuncNotFound() : CompileError("Main function not found") {};
+};
