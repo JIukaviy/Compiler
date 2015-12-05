@@ -250,10 +250,14 @@ expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
 }
 
 var_ptr expr_prefix_un_op_t::eval() {
-	if (op == T_OP_ADD)
-		return expr->eval();
-	else if (op == T_OP_SUB)
-		return -expr->eval();
+#define reg_un_op(o, t_name) op == t_name ? o##expr->eval() :
+	return
+		reg_un_op(+, T_OP_ADD)
+		reg_un_op(-, T_OP_ADD)
+		reg_un_op(~, T_OP_BIT_NOT)
+		reg_un_op(!, T_OP_NOT)
+		expr_t::eval();
+#undef reg_un_op
 }
 
 //-----------------------------------GET_ADRESS-----------------------------------
