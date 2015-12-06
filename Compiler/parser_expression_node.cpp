@@ -124,7 +124,7 @@ bool expr_const_t::is_null() {
 }
 
 void expr_const_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	cmd_list->push(static_pointer_cast<token_base_with_value_t>(constant)->get_var());
+	cmd_list->mov(AR_EAX, static_pointer_cast<token_base_with_value_t>(constant)->get_var());
 }
 
 var_ptr expr_const_t::eval() {
@@ -282,7 +282,6 @@ expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_prefix_un_op_t(op, false
 
 void expr_printf_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_val(cmd_list);
-	cmd_list->pop(AR_EAX);
 	cmd_list->_push_str("invoke crt_printf, OFFSET printf_format_str, eax");
 }
 
@@ -471,11 +470,10 @@ void expr_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 
 void expr_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	right->asm_get_val(cmd_list);
+	cmd_list->push(AR_EAX);
 	left->asm_get_val(cmd_list);
-	cmd_list->pop(AR_EAX);
 	cmd_list->pop(AR_EBX);
 	_asm_get_val(cmd_list);
-	cmd_list->push(AR_EAX);
 }
 
 var_ptr expr_bin_op_t::eval() {
@@ -608,17 +606,17 @@ bool tc_bo_right_arr_func_to_ptr(expr_t** left, expr_t** right) {
 
 void expr_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	right->asm_get_val(cmd_list);
+	cmd_list->push(AR_EAX);
 	left->asm_get_addr(cmd_list);
-	cmd_list->pop(AR_EAX);
 	int type_size = get_type()->get_size();
-	if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
+	/*if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
 		for (int i = 0; i < asm_generator_t::alignment(type_size); i += asm_generator_t::size_of(AMT_DWORD)) {
 			cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD, -i);
 			cmd_list->mov_lderef(AR_EAX, AR_EBX, AMT_DWORD, i);
 		}
 		return;
-	}
-	cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD);
+	}*/
+	cmd_list->pop(AR_EBX);
 	cmd_list->mov_lderef(AR_EAX, asm_generator_t::reg_by_size(AR_EBX, type_size), asm_generator_t::mtype_by_size(type_size));
 }
 
@@ -661,8 +659,8 @@ expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_o
 
 void expr_arithmetic_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	right->asm_get_val(cmd_list);
+	cmd_list->push(AR_EAX);
 	left->asm_get_addr(cmd_list);
-	cmd_list->pop(AR_EAX);
 	cmd_list->pop(AR_EBX);
 	_asm_get_val(cmd_list);
 }

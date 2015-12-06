@@ -453,17 +453,17 @@ int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
 void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_EAX, AR_EBP);
 	cmd_list->add(AR_EAX, new_var<int>(offset));
-	cmd_list->push(AR_EAX);
 }
 
 void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (type == ST_STRUCT || type == ST_ARRAY) {
-		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
+	int type_size = type->get_size();
+	if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += asm_generator_t::size_of(AMT_DWORD)) {
 			cmd_list->mov_rderef(AR_EAX, AR_EBP, AMT_DWORD, offset);
 			cmd_list->push(AR_EAX);
 		}
 	} else
-		cmd_list->push_deref(AR_EBP, AMT_DWORD, offset);
+		cmd_list->mov_rderef(AR_EAX, AR_EBP, AMT_DWORD, offset);
 }
 
 void sym_local_var_t::asm_set_offset(int offset_) {
