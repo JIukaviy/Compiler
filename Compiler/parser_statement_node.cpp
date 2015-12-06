@@ -38,7 +38,7 @@ void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	for each (auto sym in *sym_table) {
 		if (sym == ST_VAR) {
 			auto sym_var = dynamic_pointer_cast<sym_local_var_t>(sym);
-			sym_var->asm_set_offset(local_var_size += asm_generator_t::alignment(sym_var->get_type()->get_size()));
+			sym_var->asm_set_offset(offset + (local_var_size += asm_generator_t::alignment(sym_var->get_type()->get_size())));
 		}
 	}
 	cmd_list->sub(AR_ESP, new_var<int>(local_var_size));
