@@ -2,6 +2,7 @@
 #include "tokens.h"
 #include "parser_base_node.h"
 #include <vector>
+#include "asm_generator.h"
 
 enum SYM_TYPE {
 	ST_INTEGER,
@@ -130,6 +131,7 @@ public:
 	static type_ptr make_type(SYM_TYPE sym_type, bool is_const = false);
 	static type_ptr make_type(type_base_t* base_type, bool is_const = false);
 	void set_token(token_ptr token) override;
+	static ASM_MEM_TYPE st_to_asm_mtype(SYM_TYPE sym_type);
 	int get_size() override;
 };
 

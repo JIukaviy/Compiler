@@ -241,6 +241,10 @@ void type_t::set_token(token_ptr token) {
 	type->set_token(token);
 }
 
+ASM_MEM_TYPE type_t::st_to_asm_mtype(SYM_TYPE sym_type) {
+	return st_to_asm_type.at(sym_type);
+}
+
 //--------------------------------UPDATABLE_BASE_TYPE-------------------------------
 
 updatable_base_type_t::updatable_base_type_t() : symbol_t(ST_VOID) {}
@@ -421,7 +425,7 @@ void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 
 void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	if (type == ST_ARRAY || type == ST_STRUCT) {
-		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += 4) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += asm_generator_t::size_of(AMT_DWORD)) {
 			cmd_list->mov(AR_EAX, asm_get_name(), i);
 			cmd_list->push(AR_EAX);
 		}
