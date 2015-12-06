@@ -759,6 +759,14 @@ expr_logical_bin_op_t::expr_logical_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 
 //--------------------------------------SHIFT_OPERATORS----------------------------------------------
 
+void expr_shift_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov(AR_CL, AR_BL);
+	if (op == T_OP_LEFT)
+		cmd_list->shl(AR_EAX, AR_CL);
+	else
+		cmd_list->shr(AR_EAX, AR_CL);
+}
+
 expr_shift_bin_op_t::expr_shift_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_integer);

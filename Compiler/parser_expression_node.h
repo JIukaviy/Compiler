@@ -243,6 +243,7 @@ public:
 };
 
 class expr_shift_bin_op_t : public expr_bin_op_t {
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_shift_bin_op_t(token_ptr op);
 };
