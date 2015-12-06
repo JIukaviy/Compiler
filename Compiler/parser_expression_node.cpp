@@ -1059,10 +1059,9 @@ pos_t expr_cast_t::get_pos() {
 void expr_cast_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_val(cmd_list);
 	if (expr->get_type() == ST_CHAR && type == ST_INTEGER) {
-		cmd_list->pop(AR_EBX);
+		cmd_list->mov(AR_EBX, AR_EAX);
 		cmd_list->xor_(AR_EAX, AR_EAX);
 		cmd_list->mov(AR_AL, AR_BL);
-		cmd_list->push(AR_EAX);
 	}
 }
 
