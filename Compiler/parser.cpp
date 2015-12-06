@@ -184,10 +184,14 @@ map<STATEMENT, set<TOKEN>> starting_tokens;
 //-------------------DECLARATION_PARSER-------------------------------------------
 
 sym_ptr parser_t::parse_declaration(bool abstract_decl) {
-	return parse_declaration(parse_declaration_raw(), sym_table, abstract_decl);
+	return parse_declaration(parse_declaration_raw(), sym_table, false, abstract_decl);
 }
 
-sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bool abstract_decl) {
+sym_ptr parser_t::parse_global_declaration() {
+	return parse_declaration(parse_declaration_raw(), sym_table, true);
+}
+
+sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bool global, bool abstract_decl) {
 	sym_ptr res;
 
 	optimize_type(decl.type);
@@ -213,7 +217,7 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bo
 			throw SemanticError("Unexpected init list for function declaration", decl.estimated_ident_pos);
 		res = sym_ptr(new sym_func_t(decl.identifier, func_type, decl.func_sym_table));
 	} else {
-		sym_var_t* var = new sym_var_t(decl.identifier);
+		sym_var_t* var = global ? (sym_var_t*)(new sym_global_var_t(decl.identifier)) : (sym_var_t*)(new sym_local_var_t(decl.identifier));
 		var->set_type_and_init_list(decl.type, decl.init_list);
 		res = sym_ptr(var);
 	}
@@ -390,7 +394,7 @@ type_chain_t parser_t::func_arr_decl(bool in_func) {
 					if (!var.init_list.empty())
 						throw SemanticError("Default function parameters temporarily not supported", var.estimated_ident_pos);
 					arg_types.push_back(var.type);
-					parse_declaration(var, func_sym_table, true);
+					parse_declaration(var, func_sym_table, false, true);
 				}
 			}
 			l_base = type_base_ptr(new sym_type_func_t(arg_types));
@@ -536,7 +540,7 @@ void parser_t::parse_struct_decl_list(sym_table_ptr sym_table) {
 }
 
 void parser_t::parse_decl_stmt() {
-	shared_ptr<sym_func_t> sym_func = dynamic_pointer_cast<sym_func_t>(parse_declaration());
+	shared_ptr<sym_func_t> sym_func = dynamic_pointer_cast<sym_func_t>(sym_table == top_sym_table ? parse_global_declaration() : parse_declaration());
 	if (sym_func) {
 		sym_ptr finded_global_sym = sym_table->find_global(sym_func);
 		shared_ptr<sym_func_t> finded_func = dynamic_pointer_cast<sym_func_t>(finded_global_sym);
@@ -714,10 +718,24 @@ void parser_t::print_statements(ostream& os) {
 
 void parser_t::print_asm_code(ostream& os) {
 	if (la->next() != T_EMPTY) {
-		expr_t* expr = parse_expr();
-		asm_cmd_list_ptr cmd_list(new asm_cmd_list_t());
-		expr->generate_asm_code(cmd_list);
-		asm_gen_ptr gen(new asm_generator_t(cmd_list));
+		asm_gen_ptr gen(new asm_generator_t);
+		stmt_ptr main_block;
+		parse_top_level_stmt();
+		for each (auto sym in *top_sym_table) {
+			if (sym == ST_FUNC) {
+				auto sym_func = dynamic_pointer_cast<sym_func_t>(sym);
+				if (sym_func->get_name() == "main") {
+					if (!sym_func->defined())
+						throw MainFuncNotFound();
+					main_block = sym_func->get_block();
+				}
+				asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+				sym_func->asm_generate_code(cmd_list);
+				gen->add_function(sym_func->get_name(), cmd_list);
+			}
+		}
+		if (!main_block)
+			throw MainFuncNotFound();
 		gen->print(os);
 	}
 }

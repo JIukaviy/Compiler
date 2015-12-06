@@ -152,3 +152,8 @@ template<typename T>
 shared_ptr<var_t<T>> var_pointer_cast(var_ptr e) {
 	return static_pointer_cast<var_t<T>>(var_cast<T>(e));
 }
+
+template<typename T>
+shared_ptr<var_t<T>> new_var(T val) {
+	return shared_ptr<var_t<T>>(new var_t<T>(val));
+}

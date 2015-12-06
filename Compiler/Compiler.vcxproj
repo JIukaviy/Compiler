@@ -129,11 +129,14 @@
     <ClCompile Include="symbol_table.cpp" />
     <ClCompile Include="tokens.cpp" />
     <ClCompile Include="type_conversion.cpp" />
+    <ClCompile Include="var.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asm_bin_op.h" />
     <ClInclude Include="asm_generator.h" />
+    <ClInclude Include="asm_mem_type.h" />
     <ClInclude Include="asm_un_op.h" />
+    <ClInclude Include="var.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="lexeme_analyzer.h" />
     <ClInclude Include="parser.h" />
@@ -153,6 +156,8 @@
     <ClInclude Include="token_register.h" />
     <ClInclude Include="token_string.h" />
     <ClInclude Include="type_conversion.h" />
+    <ClInclude Include="var_bin_operators.h" />
+    <ClInclude Include="var_un_operators.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

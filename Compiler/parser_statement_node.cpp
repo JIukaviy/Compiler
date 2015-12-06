@@ -13,6 +13,10 @@ stmt_while_t::stmt_while_t(expr_t* condition) : condition(condition) {}
 stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr, stmt_ptr stmt) : init_expr(init_expr), condition(condition), expr(expr), stmt_loop_t(stmt) {}
 stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr) : init_expr(init_expr), condition(condition), expr(expr) {}
 
+void statement_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	assert(false);
+}
+
 void stmt_block_t::print_l(ostream& os, int level) {
 	os << '{' << endl;
 	if (!sym_table->empty()) {
@@ -29,11 +33,26 @@ void stmt_block_t::print_l(ostream& os, int level) {
 	os << '}';
 }
 
+void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	int local_var_size = 0;
+	for each (auto sym in *sym_table) {
+		if (sym == ST_VAR) {
+			auto sym_var = dynamic_pointer_cast<sym_local_var_t>(sym);
+			sym_var->asm_set_offset(local_var_size += asm_generator_t::alignment(sym_var->get_type()->get_size()));
+		}
+	}
+	cmd_list->sub(AR_ESP, new_var<int>(local_var_size));
+	offset += local_var_size;
+	for each (auto stmt in statements)
+		stmt->asm_generate_code(cmd_list, offset);
+	cmd_list->add(AR_ESP, new_var<int>(local_var_size));
+}
+
 void stmt_block_t::add_statement(stmt_ptr stmt) {
 	statements.push_back(stmt);
 }
 
-sym_table_ptr  stmt_block_t::get_sym_table() {
+sym_table_ptr stmt_block_t::get_sym_table() {
 	return sym_table;
 }
 
@@ -41,6 +60,11 @@ void stmt_expr_t::print_l(ostream& os, int level) {
 	os << "expression: ";
 	expression->short_print(os);
 	os << ';';
+}
+
+void stmt_expr_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	expression->asm_get_val(cmd_list);
+	cmd_list->add(AR_ESP, new_var<int>(asm_generator_t::alignment(expression->get_type()->get_size())));
 }
 
 void stmt_decl_t::print_l(ostream& os, int level) {

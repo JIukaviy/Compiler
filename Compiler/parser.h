@@ -75,7 +75,8 @@ class parser_t {
 	vector<expr_t*> parse_initializer_list();
 	expr_t* parse_initializer();
 	sym_ptr parse_declaration(bool abstract_decl = false);
-	sym_ptr parse_declaration(decl_raw_t, sym_table_ptr , bool abstract_decl = false);
+	sym_ptr parse_global_declaration();
+	sym_ptr parse_declaration(decl_raw_t, sym_table_ptr, bool global = false, bool abstract_decl = false);
 	void optimize_type(type_ptr);
 
 	bool is_begin_of(STATEMENT stmt, token_ptr token);

@@ -2,11 +2,13 @@
 #include "exceptions.h"
 #include "parser.h"
 #include "type_conversion.h"
+#include "asm_generator.h"
 #include <vector>
 #include <map>
 
 map <SYM_TYPE, TOKEN> st_to_token;
 map <TOKEN, SYM_TYPE> token_to_st;
+map <SYM_TYPE, ASM_MEM_TYPE> st_to_asm_type;
 
 void init_parser_symbol_node() {
 	st_to_token[ST_VOID] = T_KWRD_VOID;
@@ -22,11 +24,17 @@ void init_parser_symbol_node() {
 	token_to_st[T_INTEGER] = ST_INTEGER;
 	token_to_st[T_CHAR] = ST_CHAR;
 	token_to_st[T_DOUBLE] = ST_DOUBLE;
+
+	st_to_asm_type[ST_CHAR] = AMT_BYTE;
+	st_to_asm_type[ST_INTEGER] = AMT_DWORD;
+	st_to_asm_type[ST_PTR] = AMT_DWORD;
+	st_to_asm_type[ST_DOUBLE] = AMT_QWORD;
 }
 
 type_base_ptr type_base_t::make_type(SYM_TYPE sym_type) {
 	assert(sym_type != ST_ALIAS);
 	assert(sym_type != ST_FUNC);
+	assert(sym_type != ST_FUNC_TYPE);
 	assert(sym_type != ST_VAR);
 	assert(sym_type != ST_STRUCT);
 	assert(sym_type != ST_ARRAY);
@@ -323,6 +331,10 @@ type_ptr sym_with_type_t::get_type() {
 	return type;
 }
 
+string sym_with_type_t::asm_get_name() {
+	return '_' + get_name();
+}
+
 string sym_with_type_t::_get_name() const {
 	return static_pointer_cast<token_with_value_t<string>>(token)->get_value();
 }
@@ -389,6 +401,69 @@ void sym_var_t::short_print_l(ostream& os, int level) {
 
 const vector<expr_t*>& sym_var_t::get_init_list() {
 	return init_list;
+}
+
+//--------------------------------SYMBOL_GLOBAL_VAR-------------------------------
+
+sym_global_var_t::sym_global_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
+
+/*void sym_global_var_t::asm_allocate(asm_vars_ptr vars) {
+	string res = asm_get_name() + ' ';
+	if (type == ST_STRUCT || type == ST_ARRAY)
+		gen->add_global_var(asm_get_name(), AMT_BYTE, type->get_size());
+	else
+		gen->add_global_var(asm_get_name(), st_to_asm_type.at(type->get_sym_type()));
+}
+*/
+void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	cmd_list->push(asm_oprnd_ptr(new asm_addr_global_oprnd_t(asm_get_name())));
+}
+
+void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	if (type == ST_ARRAY || type == ST_STRUCT) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += 4) {
+			cmd_list->mov(AR_EAX, asm_get_name(), i);
+			cmd_list->push(AR_EAX);
+		}
+	} else
+		cmd_list->push(asm_get_name());
+}
+
+//--------------------------------SYMBOL_LOCAL_VAR--------------------------------
+
+sym_local_var_t::sym_local_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
+
+int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
+	/*if (type == ST_STRUCT || type == ST_ARRAY) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
+			cmd_list->mov(AR_EAX, AR_EBP, offset);
+			cmd_list->push(AR_EAX);
+		}
+	} else
+		cmd_list->push(AR_EBP, offset);*/ // Add inittializer
+	int aligned_size = asm_generator_t::alignment(type->get_size());
+	cmd_list->sub(AR_ESP, new_var<int>(aligned_size));
+	return aligned_size;
+}
+
+void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov(AR_EAX, AR_EBP);
+	cmd_list->add(AR_EAX, new_var<int>(offset));
+	cmd_list->push(AR_EAX);
+}
+
+void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	if (type == ST_STRUCT || type == ST_ARRAY) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
+			cmd_list->mov_rderef(AR_EAX, AR_EBP, AMT_DWORD, offset);
+			cmd_list->push(AR_EAX);
+		}
+	} else
+		cmd_list->push_deref(AR_EBP, AMT_DWORD, offset);
+}
+
+void sym_local_var_t::asm_set_offset(int offset_) {
+	offset = offset_;
 }
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
@@ -484,7 +559,7 @@ void sym_type_array_t::set_element_type(type_ptr type) {
 
 //--------------------------------SYMBOL_TYPE_FUNC-------------------------------
 
-sym_type_func_t::sym_type_func_t(const vector<type_ptr> &at) : symbol_t(ST_FUNC), arg_types(at) {}
+sym_type_func_t::sym_type_func_t(const vector<type_ptr> &at) : symbol_t(ST_FUNC_TYPE), arg_types(at) {}
 
 void sym_type_func_t::update_name() {
 	elem_type->update_name();
@@ -550,6 +625,10 @@ void sym_func_t::set_block(stmt_ptr b) {
 	block = b;
 }
 
+stmt_ptr sym_func_t::get_block() {
+	return block;
+}
+
 void sym_func_t::set_sym_table(sym_table_ptr sym_table_) {
 	sym_table = sym_table_;
 }
@@ -578,6 +657,11 @@ void sym_func_t::print_l(ostream& os, int level) {
 		os << ' ';
 		block->print_l(os, level);
 	}
+}
+
+void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov(AR_EBP, AR_ESP);
+	block->asm_generate_code(cmd_list);
 }
 
 //--------------------------------SYMBOL_TYPE_ALIAS-------------------------------

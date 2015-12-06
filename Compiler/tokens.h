@@ -133,5 +133,5 @@ inline const var_ptr token_with_value_t<T>::get_var() const {
 
 template<typename T>
 token_with_value_t<T>::token_with_value_t(int line_, int column_, TOKEN token_, T value_) : token_base_with_value_t(line_, column_, token_) {
-	var = shared_ptr<var_t<T>>(new var_t<T>(value_));
+	var = new_var<T>(value_);
 }

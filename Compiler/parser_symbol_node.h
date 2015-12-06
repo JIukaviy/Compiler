@@ -12,6 +12,7 @@ enum SYM_TYPE {
 	ST_ARRAY,
 	ST_PTR,
 	ST_FUNC,
+	ST_FUNC_TYPE,
 	ST_ALIAS,
 	ST_VAR,
 	ST_VOID,
@@ -140,6 +141,7 @@ public:
 	sym_with_type_t();
 	sym_with_type_t(type_ptr type);
 	type_ptr get_type();
+	string asm_get_name();
 };
 
 class sym_var_t : public sym_with_type_t {
@@ -150,7 +152,26 @@ public:
 	void set_type_and_init_list(type_ptr type, vector<expr_t*> init_list);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
+	virtual void asm_get_addr(asm_cmd_list_ptr cmd_list) {};
+	virtual void asm_get_val(asm_cmd_list_ptr cmd_list) {};
 	const vector<expr_t*>& get_init_list();
+};
+
+class sym_global_var_t : public sym_var_t {
+public:
+	sym_global_var_t(token_ptr identifier);
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+};
+
+class sym_local_var_t : public sym_var_t {
+	int offset;
+public:
+	sym_local_var_t(token_ptr identifier);
+	int asm_allocate(asm_cmd_list_ptr);
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_set_offset(int offset);
 };
 
 class sym_built_in_type : public virtual type_base_t {
@@ -260,12 +281,14 @@ public:
 	sym_func_t(token_ptr ident, shared_ptr<sym_type_func_t> func_type, sym_table_ptr sym_table);
 	shared_ptr<sym_type_func_t> get_func_type();
 	void set_block(stmt_ptr b);
+	stmt_ptr get_block();
 	void set_sym_table(sym_table_ptr sym_table);
 	sym_table_ptr get_sym_table();
 	void clear_sym_table();
 	bool defined();
 	void short_print_l(ostream& os, int level);
 	void print_l(ostream& os, int level) override;
+	void asm_generate_code(asm_cmd_list_ptr cmd_list);
 };
 
 class sym_type_alias_t : public type_base_t, public sym_with_type_t {
