@@ -20,6 +20,8 @@ register_token(KWRD_WHILE, "while", token_keyword, STMT_WHILE)
 register_token(KWRD_FOR, "for", token_keyword, STMT_FOR)
 register_token(KWRD_RETURN, "return", token_keyword, STMT_RETURN)
 
+register_token(KWRD_PRINTF, "printf", token_keyword, STMT_EXPR)
+
 register_token(KWRD_LONG, "long", token_keyword, STMT_NONE)
 register_token(KWRD_FLOAT, "float", token_keyword, STMT_NONE)
 register_token(KWRD_SHORT, "short", token_keyword, STMT_NONE)

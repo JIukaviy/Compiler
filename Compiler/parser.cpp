@@ -103,7 +103,7 @@ void parser_t::exit_namespace() {
 
 expr_t* parser_t::left_associated_bin_op(int p) {
 	if (p == 4)
-		return prefix_un_op();
+		return printf_un_op();
 	expr_t* left = left_associated_bin_op(p-1);
 	token_ptr op = la->get();
 	while (op->is(op_by_priority[p-1])) {
@@ -114,6 +114,19 @@ expr_t* parser_t::left_associated_bin_op(int p) {
 		op = la->get();
 	}
 	return left;
+}
+
+expr_t* parser_t::printf_un_op() {
+	token_ptr op = la->get();
+	if (op == T_KWRD_PRINTF) {
+		la->next();
+		la->require(T_BRACKET_OPEN, 0);
+		expr_un_op_t* un_op = expr_prefix_un_op_t::make_prefix_un_op(op);
+		un_op->set_operand(prefix_un_op());
+		la->require(T_BRACKET_CLOSE, 0);
+		return un_op;
+	} else
+		return prefix_un_op();
 }
 
 expr_t* parser_t::prefix_un_op() {

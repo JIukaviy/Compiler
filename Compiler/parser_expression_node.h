@@ -84,6 +84,13 @@ public:
 	var_ptr eval() override;
 };
 
+class expr_printf_op_t : public expr_prefix_un_op_t {
+public:
+	expr_printf_op_t(token_ptr op);
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	type_ptr get_type() override;
+};
+
 class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
 public:
 	expr_get_addr_un_op_t(token_ptr op);

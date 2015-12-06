@@ -60,6 +60,7 @@ class parser_t {
 	expr_t* left_associated_bin_op(int priority);
 	expr_t* tern_op();
 	expr_t* right_associated_bin_op();
+	expr_t* printf_un_op();
 	expr_t* prefix_un_op();
 	expr_t* postfix_op();
 	expr_t* factor();
