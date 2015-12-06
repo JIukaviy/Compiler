@@ -189,6 +189,9 @@ int asm_local_vars_t::get_end_offset() {
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
 		_push_un_oprtr(AUO_##op_name, operand); \
 	} \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand, int operand_size) { \
+		_push_un_oprtr(AUO_##op_name, operand, operand_size); \
+	} \
 	void asm_cmd_list_t::op_incode_name(var_ptr operand) { \
 		_push_un_oprtr(AUO_##op_name, operand); \
 	} \
@@ -210,6 +213,9 @@ int asm_local_vars_t::get_end_offset() {
 #define register_bin_op(op_name, op_incode_name) \
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
+	} \
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right, int operand_size) { \
+		_push_bin_oprtr(ABO_##op_name, left, right, operand_size); \
 	} \
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, var_ptr right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
@@ -240,6 +246,10 @@ void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand) {
 	_push_un_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(operand)));
 }
 
+void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size) {
+	_push_un_oprtr(op, asm_generator_t::reg_by_size(operand, operand_size));
+}
+
 void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand) {
 	_push_un_oprtr(op, asm_oprnd_ptr(new asm_const_oprnd_t(operand)));
 }
@@ -262,6 +272,11 @@ void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, as
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right) {
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+}
+
+void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size) {
+	_push_bin_oprtr(op,
+		asm_generator_t::reg_by_size(left, operand_size), asm_generator_t::reg_by_size(right, operand_size));
 }
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right) {
