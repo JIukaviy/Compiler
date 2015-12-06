@@ -182,14 +182,13 @@ public:
 class RedefinitionOfSymbol : public SemanticError {
 public:
 	RedefinitionOfSymbol(token_ptr token) {
-		err << token->get_pos() << "Redefinition of symbol \"";
+		err << token->get_pos() << "Redefinition of symbol ";
 		token->short_print(err);
-		err << "\"";
 	}
 	RedefinitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
-		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol \"";
+		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol ";
 		orig_symbol->short_print(err);
-		err << "\", first defenition was here: ";
+		err << ", first defenition was here: ";
 		pos_t pos = orig_symbol->get_token()->get_pos();
 		err << pos.line << ':' << pos.column;
 	}
