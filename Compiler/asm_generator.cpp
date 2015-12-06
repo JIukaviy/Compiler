@@ -3,9 +3,14 @@
 #include <map>
 
 map<ASM_REGISTER, string> asm_reg_to_str;
+map<ASM_REGISTER, int> size_of_reg;
+map<ASM_REGISTER, ASM_REGISTER> parent_of;
+map<ASM_REGISTER, map<int, ASM_REGISTER>> child_by_size;
 map<ASM_BIN_OPERATOR, string> asm_bin_op_to_str;
 map<ASM_UN_OPERATOR, string> asm_un_op_to_str;
 map<ASM_MEM_TYPE, string> asm_mt_to_str;
+map<ASM_MEM_TYPE, int> size_of_mtype;
+map<int, ASM_MEM_TYPE> mem_type_by_size;
 map<ASM_OPERAND_PREFIX, string> asm_aop_to_str;
 
 static string lower_case(char cstr[]) {
@@ -15,18 +20,27 @@ static string lower_case(char cstr[]) {
 }
 
 void asm_generator_init() {
-#define register_register(reg_name) asm_reg_to_str[AR_##reg_name] = lower_case(#reg_name);
 #define register_un_op(op_name, op_incode_name) asm_un_op_to_str[AUO_##op_name] = lower_case(#op_name);
 #define register_bin_op(op_name, op_incode_name) asm_bin_op_to_str[ABO_##op_name] = lower_case(#op_name);
-#define register_mem_type(mt_name) asm_mt_to_str[AMT_##mt_name] = #mt_name;
-#include "asm_registers.h"
 #include "asm_un_op.h"
 #include "asm_bin_op.h"
-#include "asm_mem_type.h"
-#undef register_register
 #undef register_un_op
 #undef register_bin_op
+
+#define register_mem_type(mt_name, size) \
+	asm_mt_to_str[AMT_##mt_name] = #mt_name; \
+	size_of_mtype[AMT_##mt_name] = size; \
+	mem_type_by_size[size] = AMT_##mt_name;
+#include "asm_mem_type.h"
 #undef register_mem_type
+
+#define register_register(reg_name, parent_reg_name, size) \
+	asm_reg_to_str[AR_##reg_name] = lower_case(#reg_name); \
+	size_of_reg[AR_##reg_name] = size; \
+	parent_of[AR_##reg_name] = AR_##parent_reg_name; \
+	child_by_size[AR_##parent_reg_name][size] = AR_##reg_name;
+#include "asm_registers.h"
+#undef register_register
 
 	asm_aop_to_str[AOP_NONE] = "";
 	asm_aop_to_str[AOP_OFFSET] = "OFFSET";
@@ -299,7 +313,7 @@ void asm_generator_t::print(ostream& os) {
 	os << "end start" << endl;
 }
 
-int asm_generator_t::align_size = 4;
+int asm_generator_t::align_size = ASM_WORD_SIZE;
 
 void asm_generator_t::set_align_size(int size) {
 	align_size = size;
@@ -307,4 +321,24 @@ void asm_generator_t::set_align_size(int size) {
 
 inline int asm_generator_t::alignment(int size) {
 	return size + (align_size - size % align_size) % align_size;
+}
+
+ASM_REGISTER asm_generator_t::reg_by_size(ASM_REGISTER reg, int size) {
+	return child_by_size.at(parent_of.at(reg)).at(size);
+}
+
+ASM_REGISTER asm_generator_t::reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype) {
+	return reg_by_size(reg, size_of(mtype));
+}
+
+int asm_generator_t::size_of(ASM_REGISTER reg) {
+	return size_of_reg.at(reg);
+}
+
+int asm_generator_t::size_of(ASM_MEM_TYPE mtype) {
+	return size_of_mtype.at(mtype);
+}
+
+ASM_MEM_TYPE asm_generator_t::mtype_by_size(int size) {
+	return mem_type_by_size.at(size);
 }

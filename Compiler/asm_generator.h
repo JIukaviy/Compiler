@@ -8,12 +8,14 @@
 #include <iostream>
 #include <algorithm>
 
+#define ASM_WORD_SIZE 4
+
 using namespace std;
 
 void asm_generator_init();
 
 enum ASM_REGISTER {
-#define register_register(reg_name) AR_##reg_name,
+#define register_register(reg_name, parent_reg_name, size) AR_##reg_name,
 #include "asm_registers.h"
 #undef register_register
 };
@@ -31,7 +33,7 @@ enum ASM_BIN_OPERATOR {
 };
 
 enum ASM_MEM_TYPE {
-#define register_mem_type(mt_name) AMT_##mt_name,
+#define register_mem_type(mt_name, size) AMT_##mt_name,
 #include "asm_mem_type.h"
 #undef register_mem_type
 };
@@ -39,7 +41,7 @@ enum ASM_MEM_TYPE {
 enum ASM_OPERAND_PREFIX {
 	AOP_NONE,
 	AOP_OFFSET,
-#define register_mem_type(mt_name) AOP_##mt_name##_PTR,
+#define register_mem_type(mt_name, size) AOP_##mt_name##_PTR,
 #include "asm_mem_type.h"
 #undef register_mem_type
 };
@@ -249,4 +251,10 @@ public:
 	void print(ostream& os);
 	void set_align_size(int size);
 	static int alignment(int size);
+	static ASM_REGISTER reg_by_size(ASM_REGISTER reg, int size);
+	static ASM_REGISTER reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype);
+	static int size_of(ASM_REGISTER reg);
+	static int size_of(ASM_MEM_TYPE mtype);
+	static ASM_MEM_TYPE mtype_by_size(int size);
+	static ASM_MEM_TYPE mtype_by_reg(ASM_REGISTER);
 };
