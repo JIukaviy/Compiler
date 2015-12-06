@@ -470,10 +470,10 @@ void expr_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 }
 
 void expr_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	left->asm_get_val(cmd_list);
 	right->asm_get_val(cmd_list);
-	cmd_list->pop(AR_EBX);
+	left->asm_get_val(cmd_list);
 	cmd_list->pop(AR_EAX);
+	cmd_list->pop(AR_EBX);
 	_asm_get_val(cmd_list);
 	cmd_list->push(AR_EAX);
 }
@@ -607,12 +607,19 @@ bool tc_bo_right_arr_func_to_ptr(expr_t** left, expr_t** right) {
 //-----------------------------------ASSIGN---------------------------------------------
 
 void expr_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	left->asm_get_addr(cmd_list);
 	right->asm_get_val(cmd_list);
-	cmd_list->pop(AR_EBX);
+	left->asm_get_addr(cmd_list);
 	cmd_list->pop(AR_EAX);
-	cmd_list->mov_lderef(AR_EAX, AR_EBX, AMT_DWORD);
-	cmd_list->push(AR_EBX);
+	int type_size = get_type()->get_size();
+	if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
+		for (int i = 0; i < asm_generator_t::alignment(type_size); i += asm_generator_t::size_of(AMT_DWORD)) {
+			cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD, -i);
+			cmd_list->mov_lderef(AR_EAX, AR_EBX, AMT_DWORD, i);
+		}
+		return;
+	}
+	cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD);
+	cmd_list->mov_lderef(AR_EAX, asm_generator_t::reg_by_size(AR_EBX, type_size), asm_generator_t::mtype_by_size(type_size));
 }
 
 expr_assign_bin_op_t::expr_assign_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
@@ -652,6 +659,14 @@ expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_o
 	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
+void expr_arithmetic_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	right->asm_get_val(cmd_list);
+	left->asm_get_addr(cmd_list);
+	cmd_list->pop(AR_EAX);
+	cmd_list->pop(AR_EBX);
+	_asm_get_val(cmd_list);
+}
+
 expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
 	or_conditions.push_back(oc_bo_is_arithmetic);
 }
@@ -663,6 +678,10 @@ expr_add_bin_op_t::expr_add_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op
 	or_conditions.push_back(oc_bo_integer_and_ptr);
 	type_convertions.push_back(tc_bo_integer_and_ptr);
 	type_convertions.push_back(tc_bo_pass_ptrs);
+}
+
+void expr_add_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
+	cmd_list->add_lderef(AR_EAX, get_type() == ST_CHAR ? AR_BL : AR_EBX, get_type() == ST_CHAR ? AMT_BYTE : AMT_DWORD);
 }
 
 expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
@@ -1031,6 +1050,12 @@ pos_t expr_cast_t::get_pos() {
 
 void expr_cast_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_val(cmd_list);
+	if (expr->get_type() == ST_CHAR && type == ST_INTEGER) {
+		cmd_list->pop(AR_EBX);
+		cmd_list->xor_(AR_EAX, AR_EAX);
+		cmd_list->mov(AR_AL, AR_BL);
+		cmd_list->push(AR_EAX);
+	}
 }
 
 var_ptr expr_cast_t::eval() {

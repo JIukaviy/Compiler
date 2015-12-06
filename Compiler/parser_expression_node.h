@@ -188,6 +188,7 @@ public:
 
 class expr_arithmetic_assign_bin_op_t : public expr_assign_bin_op_t {
 public:
+	void asm_get_val(asm_cmd_list_ptr) override;
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
 
@@ -198,6 +199,7 @@ public:
 };
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
