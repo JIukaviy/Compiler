@@ -93,14 +93,6 @@ expr_t* parser_t::tern_op() {
 		return left;
 }
 
-sym_table_ptr parser_t::new_namespace() {
-	return sym_table = sym_table_ptr(new sym_table_t(sym_table));
-}
-
-void parser_t::exit_namespace() {
-	sym_table = sym_table->get_parent();
-}
-
 expr_t* parser_t::left_associated_bin_op(int p) {
 	if (p == 4)
 		return printf_un_op();
@@ -483,6 +475,14 @@ vector<decl_raw_t> parser_t::parse_func_arg_types() {
 }
 
 //-------------------STATEMENT_PARSER-------------------------------------------
+
+sym_table_ptr parser_t::new_namespace() {
+	return sym_table = sym_table_ptr(new sym_table_t(sym_table));
+}
+
+void parser_t::exit_namespace() {
+	sym_table = sym_table->get_parent();
+}
 
 bool parser_t::is_begin_of(STATEMENT stmt, token_ptr token) {
 	bool res = in_set(starting_tokens.at(stmt), token->get_token_id());
