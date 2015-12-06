@@ -114,7 +114,7 @@ expr_t* parser_t::printf_un_op() {
 		la->next();
 		la->require(T_BRACKET_OPEN, 0);
 		expr_un_op_t* un_op = expr_prefix_un_op_t::make_prefix_un_op(op);
-		un_op->set_operand(prefix_un_op());
+		un_op->set_operand(parse_expr());
 		la->require(T_BRACKET_CLOSE, 0);
 		return un_op;
 	} else
