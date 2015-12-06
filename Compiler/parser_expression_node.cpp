@@ -464,6 +464,8 @@ void expr_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->_push_bin_oprtr(
 		op == T_OP_ADD ? ABO_ADD :
 		op == T_OP_SUB ? ABO_SUB :
+		op == T_OP_BIT_AND ? ABO_AND :
+		op == T_OP_BIT_OR ? ABO_OR :
 		(assert(false), ABO_ADD), 
 		AR_EAX, AR_EBX);
 }
