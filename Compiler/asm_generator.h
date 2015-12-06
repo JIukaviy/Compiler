@@ -209,7 +209,8 @@ public:
 	void op_incode_name(var_ptr operand); \
 	void op_incode_name(asm_oprnd_ptr operand); \
 	void op_incode_name(string operand, int offset = 0, int scale = 0); \
-	void op_incode_name##_deref(ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
+	void op_incode_name##_deref(ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
+	void op_incode_name##_deref(ASM_REGISTER operand, int operand_size, int offset = 0, int scale = 0);
 
 #include "asm_un_op.h"
 #undef register_un_op
@@ -218,7 +219,9 @@ public:
 	void op_incode_name(ASM_REGISTER left, var_ptr right); \
 	void op_incode_name(ASM_REGISTER left, string right, int offset = 0, int scale = 0); \
 	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
-	void op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
+	void op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
+	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0); \
+	void op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
 #include "asm_bin_op.h"
 #undef register_bin_op
 
@@ -227,6 +230,7 @@ public:
 	void _push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, string operand, int offset = 0, int scale = 0);
 	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, int scale = 0);
+	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset, int scale = 0);
 
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
@@ -234,6 +238,8 @@ public:
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
+	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
+	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
 
 	void _push_str(string str);
 	void print(ostream& os) override;
