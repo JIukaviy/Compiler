@@ -17,6 +17,7 @@ public:
 	virtual void asm_get_val(asm_cmd_list_ptr cmd_list);
 	virtual void asm_get_addr(asm_cmd_list_ptr cmd_list);
 	virtual var_ptr eval(); //  идает исключение в случае если выражение невозможно вычислить во врем€ компил€ции
+	virtual int get_type_size();
 };
 
 //-------------CONSTANT------------
@@ -149,6 +150,7 @@ protected:
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
 	virtual void _asm_get_val(asm_cmd_list_ptr cmd_list);
+	virtual ASM_BIN_OPERATOR _asm_get_operator();
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -165,6 +167,9 @@ public:
 };
 
 class expr_assign_bin_op_t : public expr_bin_op_t {
+protected:
+	ASM_BIN_OPERATOR _asm_get_operator() override;
+	virtual void _asm_get_val(asm_cmd_list_ptr cmd_list);
 public:
 	void asm_get_val(asm_cmd_list_ptr) override;
 	expr_assign_bin_op_t(token_ptr op);
@@ -176,6 +181,7 @@ public:
 };
 
 class expr_integer_assign_bin_op_t : public expr_assign_bin_op_t {
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_integer_assign_bin_op_t(token_ptr token);
 };
@@ -187,8 +193,8 @@ public:
 };
 
 class expr_arithmetic_assign_bin_op_t : public expr_assign_bin_op_t {
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
-	void asm_get_val(asm_cmd_list_ptr) override;
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
 
@@ -199,7 +205,7 @@ public:
 };
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
@@ -211,6 +217,7 @@ public:
 };
 
 class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
@@ -222,6 +229,7 @@ public:
 };
 
 class expr_mod_assign_bin_op_t : public expr_assign_bin_op_t {
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_mod_assign_bin_op_t(token_ptr op);
 };
@@ -249,6 +257,7 @@ public:
 };
 
 class expr_shift_assign_bin_op_t : public expr_assign_bin_op_t {
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_shift_assign_bin_op_t(token_ptr op);
 };
