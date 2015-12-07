@@ -232,8 +232,8 @@ public:
 	void _push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, string operand, int offset = 0, int scale = 0);
-	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, int scale = 0);
-	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset, int scale = 0);
+	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
+	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset = 0, int scale = 0);
 
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
