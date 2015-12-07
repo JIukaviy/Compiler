@@ -35,6 +35,8 @@ public:
 	int asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_reg);
 	void asm_init_local_vars(asm_cmd_list_ptr cmd_list);
 
+	int get_local_vars_size();
+
 	sym_table_ptr  get_parent();
 	bool is_var(const token_ptr&);
 	bool is_alias(const token_ptr&);

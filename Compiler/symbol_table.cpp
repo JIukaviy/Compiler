@@ -124,6 +124,16 @@ void sym_table_t::asm_init_local_vars(asm_cmd_list_ptr cmd_list) {
 		}
 }
 
+int sym_table_t::get_local_vars_size() {
+	int res = 0;
+	for each (auto sym in *this)
+		if (sym == ST_VAR) {
+			auto sym_var = dynamic_pointer_cast<sym_local_var_t>(sym);
+			res += sym_var->get_type_size();
+		}
+	return res;
+}
+
 bool sym_table_t::is_var(const token_ptr& token) {
 	if (token != T_IDENTIFIER)
 		return false;
