@@ -1120,6 +1120,7 @@ void expr_struct_access_t::set_operands(expr_t* expr_, token_ptr member_token) {
 	if (op == T_OP_DOT) {
 		if (expr_->get_type() != ST_STRUCT)
 			throw SemanticError("Expected struct as left operand of '.'", expr_->get_pos());
+		lvalue = expr_->is_lvalue();
 		structure = static_pointer_cast<sym_type_struct_t>(expr_->get_type()->get_base_type());
 	} else {
 		assert(op == T_OP_ARROW);
