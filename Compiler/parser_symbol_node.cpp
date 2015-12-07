@@ -464,6 +464,19 @@ void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
 	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
 		cmd_list->mov_lderef(AR_EBP, AR_EAX, get_type_size(), offset);
+	} else if (type->is_arithmetic());
+	else if (type == ST_ARRAY && !init_list.empty()) {
+		auto arr = dynamic_pointer_cast<sym_type_array_t>(type->get_base_type());
+		int elem_size = arr->get_element_type()->get_size();
+		for (int i = 0; i < init_list.size(); i++) {
+			init_list[i]->asm_get_val(cmd_list);
+			cmd_list->mov_lderef(AR_EBP, AR_EAX, elem_size, offset + i * elem_size);
+		}
+		int j = 0;
+		for (int i = init_list.size() * elem_size; i < get_type_size(); j++, i += elem_size) {
+			cmd_list->mov_rderef(AR_EAX, AR_EBP, elem_size, offset + (j % init_list.size()) * elem_size);
+			cmd_list->mov_lderef(AR_EBP, AR_EAX, elem_size, offset + i);
+		}
 	}
 }
 

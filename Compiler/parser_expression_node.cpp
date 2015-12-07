@@ -1053,6 +1053,20 @@ void expr_arr_index_t::set_operands(expr_t* arr_, expr_t* index_) {
 	index = index_;
 }
 
+void expr_arr_index_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	arr->asm_get_val(cmd_list);
+	cmd_list->push(AR_EAX);
+	index->asm_get_val(cmd_list);
+	cmd_list->pop(AR_EBX);
+	mul_reg_to_elem_size(cmd_list, AR_EAX, get_type()->get_size());
+	cmd_list->add(AR_EAX, AR_EBX);
+}
+
+void expr_arr_index_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	asm_get_addr(cmd_list);
+	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type()->get_size());
+}
+
 type_ptr expr_arr_index_t::get_type() {
 	return static_pointer_cast<sym_type_ptr_t>(arr->get_type()->get_base_type())->get_element_type();
 }
@@ -1209,13 +1223,15 @@ pos_t expr_cast_t::get_pos() {
 }
 
 void expr_cast_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	expr->asm_get_val(cmd_list);
 	if (expr->get_type() == ST_CHAR && type == ST_INTEGER ||
-		expr->get_type() == ST_INTEGER && type == ST_CHAR) {
+		expr->get_type() == ST_INTEGER && type == ST_CHAR)
+	{
+		expr->asm_get_val(cmd_list);
 		cmd_list->mov(AR_EBX, AR_EAX);
 		cmd_list->xor_(AR_EAX, AR_EAX);
 		cmd_list->mov(AR_AL, AR_BL);
-	}
+	} else if (expr->get_type() == ST_ARRAY)
+		expr->asm_get_addr(cmd_list);
 }
 
 var_ptr expr_cast_t::eval() {

@@ -220,6 +220,7 @@ public:
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 	ASM_BIN_OPERATOR _asm_get_operator() override;
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
@@ -232,6 +233,7 @@ public:
 
 class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 	ASM_BIN_OPERATOR _asm_get_operator() override;
+	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
@@ -315,6 +317,8 @@ public:
 	expr_t* get_arr();
 	expr_t* get_index();
 	void set_operands(expr_t* arr, expr_t* index);
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type() override;
 	pos_t get_pos();
 };
