@@ -688,10 +688,11 @@ void expr_arithmetic_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 		cmd_list->imul(AR_EDX, AR_EBX);
 		cmd_list->mov_lderef(AR_EAX, AR_EDX, type_size);
 	} else if (op == T_OP_DIV_ASSIGN) {
+		cmd_list->mov(AR_ECX, AR_EAX);
 		if (type_size < asm_generator_t::size_of(AR_EAX)) {
-			cmd_list->xor_(AR_ECX, AR_ECX);
-			cmd_list->mov_rderef(AR_ECX, AR_EAX, type_size);
-			cmd_list->mov(AR_EAX, AR_ECX);
+			cmd_list->xor_(AR_EDX, AR_EDX);
+			cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
+			cmd_list->mov(AR_EAX, AR_EDX);
 		} else
 			cmd_list->mov_rderef(AR_EAX, AR_EAX, type_size);
 		cmd_list->xor_(AR_EDX, AR_EDX);
@@ -767,9 +768,9 @@ void expr_mod_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = get_type_size();
 	cmd_list->mov(AR_ECX, AR_EAX);
 	if (type_size < asm_generator_t::size_of(AR_EAX)) {
-		cmd_list->xor_(AR_ECX, AR_ECX);
-		cmd_list->mov_rderef(AR_ECX, AR_EAX, type_size);
-		cmd_list->mov(AR_EAX, AR_ECX);
+		cmd_list->xor_(AR_EDX, AR_EDX);
+		cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
+		cmd_list->mov(AR_EAX, AR_EDX);
 	} else
 		cmd_list->mov_rderef(AR_EAX, AR_EAX, type_size);
 	cmd_list->xor_(AR_EDX, AR_EDX);
