@@ -95,24 +95,31 @@ public:
 	void print(ostream& os) override;
 };
 
+class asm_ident_operand_t : public asm_operand_t {
+	string name;
+public:
+	asm_ident_operand_t(string name);
+	void print(ostream& os) override;
+};
+
 class asm_addr_oprnd_t : public asm_operand_t {
 
 };
 
-class asm_addr_global_oprnd_t : public asm_addr_oprnd_t {
+class asm_addr_ident_oprnd_t : public asm_addr_oprnd_t {
 protected:
 	string name;
 public:
-	asm_addr_global_oprnd_t(string name);
+	asm_addr_ident_oprnd_t(string name);
 	void print(ostream& os);
 };
 
-class asm_addr_local_oprnd_t : public asm_addr_oprnd_t {
+class asm_addr_reg_oprnd_t : public asm_addr_oprnd_t {
 protected:
 	ASM_REGISTER reg;
 	int offset;
 public:
-	asm_addr_local_oprnd_t(ASM_REGISTER reg, int offset);
+	asm_addr_reg_oprnd_t(ASM_REGISTER reg, int offset);
 	void print(ostream& os);
 };
 
@@ -148,51 +155,21 @@ public:
 	void print(ostream& os) override;
 };
 
-class asm_var_t : public asm_t {};
-
-class asm_global_var_t : public asm_var_t {
+class asm_global_var_t {
 	string name;
 	ASM_MEM_TYPE type;
-	vector<expr_t*> init_list;
+	vector<var_ptr> init_list;
+	asm_cmd_list_ptr init_commands;
 	int dup;
 public:
-	asm_global_var_t(string name, ASM_MEM_TYPE type, vector<expr_t*> init_list, int dup = 0);
+	asm_global_var_t(string name, ASM_MEM_TYPE type, vector<var_ptr> init_list, int dup = 0);
+	asm_global_var_t(string name, ASM_MEM_TYPE type, asm_cmd_list_ptr init_commands, int dup = 0);
 	asm_global_var_t(string name, ASM_MEM_TYPE type, int dup = 0);
-	void print(ostream& os) override;
+	void print_alloc(ostream& os);
+	void print_init(ostream& os);
 };
 
-class asm_local_var_t : public asm_var_t {
-	vector<expr_t*> init_list;
-	int size;
-public:
-	asm_local_var_t(int size);
-	void print(ostream& os) override {};
-};
-
-class asm_vars_t : public asm_t {
-	vector<shared_ptr<asm_var_t>> vars;
-public:
-	asm_vars_t();
-	void push_var(shared_ptr<asm_var_t> var);
-};
-
-class asm_local_vars_t : public asm_vars_t {
-	int offset;
-	int size;
-public:
-	asm_local_vars_t(int offset = 0);
-	int push_local_var(int size);
-	int get_size();
-	int get_end_offset();
-	void print(ostream& offset);
-};
-
-class asm_global_vars_t : public asm_vars_t {
-public:
-	void push_global_var(string name, ASM_MEM_TYPE mem_type, int dup = 0);
-};
-
-class asm_function_t : public asm_vars_t {
+class asm_function_t : public asm_t {
 	string name;
 	asm_cmd_list_ptr cmd_list;
 public:
@@ -209,7 +186,8 @@ public:
 	void op_incode_name(ASM_REGISTER operand, int operand_size); \
 	void op_incode_name(var_ptr operand); \
 	void op_incode_name(asm_oprnd_ptr operand); \
-	void op_incode_name(string operand, int offset = 0, int scale = 0); \
+	void op_incode_name(string operand); \
+	void op_incode_name##_addr(string operand); \
 	void op_incode_name##_deref(ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
 	void op_incode_name##_deref(ASM_REGISTER operand, int operand_size, int offset = 0, int scale = 0);
 
@@ -219,7 +197,10 @@ public:
 	void op_incode_name(ASM_REGISTER left, ASM_REGISTER right); \
 	void op_incode_name(ASM_REGISTER left, ASM_REGISTER right, int operand_size); \
 	void op_incode_name(ASM_REGISTER left, var_ptr right); \
-	void op_incode_name(ASM_REGISTER left, string right, int offset = 0, int scale = 0); \
+	void op_incode_name(ASM_REGISTER left, string right); \
+	void op_incode_name##_raddr(ASM_REGISTER left, string right); \
+	void op_incode_name(ASM_REGISTER left, string right, int offset, int scale = 0); \
+	void op_incode_name(string left, ASM_REGISTER right); \
 	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
 	void op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0); \
 	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0); \
@@ -231,7 +212,9 @@ public:
 	void _push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size);
 	void _push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand);
-	void _push_un_oprtr(ASM_UN_OPERATOR op, string operand, int offset = 0, int scale = 0);
+	void _push_un_oprtr(ASM_UN_OPERATOR op, string operand);
+	void _push_un_oprtr_addr(ASM_UN_OPERATOR op, string operand);
+	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, string operand, int offset, int scale = 0);
 	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset = 0, int scale = 0);
 
@@ -239,7 +222,10 @@ public:
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right);
-	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right, int offset = 0, int scale = 0);
+	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right);
+	void _push_bin_oprtr_raddr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right);
+	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right, int offset, int scale = 0);
+	void _push_bin_oprtr(ASM_BIN_OPERATOR op, string left, ASM_REGISTER right);
 	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
@@ -251,15 +237,18 @@ public:
 
 class asm_generator_t : public asm_t {
 	void print_header(ostream& os);
-	asm_vars_t global_vars;
+	vector <shared_ptr<asm_global_var_t>> global_vars;
 	vector <shared_ptr<asm_function_t>> functions;
+	asm_cmd_list_ptr main_cmd_list;
 	static int align_size;
 public:
 	void add_global_var(shared_ptr<asm_global_var_t> var);
 	void add_global_var(string name, ASM_MEM_TYPE mem_type, int dup = 0);
+	void add_global_var(string name, ASM_MEM_TYPE mem_type, asm_cmd_list_ptr init_cmd_list, int dup = 0);
 	void add_function(string name, asm_cmd_list_ptr cmd_list);
+	void set_main_cmd_list(asm_cmd_list_ptr cmd_list);
 	void print(ostream& os);
-	void set_align_size(int size);
+	static void set_align_size(int size);
 	static int alignment(int size);
 	static ASM_REGISTER reg_by_size(ASM_REGISTER reg, int size);
 	static ASM_REGISTER reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype);

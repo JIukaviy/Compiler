@@ -415,16 +415,17 @@ const vector<expr_t*>& sym_var_t::get_init_list() {
 
 sym_global_var_t::sym_global_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
 
-/*void sym_global_var_t::asm_allocate(asm_vars_ptr vars) {
-	string res = asm_get_name() + ' ';
-	if (type == ST_STRUCT || type == ST_ARRAY)
-		gen->add_global_var(asm_get_name(), AMT_BYTE, type->get_size());
-	else
-		gen->add_global_var(asm_get_name(), st_to_asm_type.at(type->get_sym_type()));
+void sym_global_var_t::asm_register(asm_gen_ptr gen) {
+	asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->mov(asm_get_name(), asm_generator_t::reg_by_size(AR_EAX, get_type_size()));
+	}
+	gen->add_global_var(asm_get_name(), st_to_asm_type.at(type->get_base_type()->get_sym_type()),cmd_list);
 }
-*/
+
 void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
-	cmd_list->push(asm_oprnd_ptr(new asm_addr_global_oprnd_t(asm_get_name())));
+	cmd_list->mov_raddr(AR_EAX, asm_get_name());
 }
 
 void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
@@ -434,7 +435,7 @@ void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 			cmd_list->push(AR_EAX);
 		}
 	} else
-		cmd_list->push(asm_get_name());
+		cmd_list->mov(AR_EAX, asm_get_name());
 }
 
 //--------------------------------SYMBOL_LOCAL_VAR--------------------------------

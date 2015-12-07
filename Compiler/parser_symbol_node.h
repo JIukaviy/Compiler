@@ -163,6 +163,7 @@ public:
 class sym_global_var_t : public sym_var_t {
 public:
 	sym_global_var_t(token_ptr identifier);
+	void asm_register(asm_gen_ptr gen);
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 };
