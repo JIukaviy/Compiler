@@ -353,6 +353,8 @@ public:
 	void set_operands(expr_t* expr, token_ptr member);
 	token_ptr get_op();
 	token_ptr get_member();
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type() override;
 	pos_t get_pos() override;
 };

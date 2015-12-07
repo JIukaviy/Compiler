@@ -1123,6 +1123,22 @@ token_ptr expr_struct_access_t::get_member() {
 	return member->get_token();
 }
 
+void expr_struct_access_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	if (op == T_OP_DOT)
+		struct_expr->asm_get_addr(cmd_list);
+	else 
+		struct_expr->asm_get_val(cmd_list);
+	member->asm_get_addr(cmd_list);
+}
+
+void expr_struct_access_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	if (op == T_OP_DOT)
+		struct_expr->asm_get_addr(cmd_list);
+	else
+		struct_expr->asm_get_val(cmd_list);
+	member->asm_get_val(cmd_list);
+}
+
 type_ptr expr_struct_access_t::get_type() {
 	return member->get_type();
 }
