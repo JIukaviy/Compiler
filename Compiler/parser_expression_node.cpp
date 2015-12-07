@@ -435,7 +435,7 @@ pos_t expr_bin_op_t::get_pos() {
 }
 
 type_ptr expr_bin_op_t::get_type() {
-	return right->get_type();
+	return left->get_type();
 }
 
 template<class T>
