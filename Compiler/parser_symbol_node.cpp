@@ -335,6 +335,10 @@ type_ptr sym_with_type_t::get_type() {
 	return type;
 }
 
+int sym_with_type_t::get_type_size() {
+	return get_type()->get_size();
+}
+
 string sym_with_type_t::asm_get_name() {
 	return '_' + get_name();
 }
@@ -437,7 +441,7 @@ void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 
 sym_local_var_t::sym_local_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
 
-int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
+int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list, int offset) {
 	/*if (type == ST_STRUCT || type == ST_ARRAY) {
 		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
 			cmd_list->mov(AR_EAX, AR_EBP, offset);
@@ -445,9 +449,21 @@ int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
 		}
 	} else
 		cmd_list->push(AR_EBP, offset);*/ // Add inittializer
-	int aligned_size = asm_generator_t::alignment(type->get_size());
-	cmd_list->sub(AR_ESP, new_var<int>(aligned_size));
+	asm_set_offset(offset);
+	int aligned_size = asm_generator_t::alignment(get_type_size());
+	if (type->is_integer() && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->push(AR_EAX);
+	} else
+		cmd_list->sub(AR_ESP, new_var<int>(aligned_size));
 	return aligned_size;
+}
+
+void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
+	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->mov_lderef(AR_EBP, AR_EAX, get_type_size(), offset);
+	}
 }
 
 void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {

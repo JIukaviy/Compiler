@@ -874,7 +874,6 @@ ASM_BIN_OPERATOR expr_shift_bin_op_t::_asm_get_operator() {
 		(assert(false), ABO_AND);
 }
 
-
 void expr_shift_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_CL, AR_BL);
 	cmd_list->_push_bin_oprtr(_asm_get_operator(), AR_EAX, AR_CL);

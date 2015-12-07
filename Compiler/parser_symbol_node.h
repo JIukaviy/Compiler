@@ -143,6 +143,7 @@ public:
 	sym_with_type_t();
 	sym_with_type_t(type_ptr type);
 	type_ptr get_type();
+	int get_type_size();
 	string asm_get_name();
 };
 
@@ -170,7 +171,8 @@ class sym_local_var_t : public sym_var_t {
 	int offset;
 public:
 	sym_local_var_t(token_ptr identifier);
-	int asm_allocate(asm_cmd_list_ptr);
+	int asm_allocate(asm_cmd_list_ptr cmd_list, int offset);
+	void asm_init(asm_cmd_list_ptr cmd_list);
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	void asm_set_offset(int offset);
