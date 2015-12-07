@@ -170,13 +170,14 @@ public:
 
 class sym_local_var_t : public sym_var_t {
 	int offset;
+	ASM_REGISTER offset_reg;
 public:
 	sym_local_var_t(token_ptr identifier);
-	int asm_allocate(asm_cmd_list_ptr cmd_list, int offset);
+	int asm_allocate(asm_cmd_list_ptr cmd_list);
 	void asm_init(asm_cmd_list_ptr cmd_list);
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_set_offset(int offset);
+	void asm_set_offset(int offset, ASM_REGISTER offset_reg);
 };
 
 class sym_built_in_type : public virtual type_base_t {
@@ -257,7 +258,7 @@ public:
 	sym_type_struct_t(sym_table_ptr  sym_table, token_ptr identifier);
 	sym_type_struct_t(token_ptr identifier);
 	void set_sym_table(sym_table_ptr  s);
-	sym_table_ptr  get_sym_table();
+	sym_table_ptr get_sym_table();
 	shared_ptr<sym_var_t> get_member(token_ptr member);
 	bool completed() override;
 	int get_size() override;
