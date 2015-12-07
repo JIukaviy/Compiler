@@ -451,8 +451,7 @@ int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
 }
 
 void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
-	cmd_list->mov(AR_EAX, AR_EBP);
-	cmd_list->add(AR_EAX, new_var<int>(offset));
+	cmd_list->lea_rderef(AR_EAX, AR_EBP, AMT_DWORD, offset);
 }
 
 void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
