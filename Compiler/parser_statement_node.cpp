@@ -34,8 +34,8 @@ void stmt_block_t::print_l(ostream& os, int level) {
 }
 
 void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
-	int local_vars_size = sym_table->asm_set_offset_for_local_vars(offset, AR_EBP);
-	cmd_list->sub(AR_ESP, new_var<int>(asm_generator_t::alignment(local_vars_size)));
+	int local_vars_size = asm_generator_t::alignment(sym_table->asm_set_offset_for_local_vars(offset, AR_EBP));
+	cmd_list->sub(AR_ESP, new_var<int>(local_vars_size));
 	sym_table->asm_init_local_vars(cmd_list);
 	offset += local_vars_size;
 	for each (auto stmt in statements)
