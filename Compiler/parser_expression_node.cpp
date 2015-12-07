@@ -651,15 +651,22 @@ expr_integer_bin_op_t::expr_integer_bin_op_t(token_ptr token) : expr_bin_op_t(to
 	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
-ASM_BIN_OPERATOR expr_integer_assign_bin_op_t::_asm_get_operator() {
-	return
-		op == T_OP_BIT_AND_ASSIGN ? ABO_AND :
-		op == T_OP_BIT_OR_ASSIGN ? ABO_OR :
+ASM_BIN_OPERATOR expr_integer_bin_op_t::_asm_get_operator() {
+	return 
+		op == T_OP_BIT_AND ? ABO_AND :
+		op == T_OP_BIT_OR ? ABO_OR :
 		(assert(false), ABO_AND);
 }
 
 expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : expr_base_assign_bin_op_t(token) {
 	or_conditions.push_back(oc_bo_is_integer);
+}
+
+ASM_BIN_OPERATOR expr_integer_assign_bin_op_t::_asm_get_operator() {
+	return
+		op == T_OP_BIT_AND_ASSIGN ? ABO_AND :
+		op == T_OP_BIT_OR_ASSIGN ? ABO_OR :
+		(assert(false), ABO_AND);
 }
 
 //-----------------------------------ARITHMETIC_OPERATORS-----------------------------------
@@ -815,30 +822,40 @@ expr_logical_bin_op_t::expr_logical_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 
 //--------------------------------------SHIFT_OPERATORS----------------------------------------------
 
-void expr_shift_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
-	cmd_list->mov(AR_CL, AR_BL);
-	if (op == T_OP_LEFT)
-		cmd_list->shl(AR_EAX, AR_CL);
-	else
-		cmd_list->shr(AR_EAX, AR_CL);
-}
-
 expr_shift_bin_op_t::expr_shift_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	pre_check_type_convertions.push_back(tc_bo_arr_func_to_ptr);
 	or_conditions.push_back(oc_bo_is_integer);
 	type_convertions.push_back(tc_bo_integer_increase);
 }
 
-void expr_shift_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
+ASM_BIN_OPERATOR expr_shift_bin_op_t::_asm_get_operator() {
+	return
+		op == T_OP_LEFT ? ABO_SHL :
+		op == T_OP_RIGHT ? ABO_SHR :
+		(assert(false), ABO_AND);
+}
+
+
+void expr_shift_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_CL, AR_BL);
-	if (op == T_OP_LEFT_ASSIGN)
-		cmd_list->shl_lderef(AR_EAX, AR_CL, get_type_size());
-	else
-		cmd_list->shr_lderef(AR_EAX, AR_CL, get_type_size());
+	cmd_list->_push_bin_oprtr(_asm_get_operator(), AR_EAX, AR_CL);
 }
 
 expr_shift_assign_bin_op_t::expr_shift_assign_bin_op_t(token_ptr op) : expr_base_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_integer);
+}
+
+ASM_BIN_OPERATOR expr_shift_assign_bin_op_t::_asm_get_operator() {
+	return
+		op == T_OP_LEFT_ASSIGN ? ABO_SHL :
+		op == T_OP_RIGHT_ASSIGN ? ABO_SHR :
+		(assert(false), ABO_AND);
+}
+
+void expr_shift_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov(AR_CL, AR_BL);
+	cmd_list->_push_bin_oprtr_lderef(_asm_get_operator(), 
+		AR_EAX, AR_CL, asm_generator_t::mtype_by_size(get_type_size()));
 }
 
 //-----------------------------------TERNARY_OPERATOR-----------------------------------

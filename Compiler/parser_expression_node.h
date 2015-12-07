@@ -182,6 +182,7 @@ public:
 };
 
 class expr_integer_bin_op_t : public expr_bin_op_t {
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_integer_bin_op_t(token_ptr token);
 };
@@ -257,12 +258,14 @@ public:
 };
 
 class expr_shift_bin_op_t : public expr_bin_op_t {
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_shift_bin_op_t(token_ptr op);
 };
 
 class expr_shift_assign_bin_op_t : public expr_base_assign_bin_op_t {
+	ASM_BIN_OPERATOR _asm_get_operator() override;
 	void _asm_get_val(asm_cmd_list_ptr) override;
 public:
 	expr_shift_assign_bin_op_t(token_ptr op);
