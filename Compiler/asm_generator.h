@@ -227,6 +227,7 @@ public:
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right, int offset, int scale = 0);
 	void _push_bin_oprtr(ASM_BIN_OPERATOR op, string left, ASM_REGISTER right);
 	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
+	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
 	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);

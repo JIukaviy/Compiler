@@ -304,6 +304,11 @@ void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER le
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
 }
 
+void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset, int scale) {
+	_push_bin_oprtr(op,
+		asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, scale)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
+}
+
 void asm_cmd_list_t::_push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) {
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, scale)));
 }
