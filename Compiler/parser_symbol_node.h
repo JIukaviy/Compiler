@@ -117,7 +117,6 @@ public:
 	void print_l(ostream& os, int level) override;
 	type_base_ptr get_base_type();
 	void update_name() override;
-	//const string& get_name() const override;
 	void set_base_type(type_base_ptr type);
 	bool is(SYM_TYPE sym_type) const override;
 	bool is(type_ptr type) const;

@@ -250,6 +250,7 @@ public:
 	void set_main_cmd_list(asm_cmd_list_ptr cmd_list);
 	void print(ostream& os);
 	static void set_align_size(int size);
+	static int get_align_size();
 	static int alignment(int size);
 	static ASM_REGISTER reg_by_size(ASM_REGISTER reg, int size);
 	static ASM_REGISTER reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype);

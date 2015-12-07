@@ -386,6 +386,10 @@ void asm_generator_t::set_align_size(int size) {
 	align_size = size;
 }
 
+int asm_generator_t::get_align_size() {
+	return align_size;
+}
+
 int asm_generator_t::alignment(int size) {
 	return size + (align_size - size % align_size) % align_size;
 }

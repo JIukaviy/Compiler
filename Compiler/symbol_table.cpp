@@ -109,6 +109,8 @@ int sym_table_t::asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_r
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			if (!local_var)
 				continue;
+			if (local_var->get_type_size() >= asm_generator_t::get_align_size())
+				size = asm_generator_t::alignment(size);
 			local_var->asm_set_offset(offset + size, offset_reg);
 			size += local_var->get_type_size();
 		}
