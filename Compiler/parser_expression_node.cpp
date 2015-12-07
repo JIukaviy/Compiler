@@ -606,36 +606,41 @@ bool tc_bo_right_arr_func_to_ptr(expr_t** left, expr_t** right) {
 	return false;
 }
 
-//-----------------------------------ASSIGN---------------------------------------------
+//-----------------------------------BASE_ASSIGN---------------------------------------------
 
-ASM_BIN_OPERATOR expr_assign_bin_op_t::_asm_get_operator() {
-	return ABO_MOV;
+expr_base_assign_bin_op_t::expr_base_assign_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
+	pre_check_type_convertions.push_back(tc_bo_right_arr_func_to_ptr);
+	and_conditions.push_back(oc_bo_is_lvalue);
+	and_conditions.push_back(oc_bo_not_constant);
 }
 
-void expr_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_base_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->_push_bin_oprtr_lderef(_asm_get_operator(), AR_EAX, AR_EBX, get_type_size());
 }
 
-void expr_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	right->asm_get_val(cmd_list);
 	cmd_list->push(AR_EAX);
 	left->asm_get_addr(cmd_list);
 	/*if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
-		for (int i = 0; i < asm_generator_t::alignment(type_size); i += asm_generator_t::size_of(AMT_DWORD)) {
-			cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD, -i);
-			cmd_list->mov_lderef(AR_EAX, AR_EBX, AMT_DWORD, i);
-		}
-		return;
+	for (int i = 0; i < asm_generator_t::alignment(type_size); i += asm_generator_t::size_of(AMT_DWORD)) {
+	cmd_list->mov_rderef(AR_EBX, AR_ESP, AMT_DWORD, -i);
+	cmd_list->mov_lderef(AR_EAX, AR_EBX, AMT_DWORD, i);
+	}
+	return;
 	}*/
 	cmd_list->pop(AR_EBX);
 	_asm_get_val(cmd_list);
 }
 
-expr_assign_bin_op_t::expr_assign_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
-	pre_check_type_convertions.push_back(tc_bo_right_arr_func_to_ptr);
-	and_conditions.push_back(oc_bo_is_lvalue);
-	and_conditions.push_back(oc_bo_not_constant);
+//-----------------------------------ASSIGN---------------------------------------------
+
+expr_assign_bin_op_t::expr_assign_bin_op_t(token_ptr op) : expr_base_assign_bin_op_t(op) {
 	type_convertions.push_back(tc_bo_left_to_right_type);
+}
+
+ASM_BIN_OPERATOR expr_assign_bin_op_t::_asm_get_operator() {
+	return ABO_MOV;
 }
 
 //-----------------------------------INTEGER_OPERATORS-----------------------------------
@@ -653,7 +658,7 @@ ASM_BIN_OPERATOR expr_integer_assign_bin_op_t::_asm_get_operator() {
 		(assert(false), ABO_AND);
 }
 
-expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
+expr_integer_assign_bin_op_t::expr_integer_assign_bin_op_t(token_ptr token) : expr_base_assign_bin_op_t(token) {
 	or_conditions.push_back(oc_bo_is_integer);
 }
 
@@ -693,10 +698,10 @@ void expr_arithmetic_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 		cmd_list->div(AR_EBX);
 		cmd_list->mov_lderef(AR_ECX, AR_EAX, type_size);
 	} else
-		expr_assign_bin_op_t::_asm_get_val(cmd_list);
+		expr_base_assign_bin_op_t::_asm_get_val(cmd_list);
 }
 
-expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_assign_bin_op_t(token) {
+expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_base_assign_bin_op_t(token) {
 	or_conditions.push_back(oc_bo_is_arithmetic);
 }
 
@@ -773,7 +778,7 @@ void expr_mod_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_EAX, AR_EDX);
 }
 
-expr_mod_assign_bin_op_t::expr_mod_assign_bin_op_t(token_ptr op) : expr_assign_bin_op_t(op) {
+expr_mod_assign_bin_op_t::expr_mod_assign_bin_op_t(token_ptr op) : expr_base_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_integer);
 }
 
@@ -831,7 +836,7 @@ void expr_shift_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 		cmd_list->shr_lderef(AR_EAX, AR_CL, get_type_size());
 }
 
-expr_shift_assign_bin_op_t::expr_shift_assign_bin_op_t(token_ptr op) : expr_assign_bin_op_t(op) {
+expr_shift_assign_bin_op_t::expr_shift_assign_bin_op_t(token_ptr op) : expr_base_assign_bin_op_t(op) {
 	or_conditions.push_back(oc_bo_is_integer);
 }
 
