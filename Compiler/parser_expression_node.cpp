@@ -299,6 +299,10 @@ expr_get_addr_un_op_t::expr_get_addr_un_op_t(token_ptr op) : expr_prefix_un_op_t
 	and_conditions.push_back(oc_uo_is_lvalue);
 }
 
+void expr_get_addr_un_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_addr(cmd_list);
+}
+
 type_ptr expr_get_addr_un_op_t::get_type() {
 	return sym_type_ptr_t::make_ptr(expr->get_type());
 }
@@ -308,6 +312,15 @@ type_ptr expr_get_addr_un_op_t::get_type() {
 expr_dereference_op_t::expr_dereference_op_t(token_ptr op) : expr_prefix_un_op_t(op, true) {
 	pre_check_type_convertions.push_back(tc_uo_arr_func_to_ptr);
 	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+void expr_dereference_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_val(cmd_list);
+	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+}
+
+void expr_dereference_op_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_val(cmd_list);
 }
 
 type_ptr expr_dereference_op_t::get_type() {
@@ -323,11 +336,24 @@ expr_prefix_inc_dec_op_t::expr_prefix_inc_dec_op_t(token_ptr op) : expr_prefix_u
 	or_conditions.push_back(oc_uo_is_ptr);
 }
 
+void expr_prefix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_addr(cmd_list);
+	cmd_list->_push_un_oprtr_deref(
+		(op == T_OP_INC ? AUO_INC : AUO_DEC), AR_EAX, get_type_size());
+	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+}
+
 //-----------------------------------PREFIX_ADD_SUB-----------------------------------
 
 expr_prefix_add_sub_un_op_t::expr_prefix_add_sub_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
 	or_conditions.push_back(oc_uo_is_arithmetic);
 	type_convertions.push_back(tc_uo_integer_increase);
+}
+
+void expr_prefix_add_sub_un_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_val(cmd_list);
+	if (op == T_OP_SUB)
+		cmd_list->neg(AR_EAX, get_type_size());
 }
 
 //-----------------------------------PREFIX_LOGICAL_NOT-----------------------------------
@@ -347,6 +373,11 @@ type_ptr expr_prefix_not_un_op_t::get_type() {
 expr_prefix_bit_not_un_op_t::expr_prefix_bit_not_un_op_t(token_ptr op) : expr_prefix_un_op_t(op) {
 	or_conditions.push_back(oc_uo_is_integer);
 	type_convertions.push_back(tc_uo_integer_increase);
+}
+
+void expr_prefix_bit_not_un_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_val(cmd_list);
+	cmd_list->not_(AR_EAX, get_type_size());
 }
 
 //-----------------------------------POSTFIX_UNARY_OPERATOR-----------------------------------
@@ -378,6 +409,14 @@ expr_postfix_inc_dec_op_t::expr_postfix_inc_dec_op_t(token_ptr op) : expr_postfi
 	and_conditions.push_back(oc_uo_not_constant);
 	or_conditions.push_back(oc_uo_is_arithmetic);
 	or_conditions.push_back(oc_uo_is_ptr);
+}
+
+void expr_postfix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	expr->asm_get_addr(cmd_list);
+	cmd_list->mov_rderef(AR_EBX, AR_EAX, get_type_size());
+	cmd_list->_push_un_oprtr_deref(
+		(op == T_OP_INC ? AUO_INC : AUO_DEC), AR_EAX, get_type_size());
+	cmd_list->mov(AR_EAX, AR_EBX);
 }
 
 //-----------------------------------BINARY_OPERATORS-----------------------------------

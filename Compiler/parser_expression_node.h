@@ -95,22 +95,27 @@ public:
 class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
 public:
 	expr_get_addr_un_op_t(token_ptr op);
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type() override;
 };
 
 class expr_dereference_op_t : public expr_prefix_un_op_t {
 public:
 	expr_dereference_op_t(token_ptr op);
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type();
 };
 
 class expr_prefix_inc_dec_op_t : public expr_prefix_un_op_t {
 public:
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	expr_prefix_inc_dec_op_t(token_ptr op);
 };
 
 class expr_prefix_add_sub_un_op_t : public expr_prefix_un_op_t {
 public:
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	expr_prefix_add_sub_un_op_t(token_ptr op);
 };
 
@@ -122,6 +127,7 @@ public:
 
 class expr_prefix_bit_not_un_op_t : public expr_prefix_un_op_t {
 public:
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	expr_prefix_bit_not_un_op_t(token_ptr op);
 };
 
@@ -135,6 +141,7 @@ public:
 
 class expr_postfix_inc_dec_op_t : public expr_postfix_un_op_t {
 public:
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	expr_postfix_inc_dec_op_t(token_ptr op);
 };
 
