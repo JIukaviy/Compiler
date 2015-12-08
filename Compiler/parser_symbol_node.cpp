@@ -487,10 +487,9 @@ void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 
 void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = type->get_size();
-	if (type == ST_STRUCT) {
-		cmd_list->_push_alloc_cmd(get_type_size());
-		cmd_list->_push_copy_cmd(offset_reg, AR_ESP, type_size, offset);
-	} else
+	if (type == ST_STRUCT)
+		cmd_list->_push_copy_to_stack_cmd(offset_reg, get_type_size(), offset);
+	else
 		cmd_list->mov_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
 }
 
