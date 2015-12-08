@@ -485,11 +485,9 @@ void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 
 void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = type->get_size();
-	if (type_size > asm_generator_t::size_of(AMT_DWORD)) {
-		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += asm_generator_t::size_of(AMT_DWORD)) {
-			cmd_list->mov_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
-			cmd_list->push(AR_EAX);
-		}
+	if (type == ST_STRUCT) {
+		cmd_list->sub(AR_ESP, new_var<int>(type_size));
+		cmd_list->_push_copy_cmd(offset_reg, AR_ESP, type_size, offset);
 	} else
 		cmd_list->mov_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
 }
