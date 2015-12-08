@@ -626,6 +626,13 @@ vector<type_ptr> sym_type_func_t::get_arg_types() {
 	return arg_types;
 }
 
+int sym_type_func_t::get_args_size() {
+	int res = 0;
+	for each (auto arg in arg_types)
+		res += asm_generator_t::alignment(arg->get_size());
+	return res;
+}
+
 void sym_type_func_t::set_element_type(type_ptr type) {
 	if (!type)
 		return;
@@ -699,6 +706,17 @@ void sym_func_t::print_l(ostream& os, int level) {
 void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_EBP, AR_ESP);
 	block->asm_generate_code(cmd_list, -4);
+}
+
+void sym_func_t::asm_set_offset() {
+	int offset = 4;
+	for each (auto var in *sym_table) {
+		if (var == ST_VAR) {
+			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
+			local_var->asm_set_offset(offset, AR_EBP);
+			offset += asm_generator_t::alignment(local_var->get_type_size());
+		}
+	}
 }
 
 //--------------------------------SYMBOL_TYPE_ALIAS-------------------------------

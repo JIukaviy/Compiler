@@ -740,6 +740,7 @@ void parser_t::print_asm_code(ostream& os) {
 			if (sym == ST_FUNC) {
 				auto sym_func = dynamic_pointer_cast<sym_func_t>(sym);
 				asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+				sym_func->asm_set_offset();
 				sym_func->asm_generate_code(cmd_list);
 				if (sym_func->get_name() == "main") {
 					if (!sym_func->defined())

@@ -150,3 +150,12 @@ void stmt_return_t::set_ret_expr(expr_t* expr_) {
 	expr = auto_convert(expr_, func_type->get_element_type());
 }
 
+void stmt_return_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	expr->asm_get_val(cmd_list);
+	if (expr->get_type() == ST_STRUCT) {
+		auto func_type = parent->get_func_type();
+		cmd_list->mov(AR_EAX, AR_ESP);
+	}
+	cmd_list->mov(AR_ESP, AR_EBP);
+	cmd_list->ret(new_var<int>(0));
+}

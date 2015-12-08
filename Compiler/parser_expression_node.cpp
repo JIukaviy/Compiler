@@ -1200,6 +1200,22 @@ void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
 type_ptr expr_func_t::get_type() {
 	return _get_func_type()->get_element_type();
 }
+
+void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	int args_size = _get_func_type()->get_args_size();
+	cmd_list->push(AR_EBP);
+	for (int i = args.size() - 1; i >= 0; i--) {
+		args[i]->asm_get_val(cmd_list);
+		if (args[i]->get_type() != ST_STRUCT)
+			cmd_list->push(AR_EAX);
+	}
+	cmd_list->call(dynamic_cast<expr_var_t*>(func)->get_var()->asm_get_name());
+	cmd_list->_push_free_cmd(args_size);
+	cmd_list->pop(AR_EBP);
+	if (get_type() == ST_STRUCT) {
+		cmd_list->_push_alloc_cmd(get_type_size());
+		cmd_list->_push_copy_cmd(AR_EAX, AR_ESP, get_type_size());
+	}
 }
 
 pos_t expr_func_t::get_pos() {

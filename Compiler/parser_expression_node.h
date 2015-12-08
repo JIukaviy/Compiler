@@ -329,12 +329,14 @@ class expr_func_t : public expr_t {
 	expr_t* func;
 	vector<expr_t*> args;
 	token_ptr brace;
+	shared_ptr<sym_type_func_t> _get_func_type();
 public:
 	expr_func_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 	void set_operands(expr_t* f, vector<expr_t*> args_);
 	type_ptr get_type() override;
+	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	pos_t get_pos() override;
 };
 

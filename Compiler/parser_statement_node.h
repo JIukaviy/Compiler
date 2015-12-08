@@ -135,4 +135,5 @@ class stmt_return_t : public stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>> 
 public:
 	using stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>>::stmt_jump_t;
 	void set_ret_expr(expr_t* expr);
+	void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 };
