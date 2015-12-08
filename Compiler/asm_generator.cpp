@@ -264,7 +264,7 @@ void asm_cmd_list_t::_push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER opera
 }
 
 void asm_cmd_list_t::_push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset, int scale) {
-	_push_un_oprtr_deref(op, asm_generator_t::reg_by_size(operand, operand_size), asm_generator_t::mtype_by_size(operand_size), offset, scale);
+	_push_un_oprtr_deref(op, operand, asm_generator_t::mtype_by_size(operand_size), offset, scale);
 }
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
