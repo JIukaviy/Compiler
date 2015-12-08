@@ -102,20 +102,18 @@ sym_ptr sym_table_t::find_local(const token_ptr& token) {
 	return find_local(static_pointer_cast<token_with_value_t<string>>(token)->get_value());
 }
 
-int sym_table_t::asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_reg) {
-	int size = 0;
+void sym_table_t::asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_reg) {
 	for each (auto var in *this) {
 		if (var == ST_VAR) {
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			if (!local_var)
 				continue;
 			if (local_var->get_type_size() >= asm_generator_t::get_align_size())
-				size = asm_generator_t::alignment(size);
-			local_var->asm_set_offset(offset + size, offset_reg);
-			size += local_var->get_type_size();
+				offset = asm_generator_t::alignment(offset);
+			local_var->asm_set_offset(offset, offset_reg);
+			offset += local_var->get_type_size();
 		}
 	}
-	return size;
 }
 
 void sym_table_t::asm_init_local_vars(asm_cmd_list_ptr cmd_list) {

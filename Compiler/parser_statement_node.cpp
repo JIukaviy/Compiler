@@ -37,10 +37,11 @@ void stmt_block_t::print_l(ostream& os, int level) {
 void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	if (statements.empty())
 		return;
-	int local_vars_size = asm_generator_t::alignment(sym_table->asm_set_offset_for_local_vars(offset, AR_EBP));
+	int local_vars_size = asm_generator_t::alignment(sym_table->get_local_vars_size());
+	sym_table->asm_set_offset_for_local_vars(offset - local_vars_size + asm_generator_t::size_of(AMT_DWORD), AR_EBP);
 	cmd_list->_push_alloc_cmd(local_vars_size);
 	sym_table->asm_init_local_vars(cmd_list);
-	offset += local_vars_size;
+	offset -= local_vars_size;
 	for each (auto stmt in statements)
 		stmt->asm_generate_code(cmd_list, offset);
 	cmd_list->_push_free_cmd(local_vars_size);

@@ -698,7 +698,7 @@ void sym_func_t::print_l(ostream& os, int level) {
 
 void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_EBP, AR_ESP);
-	block->asm_generate_code(cmd_list);
+	block->asm_generate_code(cmd_list, -4);
 }
 
 //--------------------------------SYMBOL_TYPE_ALIAS-------------------------------
