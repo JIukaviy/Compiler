@@ -233,6 +233,8 @@ public:
 	void _push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, int scale = 0);
 
 	void _push_copy_cmd(ASM_REGISTER src_reg, ASM_REGISTER dest_reg, int size, int src_offset = 0, int dst_offset = 0, bool copy_to_stack = false);
+	void _push_alloc_cmd(int size);
+	void _push_free_cmd(int size);
 
 	void _push_str(string str);
 	void print(ostream& os) override;

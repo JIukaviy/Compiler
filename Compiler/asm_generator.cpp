@@ -325,7 +325,7 @@ void asm_cmd_list_t::_push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER le
 
 void asm_cmd_list_t::_push_copy_cmd(ASM_REGISTER src_reg, ASM_REGISTER dest_reg, int size, int src_offset, int dst_offset, bool copy_to_stack) {
 	if (copy_to_stack)
-		sub(AR_ESP, new_var<int>(size));
+		_push_alloc_cmd(size);
 	for (int i = 0; i < size;) {
 		int d = size - i;
 		if (d < asm_generator_t::size_of(AMT_DWORD)) {
@@ -341,6 +341,14 @@ void asm_cmd_list_t::_push_copy_cmd(ASM_REGISTER src_reg, ASM_REGISTER dest_reg,
 			mov_lderef(AR_ESP, AR_EDX, d, -size + i);
 		i += d;
 	}
+}
+
+void asm_cmd_list_t::_push_alloc_cmd(int size) {
+	sub(AR_ESP, new_var<int>(asm_generator_t::alignment(size)));
+}
+
+void asm_cmd_list_t::_push_free_cmd(int size) {
+	add(AR_ESP, new_var<int>(asm_generator_t::alignment(size)));
 }
 
 void asm_cmd_list_t::_push_str(string str) {
