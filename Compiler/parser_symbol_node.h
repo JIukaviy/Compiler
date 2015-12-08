@@ -295,6 +295,7 @@ public:
 	void short_print_l(ostream& os, int level);
 	void print_l(ostream& os, int level) override;
 	void asm_generate_code(asm_cmd_list_ptr cmd_list);
+	void asm_set_offset();
 };
 
 class sym_type_alias_t : public type_base_t, public sym_with_type_t {

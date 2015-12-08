@@ -122,7 +122,7 @@ bool type_base_t::completed() {
 }
 
 int type_base_t::get_size() {
-	throw SemanticError("Can't get size of the symbol");
+	throw SemanticError("Can't get size of the symbol", token->get_pos());
 }
 
 bool type_base_t::is_integer(SYM_TYPE sym_type) {
@@ -490,7 +490,7 @@ void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	if (type == ST_STRUCT)
 		cmd_list->_push_copy_to_stack_cmd(offset_reg, get_type_size(), offset);
 	else
-		cmd_list->mov_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
+		cmd_list->mov_rderef(AR_EAX, offset_reg, type_size, offset);
 }
 
 void sym_local_var_t::asm_set_offset(int offset_, ASM_REGISTER offset_reg_) {
@@ -650,7 +650,7 @@ void sym_type_func_t::print_l(ostream& os, int level) {
 
 //--------------------------------SYMBOL_FUNCTION-------------------------------
 
-sym_func_t::sym_func_t(token_ptr identifier, shared_ptr<sym_type_func_t> func_type, sym_table_ptr  sym_table) : sym_with_type_t(type_ptr(new type_t(func_type))), sym_table(sym_table), symbol_t(ST_FUNC, identifier) {
+sym_func_t::sym_func_t(token_ptr identifier, shared_ptr<sym_type_func_t> func_type, sym_table_ptr sym_table) : sym_with_type_t(type_ptr(new type_t(func_type))), sym_table(sym_table), symbol_t(ST_FUNC, identifier) {
 	update_name();
 }
 
