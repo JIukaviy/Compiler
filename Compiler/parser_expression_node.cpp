@@ -680,6 +680,7 @@ void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 		left->asm_get_addr(cmd_list);
 		cmd_list->pop(AR_EBX);
 		_asm_get_val(cmd_list);
+		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
 	}
 }
 
