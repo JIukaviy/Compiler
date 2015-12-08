@@ -1178,24 +1178,28 @@ void expr_func_t::short_print_l(ostream& os, int level) {
 	os << ")";
 }
 
+inline shared_ptr<sym_type_func_t> expr_func_t::_get_func_type() {
+	return
+		func->get_type() == ST_FUNC_TYPE ? dynamic_pointer_cast<sym_type_func_t>(func->get_type()->get_base_type()) :
+		dynamic_pointer_cast<sym_type_func_t>(sym_type_ptr_t::dereference(func->get_type())->get_base_type());
+}
+
 void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
 	if (func_->get_type() != ST_FUNC_TYPE && (func_->get_type() != ST_PTR ||
 		sym_type_ptr_t::dereference(func_->get_type()) != ST_FUNC))
 			throw SemanticError("Called object is not a function or function pointer");
 	func = func_;
-	auto func_type = 
-		func_->get_type() == ST_FUNC_TYPE ? dynamic_pointer_cast<sym_type_func_t>(func_->get_type()->get_base_type()) :
-		dynamic_pointer_cast<sym_type_func_t>(sym_type_ptr_t::dereference(func_->get_type())->get_base_type());
-	auto func_args = func_type->get_arg_types();
+	auto func_args = _get_func_type()->get_arg_types();
 	if (func_args.size() != args_.size())
-		throw IncorrectNumberOfArguments(args_.size(), func_type, this);
+		throw IncorrectNumberOfArguments(args_.size(), _get_func_type(), this);
 	args.resize(func_args.size());
 	for (int i = 0; i < func_args.size(); i++)
 		args[i] = auto_convert(args_[i], func_args[i]);
 }
 
 type_ptr expr_func_t::get_type() {
-	return func->get_type();
+	return _get_func_type()->get_element_type();
+}
 }
 
 pos_t expr_func_t::get_pos() {
