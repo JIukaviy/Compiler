@@ -61,6 +61,8 @@ void stmt_expr_t::print_l(ostream& os, int level) {
 
 void stmt_expr_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	expression->asm_get_val(cmd_list);
+	if (expression->get_type() == ST_STRUCT)
+		cmd_list->add(AR_ESP, new_var<int>(expression->get_type_size()));
 }
 
 void stmt_decl_t::print_l(ostream& os, int level) {

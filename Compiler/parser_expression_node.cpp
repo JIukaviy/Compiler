@@ -670,27 +670,10 @@ void expr_base_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 }
 
 void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_STRUCT && right->is_lvalue()) {
-		right->asm_get_addr(cmd_list);
-		cmd_list->push(AR_EAX);
+	if (left->get_type() == ST_STRUCT) {
+		right->asm_get_val(cmd_list);
 		left->asm_get_addr(cmd_list);
-		cmd_list->pop(AR_EBX);
-		for (int i = 0; i < get_type_size();) {
-			int d = get_type_size() - i;
-			if (d < asm_generator_t::size_of(AMT_DWORD)) {
-				if (d < asm_generator_t::size_of(AMT_WORD))
-					d = 1;
-				else
-					d = asm_generator_t::size_of(AMT_WORD);
-				cmd_list->mov_rderef(AR_EDX, AR_EBX, d, i);
-				cmd_list->mov_lderef(AR_EAX, AR_EDX, d, i);
-				i += d;
-			} else {
-				cmd_list->mov_rderef(AR_EDX, AR_EBX, AMT_DWORD, i);
-				cmd_list->mov_lderef(AR_EAX, AR_EDX, AMT_DWORD, i);
-				i += asm_generator_t::size_of(AMT_DWORD);
-			}
-		}
+		cmd_list->_push_copy_cmd(AR_ESP, AR_EAX, get_type_size());
 	} else {
 		right->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
@@ -1141,17 +1124,23 @@ token_ptr expr_struct_access_t::get_member() {
 }
 
 void expr_struct_access_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
-	if (op == T_OP_DOT)
+	if (op == T_OP_DOT) {
+		assert(struct_expr->is_lvalue());
 		struct_expr->asm_get_addr(cmd_list);
-	else 
+	} else
 		struct_expr->asm_get_val(cmd_list);
 	member->asm_get_addr(cmd_list);
 }
 
 void expr_struct_access_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (op == T_OP_DOT)
-		struct_expr->asm_get_addr(cmd_list);
-	else
+	if (op == T_OP_DOT) {
+		if (struct_expr->is_lvalue())
+			struct_expr->asm_get_addr(cmd_list);
+		else {
+			struct_expr->asm_get_val(cmd_list);
+			cmd_list->mov(AR_EAX, AR_ESP);
+		}
+	} else
 		struct_expr->asm_get_val(cmd_list);
 	member->asm_get_val(cmd_list);
 }
