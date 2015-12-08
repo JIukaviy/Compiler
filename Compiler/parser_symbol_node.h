@@ -274,6 +274,7 @@ public:
 	virtual void update_name();
 	void set_arg_types(const vector<type_ptr> &at);
 	vector<type_ptr> get_arg_types();
+	int get_args_size();
 	void set_element_type(type_ptr type) override;
 	void print_l(ostream& os, int level) override;
 };

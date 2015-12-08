@@ -130,6 +130,9 @@ class stmt_continue_t : public stmt_jump_t<T_KWRD_CONTINUE, shared_ptr<stmt_loop
 	using stmt_jump_t<T_KWRD_CONTINUE, shared_ptr<stmt_loop_t>>::stmt_jump_t;
 };
 
-class stmt_return_t : public stmt_jump_t<T_KWRD_RETURN, sym_ptr> {
-	using stmt_jump_t<T_KWRD_RETURN, sym_ptr>::stmt_jump_t;
+class stmt_return_t : public stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>> {
+	expr_t* expr;
+public:
+	using stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>>::stmt_jump_t;
+	void set_ret_expr(expr_t* expr);
 };

@@ -1,4 +1,5 @@
 #include "parser_statement_node.h"
+#include "type_conversion.h"
 
 stmt_expr_t::stmt_expr_t(expr_t * expression) : expression(expression) {}
 stmt_block_t::stmt_block_t() {}
@@ -142,3 +143,9 @@ void stmt_for_t::print_l(ostream& os, int level) {
 	} else
 		os << ';' << endl;
 }
+
+void stmt_return_t::set_ret_expr(expr_t* expr_) {
+	auto func_type = parent->get_func_type();
+	expr = auto_convert(expr_, func_type->get_element_type());
+}
+

@@ -659,7 +659,9 @@ stmt_ptr parser_t::parse_return_stmt() {
 		throw SemanticError("Return statement must be inside the function", la->get()->get_pos());
 	expr_t* expr = la->get() == T_SEMICOLON ? nullptr : parse_expr();
 	la->require(T_SEMICOLON);
-	return stmt_ptr(new stmt_return_t(func_stack.top()));
+	auto ret_stmt = shared_ptr<stmt_return_t>(new stmt_return_t(func_stack.top()));
+	ret_stmt->set_ret_expr(expr);
+	return ret_stmt;
 }
 
 //---------------------------------PRINT-------------------------------------------
