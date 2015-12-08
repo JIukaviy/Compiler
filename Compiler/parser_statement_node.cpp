@@ -37,12 +37,12 @@ void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	if (statements.empty())
 		return;
 	int local_vars_size = asm_generator_t::alignment(sym_table->asm_set_offset_for_local_vars(offset, AR_EBP));
-	cmd_list->sub(AR_ESP, new_var<int>(local_vars_size));
+	cmd_list->_push_alloc_cmd(local_vars_size);
 	sym_table->asm_init_local_vars(cmd_list);
 	offset += local_vars_size;
 	for each (auto stmt in statements)
 		stmt->asm_generate_code(cmd_list, offset);
-	cmd_list->add(AR_ESP, new_var<int>(local_vars_size));
+	cmd_list->_push_free_cmd(local_vars_size);
 }
 
 void stmt_block_t::add_statement(stmt_ptr stmt) {
@@ -62,7 +62,7 @@ void stmt_expr_t::print_l(ostream& os, int level) {
 void stmt_expr_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	expression->asm_get_val(cmd_list);
 	if (expression->get_type() == ST_STRUCT)
-		cmd_list->add(AR_ESP, new_var<int>(expression->get_type_size()));
+		cmd_list->_push_free_cmd(expression->get_type_size());
 }
 
 void stmt_decl_t::print_l(ostream& os, int level) {
