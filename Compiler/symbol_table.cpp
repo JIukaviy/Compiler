@@ -128,11 +128,16 @@ void sym_table_t::asm_init_local_vars(asm_cmd_list_ptr cmd_list) {
 
 int sym_table_t::get_local_vars_size() {
 	int res = 0;
-	for each (auto sym in *this)
-		if (sym == ST_VAR) {
-			auto sym_var = dynamic_pointer_cast<sym_local_var_t>(sym);
-			res += sym_var->get_type_size();
+	for each (auto var in *this) {
+		if (var == ST_VAR) {
+			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
+			if (!local_var)
+				continue;
+			if (local_var->get_type_size() >= asm_generator_t::get_align_size())
+				res = asm_generator_t::alignment(res);
+			res += local_var->get_type_size();
 		}
+	}
 	return res;
 }
 
