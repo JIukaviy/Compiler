@@ -747,7 +747,7 @@ void parser_t::print_asm_code(ostream& os) {
 					main_block = sym_func->get_block();
 					gen->set_main_cmd_list(cmd_list);
 				} else
-					gen->add_function(sym_func->get_name(), cmd_list);
+					gen->add_function(sym_func->asm_get_name(), cmd_list);
 			} else if (sym == ST_VAR) {
 				auto sym_global_var = dynamic_pointer_cast<sym_global_var_t>(sym);
 				sym_global_var->asm_register(gen);
