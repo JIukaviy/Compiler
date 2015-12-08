@@ -480,6 +480,8 @@ void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
 }
 
 void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	if (offset_reg == AR_EAX && offset == 0)
+		return;
 	cmd_list->lea_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
 }
 
