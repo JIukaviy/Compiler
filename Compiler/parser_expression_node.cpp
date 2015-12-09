@@ -692,7 +692,7 @@ void expr_base_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->_push_bin_oprtr_lderef(_asm_get_operator(), AR_EAX, AR_EBX, get_type_size());
 }
 
-void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_base_assign_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 	if (left->get_type() == ST_STRUCT) {
 		left->asm_get_addr(cmd_list);
 		cmd_list->push(AR_EAX);
@@ -708,8 +708,8 @@ void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	}
 }
 
-void expr_base_assign_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
-	asm_get_val(cmd_list);
+void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	asm_gen_code(cmd_list);
 	if (left->get_type() == ST_STRUCT)
 		cmd_list->mov(AR_EAX, AR_EBX);
 	else
