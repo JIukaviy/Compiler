@@ -10,6 +10,8 @@ bool expr_t::is_lvalue() {
 	return lvalue;
 }
 
+void expr_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {}
+
 void expr_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	assert(false);
 }
@@ -152,6 +154,10 @@ void expr_un_op_t::short_print_l(ostream& os, int level) {
 	expr->short_print(os);
 }
 
+void expr_un_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
+	expr->asm_gen_code(cmd_list);
+}
+
 expr_t* expr_un_op_t::get_expr() {
 	return expr;
 }
@@ -285,6 +291,10 @@ expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_prefix_un_op_t(op, false
 }
 
 void expr_printf_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	asm_gen_code(cmd_list);
+}
+
+void expr_printf_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_val(cmd_list);
 	cmd_list->_push_str("invoke crt_printf, OFFSET printf_format_str, eax");
 }
@@ -340,7 +350,7 @@ inline int get_ptr_elem_size(type_ptr type) {
 	return dynamic_pointer_cast<sym_type_ptr_t>(type)->get_element_type()->get_size();
 }
 
-void expr_prefix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_prefix_inc_dec_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_addr(cmd_list);
 	if (get_type() == ST_PTR)
 		cmd_list->_push_bin_oprtr_lderef(
@@ -348,6 +358,10 @@ void expr_prefix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	else
 		cmd_list->_push_un_oprtr_deref(
 			(op == T_OP_INC ? AUO_INC : AUO_DEC), AR_EAX, get_type_size());
+}
+
+void expr_prefix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	asm_gen_code(cmd_list);
 	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
 }
 
@@ -419,15 +433,19 @@ expr_postfix_inc_dec_op_t::expr_postfix_inc_dec_op_t(token_ptr op) : expr_postfi
 	or_conditions.push_back(oc_uo_is_ptr);
 }
 
-void expr_postfix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_postfix_inc_dec_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_addr(cmd_list);
-	cmd_list->mov_rderef(AR_EBX, AR_EAX, get_type_size());
 	if (get_type() == ST_PTR)
 		cmd_list->_push_bin_oprtr_lderef(
 			(op == T_OP_INC ? ABO_ADD : ABO_SUB), AR_EAX, new_var<int>(get_ptr_elem_size(get_type())), AMT_DWORD);
 	else
 		cmd_list->_push_un_oprtr_deref(
 			(op == T_OP_INC ? AUO_INC : AUO_DEC), AR_EAX, get_type_size());
+}
+
+void expr_postfix_inc_dec_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov_rderef(AR_EBX, AR_EAX, get_type_size());
+	asm_gen_code(cmd_list);
 	cmd_list->mov(AR_EAX, AR_EBX);
 }
 
@@ -529,6 +547,11 @@ void expr_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	left->asm_get_val(cmd_list);
 	cmd_list->pop(AR_EBX);
 	_asm_get_val(cmd_list);
+}
+
+void expr_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
+	left->asm_gen_code(cmd_list);
+	right->asm_gen_code(cmd_list);
 }
 
 var_ptr expr_bin_op_t::eval() {
@@ -676,15 +699,21 @@ void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 		right->asm_get_val(cmd_list);
 		cmd_list->pop(AR_EBX);
 		cmd_list->_push_copy_cmd(AR_EAX, AR_EBX, get_type_size());
-		cmd_list->mov(AR_EAX, AR_EBX);
 	} else {
 		right->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
 		left->asm_get_addr(cmd_list);
 		cmd_list->pop(AR_EBX);
 		_asm_get_val(cmd_list);
-		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
 	}
+}
+
+void expr_base_assign_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
+	asm_get_val(cmd_list);
+	if (left->get_type() == ST_STRUCT)
+		cmd_list->mov(AR_EAX, AR_EBX);
+	else
+		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
 }
 
 //-----------------------------------ASSIGN---------------------------------------------
@@ -1192,7 +1221,7 @@ type_ptr expr_func_t::get_type() {
 	return _get_func_type()->get_element_type();
 }
 
-void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+void expr_func_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 	int args_size = _get_func_type()->get_args_size();
 	cmd_list->push(AR_EBP);
 	for (int i = args.size() - 1; i >= 0; i--) {
@@ -1205,6 +1234,10 @@ void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->call(dynamic_cast<expr_var_t*>(func)->get_var()->asm_get_name());
 	cmd_list->_push_free_cmd(args_size);
 	cmd_list->pop(AR_EBP);
+}
+
+void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	asm_gen_code(cmd_list);
 }
 
 pos_t expr_func_t::get_pos() {

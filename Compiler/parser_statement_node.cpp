@@ -62,7 +62,7 @@ void stmt_expr_t::print_l(ostream& os, int level) {
 }
 
 void stmt_expr_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
-	expression->asm_get_val(cmd_list);
+	expression->asm_gen_code(cmd_list);
 }
 
 void stmt_decl_t::print_l(ostream& os, int level) {
