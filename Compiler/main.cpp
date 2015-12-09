@@ -6,6 +6,7 @@
 #include "lexeme_analyzer.h"
 #include "parser.h"
 #include "asm_generator.h"
+#include "var.h"
 
 using namespace std;
 

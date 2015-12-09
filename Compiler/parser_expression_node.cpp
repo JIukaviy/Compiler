@@ -1280,6 +1280,10 @@ void expr_cast_t::set_operand(expr_t* expr_, type_ptr dst_type) {
 		throw IllegalConversion(expr_->get_type(), dst_type, expr_->get_pos());
 }
 
+void expr_cast_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
+	expr->asm_gen_code(cmd_list);
+}
+
 type_ptr expr_cast_t::get_type() {
 	return type;
 }

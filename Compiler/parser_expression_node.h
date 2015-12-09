@@ -379,6 +379,7 @@ public:
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 	void set_operand(expr_t* expr, type_ptr type);
+	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type() override;
 	pos_t get_pos() override;
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
