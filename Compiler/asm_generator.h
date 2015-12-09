@@ -8,8 +8,6 @@
 #include <iostream>
 #include <algorithm>
 
-#define ASM_WORD_SIZE 4
-
 using namespace std;
 
 void asm_generator_init();
@@ -246,7 +244,6 @@ class asm_generator_t : public asm_t {
 	vector <shared_ptr<asm_global_var_t>> global_vars;
 	vector <shared_ptr<asm_function_t>> functions;
 	asm_cmd_list_ptr main_cmd_list;
-	static int align_size;
 public:
 	void add_global_var(shared_ptr<asm_global_var_t> var);
 	void add_global_var(string name, ASM_MEM_TYPE mem_type, int dup = 0);
@@ -254,9 +251,8 @@ public:
 	void add_function(string name, asm_cmd_list_ptr cmd_list);
 	void set_main_cmd_list(asm_cmd_list_ptr cmd_list);
 	void print(ostream& os);
-	static void set_align_size(int size);
-	static int get_align_size();
 	static int alignment(int size);
+	static int align_size(int size);
 	static ASM_REGISTER reg_by_size(ASM_REGISTER reg, int size);
 	static ASM_REGISTER reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype);
 	static int size_of(ASM_REGISTER reg);

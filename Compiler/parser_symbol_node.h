@@ -90,6 +90,7 @@ public:
 	virtual bool completed();
 	static type_base_ptr make_type(SYM_TYPE s);
 	virtual int get_size();
+	int get_aligned_size();
 	static bool is_integer(SYM_TYPE sym_type);
 	static bool is_arithmetic(SYM_TYPE sym_type);
 	virtual bool is_integer();
@@ -245,6 +246,7 @@ public:
 	type_ptr get_element_type();
 	type_ptr get_ptr_to_elem_type();
 	int get_size() override;
+	int get_elem_size();
 	int get_len();
 };
 

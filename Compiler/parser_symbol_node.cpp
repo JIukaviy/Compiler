@@ -125,6 +125,10 @@ int type_base_t::get_size() {
 	throw SemanticError("Can't get size of the symbol", token->get_pos());
 }
 
+int type_base_t::get_aligned_size() {
+	return asm_generator_t::align_size(get_size());
+}
+
 bool type_base_t::is_integer(SYM_TYPE sym_type) {
 	return (sym_type == ST_CHAR) || (sym_type == ST_INTEGER);
 }
@@ -547,7 +551,11 @@ sym_type_array_t::sym_type_array_t(expr_t* size_expr) : symbol_t(ST_ARRAY), size
 }
 
 int sym_type_array_t::get_size() {
-	return len * elem_type->get_size();
+	return len * get_elem_size();
+}
+
+int sym_type_array_t::get_elem_size() {
+	return elem_type->get_size();
 }
 
 int sym_type_array_t::get_len() {

@@ -347,7 +347,7 @@ expr_prefix_inc_dec_op_t::expr_prefix_inc_dec_op_t(token_ptr op) : expr_prefix_u
 }
 
 inline int get_ptr_elem_size(type_ptr type) {
-	return dynamic_pointer_cast<sym_type_ptr_t>(type)->get_element_type()->get_size();
+	return sym_type_ptr_t::dereference(type)->get_size();
 }
 
 void expr_prefix_inc_dec_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
@@ -1065,11 +1065,11 @@ token_ptr expr_arr_index_t::get_sqr_bracket_token() {
 	return sqr_bracket;
 }
 
-expr_t * expr_arr_index_t::get_arr() {
+expr_t* expr_arr_index_t::get_arr() {
 	return arr;
 }
 
-expr_t * expr_arr_index_t::get_index() {
+expr_t* expr_arr_index_t::get_index() {
 	return index;
 }
 
@@ -1096,11 +1096,12 @@ void expr_arr_index_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 
 void expr_arr_index_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	asm_get_addr(cmd_list);
-	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type()->get_size());
+	if (get_type() != ST_STRUCT)
+		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type()->get_size());
 }
 
 type_ptr expr_arr_index_t::get_type() {
-	return static_pointer_cast<sym_type_ptr_t>(arr->get_type()->get_base_type())->get_element_type();
+	return sym_type_ptr_t::dereference(arr->get_type());
 }
 
 pos_t expr_arr_index_t::get_pos() {

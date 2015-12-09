@@ -414,18 +414,17 @@ void asm_generator_t::print(ostream& os) {
 	os << "end start" << endl;
 }
 
-int asm_generator_t::align_size = ASM_WORD_SIZE;
-
-void asm_generator_t::set_align_size(int size) {
-	align_size = size;
-}
-
-int asm_generator_t::get_align_size() {
-	return align_size;
-}
-
 int asm_generator_t::alignment(int size) {
-	return size + (align_size - size % align_size) % align_size;
+	return size + (size_of(AMT_DWORD) - size % size_of(AMT_DWORD)) % size_of(AMT_DWORD);
+}
+
+int asm_generator_t::align_size(int size) {
+	return 
+		size >= size_of(AMT_DWORD) ? alignment(size) : 
+		size > size_of(AMT_WORD) ? size_of(AMT_DWORD) :
+		size == size_of(AMT_WORD) ? size : 
+		size > size_of(AMT_BYTE) ? size_of(AMT_WORD) :
+		size;
 }
 
 ASM_REGISTER asm_generator_t::reg_by_size(ASM_REGISTER reg, int size) {

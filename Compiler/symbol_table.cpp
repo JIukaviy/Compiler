@@ -108,7 +108,7 @@ void sym_table_t::asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			if (!local_var)
 				continue;
-			if (local_var->get_type_size() >= asm_generator_t::get_align_size())
+			if (local_var->get_type_size() >= asm_generator_t::size_of(AMT_DWORD))
 				offset = asm_generator_t::alignment(offset);
 			local_var->asm_set_offset(offset, offset_reg);
 			offset += local_var->get_type_size();
@@ -131,7 +131,7 @@ int sym_table_t::get_local_vars_size() {
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			if (!local_var)
 				continue;
-			if (local_var->get_type_size() >= asm_generator_t::get_align_size())
+			if (local_var->get_type_size() >= asm_generator_t::size_of(AMT_DWORD))
 				res = asm_generator_t::alignment(res);
 			res += local_var->get_type_size();
 		}
