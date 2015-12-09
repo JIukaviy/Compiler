@@ -60,6 +60,7 @@ class parser_t {
 	expr_t* left_associated_bin_op(int priority);
 	expr_t* tern_op();
 	expr_t* right_associated_bin_op();
+	expr_t* printf_un_op();
 	expr_t* prefix_un_op();
 	expr_t* postfix_op();
 	expr_t* factor();
@@ -75,7 +76,8 @@ class parser_t {
 	vector<expr_t*> parse_initializer_list();
 	expr_t* parse_initializer();
 	sym_ptr parse_declaration(bool abstract_decl = false);
-	sym_ptr parse_declaration(decl_raw_t, sym_table_ptr , bool abstract_decl = false);
+	sym_ptr parse_global_declaration();
+	sym_ptr parse_declaration(decl_raw_t, sym_table_ptr, bool global = false, bool abstract_decl = false);
 	void optimize_type(type_ptr);
 
 	bool is_begin_of(STATEMENT stmt, token_ptr token);
@@ -94,6 +96,7 @@ class parser_t {
 public:
 	parser_t(lexeme_analyzer_t* la_);
 	void print_expr(ostream&);
+	void print_eval_expr(ostream&);
 	void print_type(ostream&);
 	void print_decl(ostream&);
 	void print_statement(ostream&);

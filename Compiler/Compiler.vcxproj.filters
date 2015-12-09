@@ -57,6 +57,9 @@
     <ClCompile Include="asm_generator.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="var.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
@@ -124,6 +127,18 @@
     </ClInclude>
     <ClInclude Include="asm_un_op.h">
       <Filter>Заголовочные файлы\asm</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_mem_type.h">
+      <Filter>Заголовочные файлы\asm</Filter>
+    </ClInclude>
+    <ClInclude Include="var.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="var_un_operators.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="var_bin_operators.h">
+      <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

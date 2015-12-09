@@ -2,11 +2,13 @@
 #include "exceptions.h"
 #include "parser.h"
 #include "type_conversion.h"
+#include "asm_generator.h"
 #include <vector>
 #include <map>
 
 map <SYM_TYPE, TOKEN> st_to_token;
 map <TOKEN, SYM_TYPE> token_to_st;
+map <SYM_TYPE, ASM_MEM_TYPE> st_to_asm_type;
 
 void init_parser_symbol_node() {
 	st_to_token[ST_VOID] = T_KWRD_VOID;
@@ -22,11 +24,17 @@ void init_parser_symbol_node() {
 	token_to_st[T_INTEGER] = ST_INTEGER;
 	token_to_st[T_CHAR] = ST_CHAR;
 	token_to_st[T_DOUBLE] = ST_DOUBLE;
+
+	st_to_asm_type[ST_CHAR] = AMT_BYTE;
+	st_to_asm_type[ST_INTEGER] = AMT_DWORD;
+	st_to_asm_type[ST_PTR] = AMT_DWORD;
+	st_to_asm_type[ST_DOUBLE] = AMT_QWORD;
 }
 
 type_base_ptr type_base_t::make_type(SYM_TYPE sym_type) {
 	assert(sym_type != ST_ALIAS);
 	assert(sym_type != ST_FUNC);
+	assert(sym_type != ST_FUNC_TYPE);
 	assert(sym_type != ST_VAR);
 	assert(sym_type != ST_STRUCT);
 	assert(sym_type != ST_ARRAY);
@@ -114,7 +122,11 @@ bool type_base_t::completed() {
 }
 
 int type_base_t::get_size() {
-	throw SemanticError("Can't get size of the symbol");
+	throw SemanticError("Can't get size of the symbol", token->get_pos());
+}
+
+int type_base_t::get_aligned_size() {
+	return asm_generator_t::align_size(get_size());
 }
 
 bool type_base_t::is_integer(SYM_TYPE sym_type) {
@@ -233,6 +245,10 @@ void type_t::set_token(token_ptr token) {
 	type->set_token(token);
 }
 
+ASM_MEM_TYPE type_t::st_to_asm_mtype(SYM_TYPE sym_type) {
+	return st_to_asm_type.at(sym_type);
+}
+
 //--------------------------------UPDATABLE_BASE_TYPE-------------------------------
 
 updatable_base_type_t::updatable_base_type_t() : symbol_t(ST_VOID) {}
@@ -323,6 +339,14 @@ type_ptr sym_with_type_t::get_type() {
 	return type;
 }
 
+int sym_with_type_t::get_type_size() {
+	return get_type()->get_size();
+}
+
+string sym_with_type_t::asm_get_name() {
+	return '_' + get_name();
+}
+
 string sym_with_type_t::_get_name() const {
 	return static_pointer_cast<token_with_value_t<string>>(token)->get_value();
 }
@@ -345,14 +369,15 @@ void sym_var_t::set_type_and_init_list(type_ptr type_, vector<expr_t*> init_list
 				static_cast<expr_const_t*>(init_list_[0])->get_token() == T_STRING) 
 			{
 				size_t str_literal_size = init_list_[0]->get_type()->get_size();
-				if (arr->completed() && arr->get_size() < str_literal_size)
+				if (arr->completed() && arr->get_len() < str_literal_size)
 					throw SemanticError("Initializer string for array of char is too long", init_list_[0]->get_pos());
-				arr->set_size(str_literal_size);
+				arr->set_len(str_literal_size);
 				return;
 			}
-			if (arr->completed() && arr->get_size() < init_list_.size())
+			if (arr->completed() && arr->get_len() < init_list_.size())
 				throw InvalidInitListSize(init_list_[1]->get_pos());
-			arr->set_size(init_list_.size());
+			if (!arr->completed())
+				arr->set_len(init_list_.size());
 			init_list.resize(init_list_.size());
 			for (int i = 0; i < init_list_.size(); i++)
 				init_list[i] = auto_convert(init_list_[i], arr->get_element_type());
@@ -384,6 +409,104 @@ void sym_var_t::short_print_l(ostream& os, int level) {
 	token->short_print(os);
 	os << "\", type: ";
 	type->short_print_l(os, level);
+}
+
+const vector<expr_t*>& sym_var_t::get_init_list() {
+	return init_list;
+}
+
+//--------------------------------SYMBOL_GLOBAL_VAR-------------------------------
+
+sym_global_var_t::sym_global_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
+
+void sym_global_var_t::asm_register(asm_gen_ptr gen) {
+	asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+	int dup = 0;
+	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->mov(asm_get_name(), asm_generator_t::reg_by_size(AR_EAX, get_type_size()));
+	} else if (type == ST_STRUCT || type == ST_ARRAY)
+		dup = asm_generator_t::alignment(type->get_size() / asm_generator_t::size_of(AMT_DWORD));
+	gen->add_global_var(asm_get_name(), AMT_DWORD, cmd_list, dup);
+}
+
+void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov_raddr(AR_EAX, asm_get_name());
+}
+
+void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	if (type == ST_ARRAY || type == ST_STRUCT) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += asm_generator_t::size_of(AMT_DWORD)) {
+			cmd_list->mov(AR_EAX, asm_get_name(), i);
+			cmd_list->push(AR_EAX);
+		}
+	} else
+		cmd_list->mov(AR_EAX, asm_get_name());
+}
+
+//--------------------------------SYMBOL_LOCAL_VAR--------------------------------
+
+sym_local_var_t::sym_local_var_t(token_ptr identifier) : symbol_t(ST_VAR, identifier), sym_var_t(identifier) {}
+
+int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
+	/*if (type == ST_STRUCT || type == ST_ARRAY) {
+		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
+			cmd_list->mov(AR_EAX, offset_reg, offset);
+			cmd_list->push(AR_EAX);
+		}
+	} else
+		cmd_list->push(offset_reg, offset);*/ // Add inittializer
+	int aligned_size = asm_generator_t::alignment(get_type_size());
+	if (type->is_integer() && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->push(AR_EAX);
+	} else
+		cmd_list->sub(AR_ESP, new_var<int>(aligned_size));
+	return aligned_size;
+}
+
+void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
+	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
+		init_list[0]->asm_get_val(cmd_list);
+		cmd_list->mov_lderef(offset_reg, AR_EAX, get_type_size(), offset);
+	} else if (type->is_arithmetic());
+	else if (type == ST_ARRAY && !init_list.empty()) {
+		auto arr = dynamic_pointer_cast<sym_type_array_t>(type->get_base_type());
+		int elem_size = arr->get_element_type()->get_size();
+		for (int i = 0; i < init_list.size(); i++) {
+			init_list[i]->asm_get_val(cmd_list);
+			cmd_list->mov_lderef(offset_reg, AR_EAX, elem_size, offset + i * elem_size);
+		}
+		int j = 0;
+		for (int i = init_list.size() * elem_size; i < get_type_size(); j++, i += elem_size) {
+			cmd_list->mov_rderef(AR_EAX, offset_reg, elem_size, offset + (j % init_list.size()) * elem_size);
+			cmd_list->mov_lderef(offset_reg, AR_EAX, elem_size, offset + i);
+		}
+	}
+}
+
+void sym_local_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	if (offset_reg == AR_EAX && offset == 0)
+		return;
+	cmd_list->lea_rderef(AR_EAX, offset_reg, AMT_DWORD, offset);
+}
+
+void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
+	int type_size = type->get_size();
+	if (type == ST_STRUCT)
+		asm_get_addr(cmd_list);
+	else
+		cmd_list->mov_rderef(AR_EAX, offset_reg, type_size, offset);
+}
+
+void sym_local_var_t::asm_set_offset(int offset_, ASM_REGISTER offset_reg_) {
+	offset = offset_;
+	offset_reg = offset_reg_;
+	if (type == ST_STRUCT) {
+		auto struct_type = dynamic_pointer_cast<sym_type_struct_t>(type->get_base_type());
+		sym_table_ptr sym_table = struct_type->get_sym_table();
+		sym_table->asm_set_offset_for_local_vars(0, AR_EAX);
+	}
 }
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
@@ -423,11 +546,22 @@ type_ptr sym_type_ptr_t::make_ptr(type_ptr type, bool is_const) {
 
 sym_type_array_t::sym_type_array_t(expr_t* size_expr) : symbol_t(ST_ARRAY), size_expr(size_expr) {
 	if (size_expr)
-		size = 1; // ƒобавить вычисление константных выражений
+		if (!size_expr->get_type()->is_integer())
+			throw SemanticError("Size of array has non-integer type", size_expr->get_pos());
+		else
+			len = var_pointer_cast<int>(size_expr->eval())->get_val();
 }
 
 int sym_type_array_t::get_size() {
-	return size;
+	return len * get_elem_size();
+}
+
+int sym_type_array_t::get_elem_size() {
+	return elem_type->get_size();
+}
+
+int sym_type_array_t::get_len() {
+	return len;
 }
 
 string sym_type_array_t::_get_name() const {
@@ -437,18 +571,18 @@ string sym_type_array_t::_get_name() const {
 
 void sym_type_array_t::print_l(ostream& os, int level) {
 	os << "array[";
-	if (size)
-		os << size;
+	if (len)
+		os << len;
 	os << "] with elems: ";
 	elem_type->print(os);
 }
 
 bool sym_type_array_t::completed() {
-	return size;
+	return len;
 }
 
-void sym_type_array_t::set_size(size_t size_) {
-	size = size_;
+void sym_type_array_t::set_len(size_t len_) {
+	len = len_;
 }
 
 type_ptr sym_type_array_t::get_element_type() {
@@ -472,7 +606,7 @@ void sym_type_array_t::set_element_type(type_ptr type) {
 
 //--------------------------------SYMBOL_TYPE_FUNC-------------------------------
 
-sym_type_func_t::sym_type_func_t(const vector<type_ptr> &at) : symbol_t(ST_FUNC), arg_types(at) {}
+sym_type_func_t::sym_type_func_t(const vector<type_ptr> &at) : symbol_t(ST_FUNC_TYPE), arg_types(at) {}
 
 void sym_type_func_t::update_name() {
 	elem_type->update_name();
@@ -502,6 +636,13 @@ vector<type_ptr> sym_type_func_t::get_arg_types() {
 	return arg_types;
 }
 
+int sym_type_func_t::get_args_size() {
+	int res = 0;
+	for each (auto arg in arg_types)
+		res += asm_generator_t::alignment(arg->get_size());
+	return res;
+}
+
 void sym_type_func_t::set_element_type(type_ptr type) {
 	if (!type)
 		return;
@@ -526,7 +667,7 @@ void sym_type_func_t::print_l(ostream& os, int level) {
 
 //--------------------------------SYMBOL_FUNCTION-------------------------------
 
-sym_func_t::sym_func_t(token_ptr identifier, shared_ptr<sym_type_func_t> func_type, sym_table_ptr  sym_table) : sym_with_type_t(type_ptr(new type_t(func_type))), sym_table(sym_table), symbol_t(ST_FUNC, identifier) {
+sym_func_t::sym_func_t(token_ptr identifier, shared_ptr<sym_type_func_t> func_type, sym_table_ptr sym_table) : sym_with_type_t(type_ptr(new type_t(func_type))), sym_table(sym_table), symbol_t(ST_FUNC, identifier) {
 	update_name();
 }
 
@@ -536,6 +677,10 @@ shared_ptr<sym_type_func_t> sym_func_t::get_func_type() {
 
 void sym_func_t::set_block(stmt_ptr b) {
 	block = b;
+}
+
+stmt_ptr sym_func_t::get_block() {
+	return block;
 }
 
 void sym_func_t::set_sym_table(sym_table_ptr sym_table_) {
@@ -565,6 +710,22 @@ void sym_func_t::print_l(ostream& os, int level) {
 	if (block) {
 		os << ' ';
 		block->print_l(os, level);
+	}
+}
+
+void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->mov(AR_EBP, AR_ESP);
+	block->asm_generate_code(cmd_list, -4);
+}
+
+void sym_func_t::asm_set_offset() {
+	int offset = 4;
+	for each (auto var in *sym_table) {
+		if (var == ST_VAR) {
+			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
+			local_var->asm_set_offset(offset, AR_EBP);
+			offset += asm_generator_t::alignment(local_var->get_type_size());
+		}
 	}
 }
 
@@ -673,7 +834,7 @@ bool sym_type_struct_t::completed() {
 }
 
 int sym_type_struct_t::get_size() {
-	return 0;
+	return sym_table->get_local_vars_size();
 }
 
 void sym_type_struct_t::print_l(ostream& os, int level) {

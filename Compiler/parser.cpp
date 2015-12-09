@@ -93,17 +93,9 @@ expr_t* parser_t::tern_op() {
 		return left;
 }
 
-sym_table_ptr parser_t::new_namespace() {
-	return sym_table = sym_table_ptr(new sym_table_t(sym_table));
-}
-
-void parser_t::exit_namespace() {
-	sym_table = sym_table->get_parent();
-}
-
 expr_t* parser_t::left_associated_bin_op(int p) {
 	if (p == 4)
-		return prefix_un_op();
+		return printf_un_op();
 	expr_t* left = left_associated_bin_op(p-1);
 	token_ptr op = la->get();
 	while (op->is(op_by_priority[p-1])) {
@@ -114,6 +106,19 @@ expr_t* parser_t::left_associated_bin_op(int p) {
 		op = la->get();
 	}
 	return left;
+}
+
+expr_t* parser_t::printf_un_op() {
+	token_ptr op = la->get();
+	if (op == T_KWRD_PRINTF) {
+		la->next();
+		la->require(T_BRACKET_OPEN, 0);
+		expr_un_op_t* un_op = expr_prefix_un_op_t::make_prefix_un_op(op);
+		un_op->set_operand(parse_expr());
+		la->require(T_BRACKET_CLOSE, 0);
+		return un_op;
+	} else
+		return prefix_un_op();
 }
 
 expr_t* parser_t::prefix_un_op() {
@@ -184,10 +189,14 @@ map<STATEMENT, set<TOKEN>> starting_tokens;
 //-------------------DECLARATION_PARSER-------------------------------------------
 
 sym_ptr parser_t::parse_declaration(bool abstract_decl) {
-	return parse_declaration(parse_declaration_raw(), sym_table, abstract_decl);
+	return parse_declaration(parse_declaration_raw(), sym_table, false, abstract_decl);
 }
 
-sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bool abstract_decl) {
+sym_ptr parser_t::parse_global_declaration() {
+	return parse_declaration(parse_declaration_raw(), sym_table, true);
+}
+
+sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bool global, bool abstract_decl) {
 	sym_ptr res;
 
 	optimize_type(decl.type);
@@ -213,14 +222,14 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bo
 			throw SemanticError("Unexpected init list for function declaration", decl.estimated_ident_pos);
 		res = sym_ptr(new sym_func_t(decl.identifier, func_type, decl.func_sym_table));
 	} else {
-		sym_var_t* var = new sym_var_t(decl.identifier);
+		sym_var_t* var = global ? (sym_var_t*)(new sym_global_var_t(decl.identifier)) : (sym_var_t*)(new sym_local_var_t(decl.identifier));
 		var->set_type_and_init_list(decl.type, decl.init_list);
 		res = sym_ptr(var);
 	}
 
 	res->set_token(decl.identifier);
 	res->update_name();
-	if (res != ST_FUNC)
+	if (res != ST_FUNC_TYPE)
 		sym_table->insert(res);
 
 	return res;
@@ -390,7 +399,7 @@ type_chain_t parser_t::func_arr_decl(bool in_func) {
 					if (!var.init_list.empty())
 						throw SemanticError("Default function parameters temporarily not supported", var.estimated_ident_pos);
 					arg_types.push_back(var.type);
-					parse_declaration(var, func_sym_table, true);
+					parse_declaration(var, func_sym_table, false, true);
 				}
 			}
 			l_base = type_base_ptr(new sym_type_func_t(arg_types));
@@ -467,6 +476,14 @@ vector<decl_raw_t> parser_t::parse_func_arg_types() {
 
 //-------------------STATEMENT_PARSER-------------------------------------------
 
+sym_table_ptr parser_t::new_namespace() {
+	return sym_table = sym_table_ptr(new sym_table_t(sym_table));
+}
+
+void parser_t::exit_namespace() {
+	sym_table = sym_table->get_parent();
+}
+
 bool parser_t::is_begin_of(STATEMENT stmt, token_ptr token) {
 	bool res = in_set(starting_tokens.at(stmt), token->get_token_id());
 	return stmt == STMT_DECL ? res || sym_table->is_alias(token) : res;
@@ -515,7 +532,7 @@ void parser_t::parse_top_level_stmt() {
 			parse_decl_stmt();
 }
 
-void parser_t::parse_struct_decl_list(sym_table_ptr  sym_table) {
+void parser_t::parse_struct_decl_list(sym_table_ptr sym_table) {
 	la->require(T_BRACE_OPEN, 0);
 	while (la->get() != T_BRACE_CLOSE) {
 		if (la->get() == T_SEMICOLON) {
@@ -528,7 +545,7 @@ void parser_t::parse_struct_decl_list(sym_table_ptr  sym_table) {
 			throw SemanticError("Initializer list not supported in struct members declaration", decl.estimated_ident_pos);
 		if (decl.type_def)
 			throw SemanticError("Unexpected \"typedef\" in struct members declaration", decl.type_def->get_pos());
-		if (decl.type == ST_FUNC)
+		if (decl.type == ST_FUNC_TYPE)
 			throw SemanticError("Functions not supported in struct members declaration", decl.estimated_ident_pos);
 		parse_declaration(decl, sym_table);
 	}
@@ -536,7 +553,7 @@ void parser_t::parse_struct_decl_list(sym_table_ptr  sym_table) {
 }
 
 void parser_t::parse_decl_stmt() {
-	shared_ptr<sym_func_t> sym_func = dynamic_pointer_cast<sym_func_t>(parse_declaration());
+	shared_ptr<sym_func_t> sym_func = dynamic_pointer_cast<sym_func_t>(sym_table == top_sym_table ? parse_global_declaration() : parse_declaration());
 	if (sym_func) {
 		sym_ptr finded_global_sym = sym_table->find_global(sym_func);
 		shared_ptr<sym_func_t> finded_func = dynamic_pointer_cast<sym_func_t>(finded_global_sym);
@@ -642,21 +659,10 @@ stmt_ptr parser_t::parse_return_stmt() {
 		throw SemanticError("Return statement must be inside the function", la->get()->get_pos());
 	expr_t* expr = la->get() == T_SEMICOLON ? nullptr : parse_expr();
 	la->require(T_SEMICOLON);
-	return stmt_ptr(new stmt_return_t(func_stack.top()));
+	auto ret_stmt = shared_ptr<stmt_return_t>(new stmt_return_t(func_stack.top()));
+	ret_stmt->set_ret_expr(expr);
+	return ret_stmt;
 }
-
-//---------------------------------VALIDATE_AND_OPTIMIZE_EXPRESSIONS-------------------------------------------
-
-/*expr_t* parser_t::validate_expr(expr_t* expr) {
-	expr_bin_op_t* bin_op = dynamic_cast<expr_bin_op_t*>(expr);
-	if (bin_op) {
-
-	}
-	expr_const_t* constant = dynamic_cast<expr_const_t*>(expr);
-	if (constant) {
-		return constant;
-	}
-}*/
 
 //---------------------------------PRINT-------------------------------------------
 
@@ -664,6 +670,14 @@ void parser_t::print_expr(ostream& os) {
 	la->next();
 	if (la->get() != T_EMPTY)
 		right_associated_bin_op()->print(os);
+}
+
+void parser_t::print_eval_expr(ostream& os) {
+	if (la->next() == T_EMPTY)
+		return;
+	expr_t* expr = parse_expr();
+	expr->eval()->print(os);
+	os << endl;
 }
 
 void parser_t::print_type(ostream& os) {
@@ -719,10 +733,29 @@ void parser_t::print_statements(ostream& os) {
 
 void parser_t::print_asm_code(ostream& os) {
 	if (la->next() != T_EMPTY) {
-		expr_t* expr = parse_expr();
-		asm_cmd_list_ptr cmd_list(new asm_cmd_list_t());
-		expr->generate_asm_code(cmd_list);
-		asm_generator_ptr gen(new asm_generator_t(cmd_list));
+		asm_gen_ptr gen(new asm_generator_t);
+		stmt_ptr main_block;
+		parse_top_level_stmt();
+		for each (auto sym in *top_sym_table) {
+			if (sym == ST_FUNC) {
+				auto sym_func = dynamic_pointer_cast<sym_func_t>(sym);
+				asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+				sym_func->asm_set_offset();
+				sym_func->asm_generate_code(cmd_list);
+				if (sym_func->get_name() == "main") {
+					if (!sym_func->defined())
+						throw MainFuncNotFound();
+					main_block = sym_func->get_block();
+					gen->set_main_cmd_list(cmd_list);
+				} else
+					gen->add_function(sym_func->asm_get_name(), cmd_list);
+			} else if (sym == ST_VAR) {
+				auto sym_global_var = dynamic_pointer_cast<sym_global_var_t>(sym);
+				sym_global_var->asm_register(gen);
+			}
+		}
+		if (!main_block)
+			throw MainFuncNotFound();
 		gen->print(os);
 	}
 }

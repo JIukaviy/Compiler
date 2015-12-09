@@ -182,14 +182,13 @@ public:
 class RedefinitionOfSymbol : public SemanticError {
 public:
 	RedefinitionOfSymbol(token_ptr token) {
-		err << token->get_pos() << "Redefinition of symbol \"";
+		err << token->get_pos() << "Redefinition of symbol ";
 		token->short_print(err);
-		err << "\"";
 	}
 	RedefinitionOfSymbol(sym_ptr orig_symbol, sym_ptr redef_symbol) {
-		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol \"";
+		err << redef_symbol->get_token()->get_pos() << "Redefinition of symbol ";
 		orig_symbol->short_print(err);
-		err << "\", first defenition was here: ";
+		err << ", first defenition was here: ";
 		pos_t pos = orig_symbol->get_token()->get_pos();
 		err << pos.line << ':' << pos.column;
 	}
@@ -273,9 +272,12 @@ public:
 
 class ExprMustBeLValue : public SemanticError {
 public:
-	ExprMustBeLValue(pos_t pos) {
-		err << pos << "Expression must be lvalue";
-	}
+	ExprMustBeLValue(pos_t pos) : SemanticError("Expression must be lvalue", pos) {}
+};
+
+class ExprMustBeEval : public SemanticError {
+public:
+	ExprMustBeEval(pos_t pos) : SemanticError("Expression should be computable at compile time", pos) {}
 };
 
 class AssignmentToReadOnly : public SemanticError {
@@ -311,4 +313,9 @@ public:
 class InvalidInitListSize : public SemanticError {
 public:
 	InvalidInitListSize(pos_t pos) : SemanticError("Too many init arguments", pos) {}
+};
+
+class MainFuncNotFound : public CompileError {
+public:
+	MainFuncNotFound() : CompileError("Main function not found") {};
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "parser_symbol_node.h"
+#include "asm_generator.h"
 #include <vector>
 #include <map>
 
@@ -30,6 +31,11 @@ public:
 	sym_ptr find_global(const string& s);
 	sym_ptr find_global(const sym_ptr s);
 	sym_ptr find_global(const token_ptr& token);
+
+	void asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_reg);
+	void asm_init_local_vars(asm_cmd_list_ptr cmd_list);
+
+	int get_local_vars_size();
 
 	sym_table_ptr  get_parent();
 	bool is_var(const token_ptr&);

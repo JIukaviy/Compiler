@@ -4,6 +4,7 @@
 #include "parser_expression_node.h"
 #include "symbol_table.h"
 #include "exceptions.h"
+#include "asm_generator.h"
 #include <vector>
 
 using namespace std;
@@ -24,18 +25,19 @@ enum STATEMENT {
 
 class statement_t : public node_t {
 public:
-	
+	virtual void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0);
 };
 
 class stmt_block_t : public statement_t {
 	vector<stmt_ptr> statements;
-	sym_table_ptr  sym_table;
+	sym_table_ptr sym_table;
 public:
 	stmt_block_t();
-	stmt_block_t(const vector<stmt_ptr>& statements, sym_table_ptr  sym_table);
+	stmt_block_t(const vector<stmt_ptr>& statements, sym_table_ptr sym_table);
 	void add_statement(stmt_ptr stmt);
-	sym_table_ptr  get_sym_table();
+	sym_table_ptr get_sym_table();
 	void print_l(ostream& os, int level) override;
+	void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 };
 
 class stmt_expr_t : public statement_t {
@@ -43,6 +45,7 @@ class stmt_expr_t : public statement_t {
 public:
 	stmt_expr_t(expr_t* expression);
 	void print_l(ostream& os, int level) override;
+	void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 };
 
 class stmt_decl_t : public statement_t {
@@ -127,6 +130,10 @@ class stmt_continue_t : public stmt_jump_t<T_KWRD_CONTINUE, shared_ptr<stmt_loop
 	using stmt_jump_t<T_KWRD_CONTINUE, shared_ptr<stmt_loop_t>>::stmt_jump_t;
 };
 
-class stmt_return_t : public stmt_jump_t<T_KWRD_RETURN, sym_ptr> {
-	using stmt_jump_t<T_KWRD_RETURN, sym_ptr>::stmt_jump_t;
+class stmt_return_t : public stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>> {
+	expr_t* expr;
+public:
+	using stmt_jump_t<T_KWRD_RETURN, shared_ptr<sym_func_t>>::stmt_jump_t;
+	void set_ret_expr(expr_t* expr);
+	void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 };
