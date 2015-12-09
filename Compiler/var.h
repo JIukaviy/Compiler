@@ -32,6 +32,7 @@ public:
 #undef register_bin_op
 	virtual operator bool() = 0;
 	virtual void print(ostream& os) = 0;
+	virtual void asm_print(ostream& os) = 0;
 };
 
 template <typename T>
@@ -48,6 +49,7 @@ public:
 	operator bool() override;
 	T& get_val();
 	void print(ostream& os) override;
+	void asm_print(ostream& os) override;
 };
 
 template<typename T>
@@ -58,6 +60,17 @@ inline T& var_t<T>::get_val() {
 template<typename T>
 inline void var_t<T>::print(ostream& os) {
 	os << val;
+}
+
+template<typename T>
+inline void var_t<T>::asm_print(ostream & os) {
+	print(os);
+}
+
+
+template<>
+inline void var_t<string>::asm_print(ostream& os) {
+	os << "OFFSET STR_LITERAL(\"" << val << "\")";
 }
 
 template<>

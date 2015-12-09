@@ -70,7 +70,7 @@ void asm_ident_operand_t::print(ostream& os) {
 asm_const_oprnd_t::asm_const_oprnd_t(var_ptr var) : var(var) {}
 
 void asm_const_oprnd_t::print(ostream& os) {
-	var->print(os);
+	var->asm_print(os);
 }
 
 //------------------------------ASM_ADRESS_OPERAND-------------------------------------------
@@ -381,7 +381,24 @@ void asm_generator_t::print_header(ostream& os) {
 		".model flat, C" << endl <<
 		"option casemap : none" << endl <<
 		"include \\masm32\\include\\msvcrt.inc" << endl <<
-		"includelib \\masm32\\lib\\msvcrt.lib" << endl;
+		"includelib \\masm32\\lib\\msvcrt.lib" << endl <<
+		"R8 macro value:req" << endl <<
+		"LOCAL lbl" << endl << 
+		".data" << endl <<
+		"lbl REAL8 value" << endl <<
+		".code" << endl <<
+		"EXITM <lbl>" << endl <<
+		"endm" << endl <<
+		"STR_LITERAL macro value : req" << endl <<
+		"LOCAL lbl" << endl <<
+		".data" << endl <<
+		"lbl BYTE value, 0" << endl <<
+		".code" << endl <<
+		"EXITM <lbl>" << endl <<
+		"endm" << endl <<
+		".DATA" << endl <<
+		DOUBLE_BUFF_NAME << " QWORD 0" << endl <<
+		INT_BUFF_NAME << " DWORD 0" << endl;
 }
 
 void asm_generator_t::add_global_var(string name, ASM_MEM_TYPE mem_type, int dup) {
@@ -403,10 +420,8 @@ void asm_generator_t::set_main_cmd_list(asm_cmd_list_ptr cmd_list) {
 void asm_generator_t::print(ostream& os) {
 	print_header(os);
 
-	os << ".DATA" << endl;
 	for each (auto var in global_vars)
 		var->print_alloc(os);
-	os << "printf_format_str BYTE \"%d\", 10, 13, 0" << endl;
 
 	os << ".CODE" << endl;
 	for each (auto func in functions)

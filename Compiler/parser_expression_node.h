@@ -34,6 +34,7 @@ public:
 	pos_t get_pos();
 	bool is_null();
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	var_ptr eval() override;
 };
 
@@ -85,14 +86,6 @@ public:
 	void short_print_l(ostream& os, int level) override;
 	static expr_un_op_t* make_prefix_un_op(token_ptr op);
 	var_ptr eval() override;
-};
-
-class expr_printf_op_t : public expr_prefix_un_op_t {
-public:
-	expr_printf_op_t(token_ptr op);
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
-	type_ptr get_type() override;
 };
 
 class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
@@ -334,9 +327,11 @@ public:
 
 class expr_func_t : public expr_t {
 	expr_t* func;
-	vector<expr_t*> args;
 	token_ptr brace;
 	shared_ptr<sym_type_func_t> _get_func_type();
+protected:
+	vector<expr_t*> args;
+	string asm_func_name;
 public:
 	expr_func_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -345,7 +340,19 @@ public:
 	type_ptr get_type() override;
 	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	int get_args_size();
 	pos_t get_pos() override;
+};
+
+//----------------PRINTF_OPERATOR---------------
+
+class expr_printf_op_t : public expr_func_t {
+protected:
+	void set_operands(expr_t* f, vector<expr_t*> args_);
+public:
+	expr_printf_op_t(token_ptr op);
+	void set_operands(vector<expr_t*> args);
+	type_ptr get_type() override;
 };
 
 //----------------STRUCT_ACCESS-------------------

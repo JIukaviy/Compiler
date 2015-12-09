@@ -131,6 +131,10 @@ bool expr_const_t::is_null() {
 
 void expr_const_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_EAX, static_pointer_cast<token_base_with_value_t>(constant)->get_var());
+
+void expr_const_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
+	assert(constant == T_STRING);
+	asm_get_val(cmd_list);
 }
 
 var_ptr expr_const_t::eval() {
@@ -268,7 +272,6 @@ expr_un_op_t* expr_prefix_un_op_t::make_prefix_un_op(token_ptr op) {
 		op->is(T_OP_ADD, T_OP_SUB, 0) ? new_un_op<expr_prefix_add_sub_un_op_t>(op) :
 		op == T_OP_NOT ? new_un_op<expr_prefix_not_un_op_t>(op) :
 		op == T_OP_BIT_NOT ? new_un_op<expr_prefix_bit_not_un_op_t>(op) :
-		op == T_KWRD_PRINTF ? new_un_op<expr_printf_op_t>(op) :
 		(assert(false), nullptr);
 }
 
@@ -281,26 +284,6 @@ var_ptr expr_prefix_un_op_t::eval() {
 		reg_un_op(!, T_OP_NOT)
 		expr_t::eval();
 #undef reg_un_op
-}
-
-//-----------------------------------PRINTF_OPERATOR-----------------------------------
-
-expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_prefix_un_op_t(op, false) {
-	or_conditions.push_back(oc_uo_is_integer);
-	type_convertions.push_back(tc_uo_integer_increase);
-}
-
-void expr_printf_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	asm_gen_code(cmd_list);
-}
-
-void expr_printf_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
-	expr->asm_get_val(cmd_list);
-	cmd_list->_push_str("invoke crt_printf, OFFSET printf_format_str, eax");
-}
-
-type_ptr expr_printf_op_t::get_type() {
-	return parser_t::get_type(ST_VOID);
 }
 
 //-----------------------------------GET_ADRESS-----------------------------------
@@ -1232,9 +1215,16 @@ void expr_func_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 		else
 			cmd_list->push(AR_EAX);
 	}
-	cmd_list->call(dynamic_cast<expr_var_t*>(func)->get_var()->asm_get_name());
+	cmd_list->call(asm_func_name);
 	cmd_list->_push_free_cmd(args_size);
 	cmd_list->pop(AR_EBP);
+}
+
+int expr_func_t::get_args_size() {
+	int res = 0;
+	for each (auto var in args)
+		res += asm_generator_t::alignment(var->get_type_size());
+	return res;
 }
 
 void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
@@ -1244,6 +1234,25 @@ void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 pos_t expr_func_t::get_pos() {
 	return brace->get_pos();
 }
+
+//-----------------------------------PRINTF_OPERATOR-----------------------------------
+
+expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_func_t(op) {
+	asm_func_name = "crt_printf";
+}
+
+void expr_printf_op_t::set_operands(vector<expr_t*> args_) {
+	if (args_.empty())
+		throw SemanticError("Printf operator requires at least one parameter", get_pos());
+	if (args_[0]->get_type() != ST_PTR && args_[0]->get_type() != ST_ARRAY)
+		throw SemanticError("Printf operator requires pointer to char as first parameter", get_pos());
+	args = args_;
+}
+
+type_ptr expr_printf_op_t::get_type() {
+	return parser_t::get_type(ST_VOID);
+}
+
 
 //-----------------------------------CAST_OPERATOR-----------------------------------
 
