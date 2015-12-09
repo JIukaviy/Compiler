@@ -421,11 +421,13 @@ sym_global_var_t::sym_global_var_t(token_ptr identifier) : symbol_t(ST_VAR, iden
 
 void sym_global_var_t::asm_register(asm_gen_ptr gen) {
 	asm_cmd_list_ptr cmd_list(new asm_cmd_list_t);
+	int dup = 0;
 	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
 		cmd_list->mov(asm_get_name(), asm_generator_t::reg_by_size(AR_EAX, get_type_size()));
-	}
-	gen->add_global_var(asm_get_name(), st_to_asm_type.at(type->get_base_type()->get_sym_type()),cmd_list);
+	} else if (type == ST_STRUCT || type == ST_ARRAY)
+		dup = asm_generator_t::alignment(type->get_size() / asm_generator_t::size_of(AMT_DWORD));
+	gen->add_global_var(asm_get_name(), AMT_DWORD, cmd_list, dup);
 }
 
 void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {

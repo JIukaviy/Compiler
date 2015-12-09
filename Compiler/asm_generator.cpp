@@ -111,13 +111,18 @@ void asm_deref_reg_oprnd_t::print(ostream& os) {
 //------------------------------ASM_GLOBAL_VAR-------------------------------------------
 
 asm_global_var_t::asm_global_var_t(string name, ASM_MEM_TYPE type, asm_cmd_list_ptr init_commands, int dup) : 
-	name(name), type(type), init_commands(init_commands) {}
+	name(name), type(type), init_commands(init_commands), dup(dup) {}
 
 asm_global_var_t::asm_global_var_t(string name, ASM_MEM_TYPE type, int dup) :
 	name(name), type(type), dup(dup) {}
 
 void asm_global_var_t::print_alloc(ostream& os) {
-	os << name << ' ' << asm_mt_to_str.at(type) << " 0" << endl;
+	os << name << ' ' << asm_mt_to_str.at(type);
+	if (dup)
+		os << ' ' << dup << " dup (0)";
+	else
+		os << " 0";
+	os << endl;
 }
 
 void asm_global_var_t::print_init(ostream& os) {
