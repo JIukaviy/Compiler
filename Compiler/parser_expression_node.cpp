@@ -671,9 +671,12 @@ void expr_base_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 
 void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	if (left->get_type() == ST_STRUCT) {
-		right->asm_get_val(cmd_list);
 		left->asm_get_addr(cmd_list);
-		cmd_list->_push_copy_cmd(AR_ESP, AR_EAX, get_type_size());
+		cmd_list->push(AR_EAX);
+		right->asm_get_val(cmd_list);
+		cmd_list->pop(AR_EBX);
+		cmd_list->_push_copy_cmd(AR_EAX, AR_EBX, get_type_size());
+		cmd_list->mov(AR_EAX, AR_EBX);
 	} else {
 		right->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
@@ -1125,24 +1128,12 @@ token_ptr expr_struct_access_t::get_member() {
 }
 
 void expr_struct_access_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
-	if (op == T_OP_DOT) {
-		assert(struct_expr->is_lvalue());
-		struct_expr->asm_get_addr(cmd_list);
-	} else
-		struct_expr->asm_get_val(cmd_list);
+	struct_expr->asm_get_val(cmd_list);
 	member->asm_get_addr(cmd_list);
 }
 
 void expr_struct_access_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (op == T_OP_DOT) {
-		if (struct_expr->is_lvalue())
-			struct_expr->asm_get_addr(cmd_list);
-		else {
-			struct_expr->asm_get_val(cmd_list);
-			cmd_list->mov(AR_EAX, AR_ESP);
-		}
-	} else
-		struct_expr->asm_get_val(cmd_list);
+	struct_expr->asm_get_val(cmd_list);
 	member->asm_get_val(cmd_list);
 }
 
@@ -1206,16 +1197,14 @@ void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->push(AR_EBP);
 	for (int i = args.size() - 1; i >= 0; i--) {
 		args[i]->asm_get_val(cmd_list);
-		if (args[i]->get_type() != ST_STRUCT)
+		if (args[i]->get_type() == ST_STRUCT)
+			cmd_list->_push_copy_to_stack_cmd(AR_EAX, args[i]->get_type_size());
+		else
 			cmd_list->push(AR_EAX);
 	}
 	cmd_list->call(dynamic_cast<expr_var_t*>(func)->get_var()->asm_get_name());
 	cmd_list->_push_free_cmd(args_size);
 	cmd_list->pop(AR_EBP);
-	if (get_type() == ST_STRUCT) {
-		cmd_list->_push_alloc_cmd(get_type_size());
-		cmd_list->_push_copy_cmd(AR_EAX, AR_ESP, get_type_size());
-	}
 }
 
 pos_t expr_func_t::get_pos() {

@@ -344,18 +344,9 @@ void asm_cmd_list_t::_push_copy_cmd(ASM_REGISTER src_reg, ASM_REGISTER dest_reg,
 }
 
 void asm_cmd_list_t::_push_copy_to_stack_cmd(ASM_REGISTER src_reg, int size, int src_offset) {
-	for (int i = size; i > 0;) {
-		int d = asm_generator_t::size_of(AMT_DWORD) - i % asm_generator_t::size_of(AMT_DWORD);
-		if (d < asm_generator_t::size_of(AMT_DWORD)) {
-			if (d < asm_generator_t::size_of(AMT_WORD))
-				d = 1;
-			else
-				d = asm_generator_t::size_of(AMT_WORD);
-		} else
-			d = min(d, asm_generator_t::size_of(AMT_DWORD));
-		push_deref(src_reg, d, i - d + src_offset);
-		i -= d;
-	}
+	size = asm_generator_t::alignment(size) - asm_generator_t::size_of(AMT_DWORD);
+	for (int i = size; i >= 0; i -= asm_generator_t::size_of(AMT_DWORD))
+		push_deref(src_reg, AMT_DWORD, i + src_offset);
 }
 
 void asm_cmd_list_t::_push_alloc_cmd(int size) {
