@@ -10,15 +10,25 @@ map<TOKEN, ASM_OPERATOR> token_to_fp_op_map;
 
 void parser_expression_node_init() {
 	token_to_int_op_map[T_OP_ADD] = AO_ADD;
+	token_to_int_op_map[T_OP_ADD_ASSIGN] = AO_ADD;
 	token_to_int_op_map[T_OP_SUB] = AO_SUB;
+	token_to_int_op_map[T_OP_SUB_ASSIGN] = AO_SUB;
 	token_to_int_op_map[T_OP_MUL] = AO_IMUL;
+	token_to_int_op_map[T_OP_MUL_ASSIGN] = AO_IMUL;
 	token_to_int_op_map[T_OP_DIV] = AO_DIV;
+	token_to_int_op_map[T_OP_DIV_ASSIGN] = AO_DIV;
 	token_to_int_op_map[T_OP_MOD] = AO_DIV;
+	token_to_int_op_map[T_OP_MOD_ASSIGN] = AO_DIV;
 	token_to_int_op_map[T_OP_BIT_OR] = AO_OR;
+	token_to_int_op_map[T_OP_BIT_OR_ASSIGN] = AO_OR;
 	token_to_int_op_map[T_OP_BIT_AND] = AO_AND;
+	token_to_int_op_map[T_OP_BIT_AND_ASSIGN] = AO_AND;
 	token_to_int_op_map[T_OP_XOR] = AO_XOR;
+	token_to_int_op_map[T_OP_XOR_ASSIGN] = AO_XOR;
 	token_to_int_op_map[T_OP_LEFT] = AO_SHL;
+	token_to_int_op_map[T_OP_LEFT_ASSIGN] = AO_SHL;
 	token_to_int_op_map[T_OP_RIGHT] = AO_SHR;
+	token_to_int_op_map[T_OP_RIGHT_ASSIGN] = AO_SHR;
 	token_to_int_op_map[T_OP_ASSIGN] = AO_MOV;
 
 	token_to_fp_op_map[T_OP_ADD] = AO_FADD;
