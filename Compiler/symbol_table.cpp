@@ -20,12 +20,12 @@ void sym_table_t::insert(sym_ptr s) {
 
 sym_ptr sym_table_t::find_global_or_insert(sym_ptr s) {
 	sym_ptr finded = find_global(s);
-	return finded ? finded : _insert(s), s;
+	return finded ? finded : (_insert(s), s);
 }
 
 sym_ptr sym_table_t::find_local_or_insert(sym_ptr s) {
 	sym_ptr finded = find_local(s);
-	return finded ? finded : _insert(s), s;
+	return finded ? finded : (_insert(s), s);
 }
 
 sym_ptr sym_table_t::get_global(const sym_ptr s) {
