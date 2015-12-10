@@ -15,13 +15,13 @@ int main(int argc, char** argv) {
 	lexeme_analyzer_init();
 	parser_init();
 	asm_generator_init();
-	if (argc == 3) {
+	if (argc == 4) {
 		ifstream fin(argv[2]);
 		if (!fin) {
 			cerr << "Can't open file" << endl;
 			return 1;
 		}
-		ofstream fout("output.txt");
+		ofstream fout(argv[3]);
 		lexeme_analyzer_t la(fin);
 		parser_t parser(&la);
 		try {
