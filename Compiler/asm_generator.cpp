@@ -53,6 +53,8 @@ void asm_generator_init() {
 asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg) : reg(reg) {}
 asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg, int reg_size) : reg(asm_gen_t::reg_by_size(reg, reg_size)) {}
 
+asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg, ASM_MEM_TYPE reg_size) : reg(asm_gen_t::reg_by_mtype(reg, reg_size)) {}
+
 void asm_reg_oprnd_t::print(ostream& os) {
 	os << asm_reg_to_str.at(reg);
 }
@@ -292,7 +294,7 @@ void asm_cmd_list_t::_add_op(ASM_OPERATOR op, string left, var_ptr right) {
 }
 
 void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
-	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right, mtype)));
 }
 
 void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
@@ -316,7 +318,7 @@ void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, string r
 }
 
 void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
-	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, offset_reg, scale)));
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left, mtype)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, offset_reg, scale)));
 }
 
 void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {

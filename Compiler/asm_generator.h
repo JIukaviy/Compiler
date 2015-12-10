@@ -80,6 +80,7 @@ class asm_reg_oprnd_t : public asm_operand_t {
 public:
 	asm_reg_oprnd_t(ASM_REGISTER reg);
 	asm_reg_oprnd_t(ASM_REGISTER reg, int reg_size);
+	asm_reg_oprnd_t(ASM_REGISTER reg, ASM_MEM_TYPE reg_size);
 	void print(ostream& os) override;
 };
 
