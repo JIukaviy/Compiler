@@ -137,11 +137,5 @@
     <ClInclude Include="asm_op.h">
       <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
-    <ClInclude Include="asm_operand_types.h">
-      <Filter>Заголовочные файлы\asm</Filter>
-    </ClInclude>
-    <ClInclude Include="asm_op_operands.h">
-      <Filter>Заголовочные файлы\asm</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
