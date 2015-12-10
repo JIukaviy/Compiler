@@ -6,6 +6,8 @@
 #include "asm_generator.h"
 #include "var.h"
 
+void parser_expression_node_init();
+
 class expr_t : public node_t {
 protected:
 	bool lvalue;
@@ -19,6 +21,8 @@ public:
 	virtual void asm_get_addr(asm_cmd_list_ptr cmd_list);
 	virtual var_ptr eval(); //  идает исключение в случае если выражение невозможно вычислить во врем€ компил€ции
 	virtual int get_type_size();
+	static ASM_OPERATOR token_to_fp_op(token_ptr token);
+	static ASM_OPERATOR token_to_int_op(token_ptr token);
 };
 
 //-------------CONSTANT------------
@@ -154,9 +158,10 @@ protected:
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
-	virtual void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
-	virtual void _asm_get_val(asm_cmd_list_ptr cmd_list);
-	virtual ASM_BIN_OPERATOR _asm_get_operator();
+	virtual void _asm_gen_code_int(asm_cmd_list_ptr cmd_list);
+	virtual void _asm_get_val_int(asm_cmd_list_ptr cmd_list);
+	virtual void _asm_gen_code_fp(asm_cmd_list_ptr cmd_list);
+	virtual void _asm_get_val_fp(asm_cmd_list_ptr cmd_list);
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -175,9 +180,9 @@ public:
 
 class expr_base_assign_bin_op_t : public expr_bin_op_t {
 protected:
-	void _asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void _asm_double_assign(asm_cmd_list_ptr cmd_list, bool keep_val);
-	void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_fp_assign(asm_cmd_list_ptr cmd_list, bool keep_val);
 public:
 	void asm_get_val(asm_cmd_list_ptr) override;
 	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
@@ -185,71 +190,64 @@ public:
 };
 
 class expr_assign_bin_op_t : public expr_base_assign_bin_op_t {
-protected:
-	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_assign_bin_op_t(token_ptr op);
 };
 
 class expr_integer_bin_op_t : public expr_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_integer_bin_op_t(token_ptr token);
 };
 
 class expr_integer_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
 public:
 	expr_integer_assign_bin_op_t(token_ptr token);
 };
 
 class expr_arithmetic_bin_op_t : public expr_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_arithmetic_bin_op_t(token_ptr token);
 };
 
 class expr_arithmetic_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
-	void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
 
 class expr_add_bin_op_t : public expr_arithmetic_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_add_bin_op_t(token_ptr op);
 };
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
 
 class expr_sub_bin_op_t : public expr_arithmetic_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_sub_bin_op_t(token_ptr op);
 };
 
 class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
 
 class expr_mod_bin_op_t : public expr_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_mod_bin_op_t(token_ptr op);
 };
 
 class expr_mod_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_mod_assign_bin_op_t(token_ptr op);
 };
@@ -271,15 +269,13 @@ public:
 };
 
 class expr_shift_bin_op_t : public expr_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_shift_bin_op_t(token_ptr op);
 };
 
 class expr_shift_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	ASM_BIN_OPERATOR _asm_get_operator() override;
-	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_shift_assign_bin_op_t(token_ptr op);
 };

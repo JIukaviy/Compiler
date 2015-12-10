@@ -731,7 +731,7 @@ void parser_t::print_statements(ostream& os) {
 
 void parser_t::print_asm_code(ostream& os) {
 	if (la->next() != T_EMPTY) {
-		asm_gen_ptr gen(new asm_generator_t);
+		asm_gen_ptr gen(new asm_gen_t);
 		stmt_ptr main_block;
 		parse_top_level_stmt();
 		for each (auto sym in *top_sym_table) {
@@ -796,4 +796,5 @@ void parser_init() {
 #undef register_token
 
 	init_parser_symbol_node();
+	parser_expression_node_init();
 }

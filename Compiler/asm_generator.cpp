@@ -9,8 +9,7 @@ map<ASM_REGISTER, string> asm_reg_to_str;
 map<ASM_REGISTER, int> size_of_reg;
 map<ASM_REGISTER, ASM_REGISTER> parent_of;
 map<ASM_REGISTER, map<int, ASM_REGISTER>> child_by_size;
-map<ASM_BIN_OPERATOR, string> asm_bin_op_to_str;
-map<ASM_UN_OPERATOR, string> asm_un_op_to_str;
+map<ASM_OPERATOR, string> asm_op_to_str;
 map<ASM_MEM_TYPE, string> asm_mt_to_str;
 map<ASM_MEM_TYPE, int> size_of_mtype;
 map<int, ASM_MEM_TYPE> mem_type_by_size;
@@ -23,12 +22,9 @@ static string lower_case(char cstr[]) {
 }
 
 void asm_generator_init() {
-#define register_un_op(op_name, op_incode_name) asm_un_op_to_str[AUO_##op_name] = lower_case(#op_name);
-#define register_bin_op(op_name, op_incode_name) asm_bin_op_to_str[ABO_##op_name] = lower_case(#op_name);
-#include "asm_un_op.h"
-#include "asm_bin_op.h"
-#undef register_un_op
-#undef register_bin_op
+#define register_asm_op(op_name, op_incode_name) asm_op_to_str[AO_##op_name] = lower_case(#op_name);
+#include "asm_op.h"
+#undef register_asm_op
 
 #define register_mem_type(mt_name, size) \
 	asm_mt_to_str[AMT_##mt_name] = #mt_name; \
@@ -55,6 +51,7 @@ void asm_generator_init() {
 //------------------------------ASM_REGISTER_OPERAND-------------------------------------------
 
 asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg) : reg(reg) {}
+asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg, int reg_size) : reg(asm_gen_t::reg_by_size(reg, reg_size)) {}
 
 void asm_reg_oprnd_t::print(ostream& os) {
 	os << asm_reg_to_str.at(reg);
@@ -94,20 +91,17 @@ void asm_addr_reg_oprnd_t::print(ostream& os) {
 
 asm_deref_oprnd_t::asm_deref_oprnd_t(int offset, int scale) : offset(offset), scale(scale) {}
 
-asm_deref_ident_oprnd_t::asm_deref_ident_oprnd_t(string name, int offset, int scale) : asm_deref_oprnd_t(offset, scale), name(name) {}
-
-void asm_deref_ident_oprnd_t::print(ostream& os) {
-	os << name << '[' << offset << ']';
-}
-
-asm_deref_reg_oprnd_t::asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset, int scale) : asm_deref_oprnd_t(offset, scale), mtype(mtype), reg(reg) {}
+asm_deref_reg_oprnd_t::asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset, ASM_REGISTER offset_reg, int scale) : 
+	asm_deref_oprnd_t(offset, scale), mtype(mtype), reg(reg), offset_reg(offset_reg) {}
 
 void asm_deref_reg_oprnd_t::print(ostream& os) {
 	os << asm_mt_to_str.at(mtype) << " PTR [" << asm_reg_to_str.at(reg);
-	if (offset)
-		os << " + " << offset;
+	if (offset_reg != AR_NONE)
+		os << " + " << asm_reg_to_str.at(offset_reg);
 	if (scale)
 		os << " * " << scale;
+	if (offset)
+		os << " + " << offset;
 	os << ']';
 }
 
@@ -153,32 +147,22 @@ void asm_str_cmd_t::print(ostream& os) {
 	os << str;
 }
 
-//------------------------------ASM_UNARY_OPERATOR-------------------------------------------
+//------------------------------ASM_OPERATOR-------------------------------------------
 
-asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) : op(op), operand(operand) {}
-
-asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op) : op(op) {}
-
-void asm_un_oprtr_t::print(ostream& os) {
-	os << asm_un_op_to_str.at(op);
-	if (operand) {
-		os << ' ';
-		operand->print(os);
-	}
-}
-
-//------------------------------ASM_BINARY_OPERATOR-------------------------------------------
-
-asm_bin_oprtr_t::asm_bin_oprtr_t(ASM_BIN_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand) : 
+asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand) : 
 	op(op), left_operand(left_operand), right_operand(right_operand) {}
 
-asm_bin_oprtr_t::asm_bin_oprtr_t(ASM_BIN_OPERATOR op) : op(op) {}
+asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand) : op(op), left_operand(left_operand) {}
 
-void asm_bin_oprtr_t::print(ostream& os) {
-	os << asm_bin_op_to_str.at(op);
-	if (left_operand && right_operand) {
+asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op) : op(op) {}
+
+void asm_oprtr_t::print(ostream& os) {
+	os << asm_op_to_str.at(op);
+	if (left_operand) {
 		os << ' ';
 		left_operand->print(os);
+	}
+	if (right_operand) {
 		os << ", ";
 		right_operand->print(os);
 	}
@@ -186,226 +170,210 @@ void asm_bin_oprtr_t::print(ostream& os) {
 
 //------------------------------ASM_COMANNDS_LIST-------------------------------------------
 
-#define register_un_op(op_name, op_incode_name) \
-	void asm_cmd_list_t::op_incode_name() { \
-		_push_un_oprtr(AUO_##op_name); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
-		_push_un_oprtr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand, int operand_size) { \
-		_push_un_oprtr(AUO_##op_name, operand, operand_size); \
-	} \
-	void asm_cmd_list_t::op_incode_name(var_ptr operand) { \
-		_push_un_oprtr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name(asm_oprnd_ptr operand) { \
-		_push_un_oprtr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name(string operand) { \
-		_push_un_oprtr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_addr(string operand) { \
-		_push_un_oprtr_addr(AUO_##op_name, operand); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_deref(ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, int scale) { \
-		_push_un_oprtr_deref(AUO_##op_name, operand, mtype, offset, scale); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_deref(ASM_REGISTER operand, int operand_size, int offset, int scale) { \
-		_push_un_oprtr_deref(AUO_##op_name, operand, operand_size, offset, scale); \
-	}
-#include "asm_un_op.h"
-#undef register_un_op
+#define register_asm_op(op_name, op_incode_name)\
+	void asm_cmd_list_t::op_incode_name() \
+	{_add_op(AO_##op_name);}\
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand, int operand_size)\
+	{_add_op(AO_##op_name, operand, operand_size);}\
+	void asm_cmd_list_t::op_incode_name(var_ptr operand)\
+	{_add_op(AO_##op_name, operand);}\
+	void asm_cmd_list_t::op_incode_name(string operand)\
+	{_add_op(AO_##op_name, operand);}\
+	void asm_cmd_list_t::op_incode_name##_addr(string operand)\
+	{_add_op_addr(AO_##op_name, operand);}\
+	void asm_cmd_list_t::op_incode_name##_deref(ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_deref(AO_##op_name, operand, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_deref(ASM_REGISTER operand, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_deref(AO_##op_name, operand, operand_size, offset, offset_reg, scale);}\
+\
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right, int operand_size)\
+	{_add_op(AO_##op_name, left, right, operand_size);}\
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, var_ptr right, int operand_size)\
+	{_add_op(AO_##op_name, left, right, operand_size);}\
+	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, string right, int operand_size)\
+	{_add_op(AO_##op_name, left, right, operand_size);}\
+\
+	void asm_cmd_list_t::op_incode_name(string left, var_ptr right)\
+	{_add_op(AO_##op_name, left, right);}\
+	void asm_cmd_list_t::op_incode_name(string left, ASM_REGISTER right, int operand_size)\
+	{_add_op(AO_##op_name, left, right, operand_size);}\
+\
+	void asm_cmd_list_t::op_incode_name##_raddr(ASM_REGISTER left, string right)\
+	{_add_op_raddr(AO_##op_name, left, right);}\
+	void asm_cmd_list_t::op_incode_name##_raddr(string left, string right)\
+	{_add_op_raddr(AO_##op_name, left, right);}\
+\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, string right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, string right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, var_ptr right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
+\
+	void asm_cmd_list_t::op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_rderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_rderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_rderef(string left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_rderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_rderef(string left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_rderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}
+#include "asm_op.h"
+#undef register_op
 
-#define register_bin_op(op_name, op_incode_name) \
-	void asm_cmd_list_t::op_incode_name() { \
-		_push_bin_oprtr(ABO_##op_name); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right, int operand_size) { \
-		_push_bin_oprtr(ABO_##op_name, left, right, operand_size); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, var_ptr right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, string right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_raddr(ASM_REGISTER left, string right) { \
-		_push_bin_oprtr_raddr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, string right, int offset, int scale) { \
-		_push_bin_oprtr(ABO_##op_name, left, right, offset, scale); \
-	} \
-	void asm_cmd_list_t::op_incode_name(string left, ASM_REGISTER right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name(string left, var_ptr right) { \
-		_push_bin_oprtr(ABO_##op_name, left, right); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) { \
-		_push_bin_oprtr_lderef(ABO_##op_name, left, right, mtype, offset, scale); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) { \
-		_push_bin_oprtr_rderef(ABO_##op_name, left, right, mtype, offset, scale); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, int scale) { \
-		_push_bin_oprtr_lderef(ABO_##op_name, left, right, operand_size, offset, scale); \
-	} \
-	void asm_cmd_list_t::op_incode_name##_rderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, int scale) { \
-		_push_bin_oprtr_rderef(ABO_##op_name, left, right, operand_size, offset, scale); \
-	}
-#include "asm_bin_op.h"
-#undef register_bin_op
-
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) {
-	commands.push_back(asm_cmd_ptr(new asm_un_oprtr_t(op, operand)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, asm_oprnd_ptr operand) {
+	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op, operand)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(operand)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER operand, int operand_size) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(operand, operand_size)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size) {
-	_push_un_oprtr(op, asm_generator_t::reg_by_size(operand, operand_size));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, var_ptr operand) {
+	_add_op(op, asm_oprnd_ptr(new asm_const_oprnd_t(operand)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, var_ptr operand) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_const_oprnd_t(operand)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, string operand) {
+	_add_op(op, asm_oprnd_ptr(new asm_ident_operand_t(operand)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op, string operand) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_ident_operand_t(operand)));
+void asm_cmd_list_t::_add_op_addr(ASM_OPERATOR op, string operand) {
+	_add_op(op, asm_oprnd_ptr(new asm_addr_ident_oprnd_t(operand)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr_addr(ASM_UN_OPERATOR op, string operand) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_addr_ident_oprnd_t(operand)));
+void asm_cmd_list_t::_add_op_deref(ASM_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, operand, offset, offset_reg, scale)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, ASM_MEM_TYPE mtype, int offset, int scale) {
-	_push_un_oprtr(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, operand, offset, scale)));
+void asm_cmd_list_t::_add_op_deref(ASM_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_deref(op, operand, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
-void asm_cmd_list_t::_push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER operand, int operand_size, int offset, int scale) {
-	_push_un_oprtr_deref(op, operand, asm_generator_t::mtype_by_size(operand_size), offset, scale);
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op) {
+	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op)));
 }
 
-void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op) {
-	commands.push_back(asm_cmd_ptr(new asm_un_oprtr_t(op)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
+	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op, left, right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op) {
-	commands.push_back(asm_cmd_ptr(new asm_bin_oprtr_t(op)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left, operand_size)), asm_oprnd_ptr(new asm_reg_oprnd_t(right, operand_size)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
-	commands.push_back(asm_cmd_ptr(new asm_bin_oprtr_t(op, left, right)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER left, var_ptr right, int operand_size) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left, operand_size)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER left, string right, int operand_size) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left, operand_size)), asm_oprnd_ptr(new asm_ident_operand_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size) {
-	_push_bin_oprtr(op,
-		asm_generator_t::reg_by_size(left, operand_size), asm_generator_t::reg_by_size(right, operand_size));
+void asm_cmd_list_t::_add_op_raddr(ASM_OPERATOR op, ASM_REGISTER left, string right) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_addr_ident_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
+void asm_cmd_list_t::_add_op_raddr(ASM_OPERATOR op, string left, string right) {
+	_add_op(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_addr_ident_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_ident_operand_t(right)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, string left, ASM_REGISTER right, int operand_size) {
+	_add_op(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right, operand_size)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_raddr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_addr_ident_oprnd_t(right)));
+void asm_cmd_list_t::_add_op(ASM_OPERATOR op, string left, var_ptr right) {
+	_add_op(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, string right, int offset, int scale) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_deref_ident_oprnd_t(right, offset, scale)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, string left, ASM_REGISTER right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_lderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
-void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, string left, var_ptr right) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, var_ptr right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_lderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset, int scale) {
-	_push_bin_oprtr(op,
-		asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, scale)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, string right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_ident_operand_t(right)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) {
-	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, scale)));
+void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, string right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_lderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, int scale) {
-	_push_bin_oprtr_lderef(op,
-		left, asm_generator_t::reg_by_size(right, operand_size), asm_generator_t::mtype_by_size(operand_size), offset, scale);
+void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_reg_oprnd_t(left)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, offset_reg, scale)));
 }
 
-void asm_cmd_list_t::_push_bin_oprtr_rderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, int scale) {
-	_push_bin_oprtr_rderef(op,
-		asm_generator_t::reg_by_size(left, operand_size), right, asm_generator_t::mtype_by_size(operand_size), offset, scale);
+void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_rderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
-void asm_cmd_list_t::_push_copy_cmd(ASM_REGISTER src_reg, ASM_REGISTER dest_reg, int size, int src_offset, int dst_offset, bool copy_to_stack) {
-	if (copy_to_stack)
-		_push_alloc_cmd(size);
+void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, string left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, right, offset, offset_reg, scale)));
+}
+
+void asm_cmd_list_t::_add_op_rderef(ASM_OPERATOR op, string left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_rderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
+}
+
+void asm_cmd_list_t::_copy_to_mem(ASM_REGISTER src_reg, ASM_REGISTER dest_reg, int size, int src_offset, int dst_offset) {
 	for (int i = 0; i < size;) {
 		int d = size - i;
-		if (d < asm_generator_t::size_of(AMT_DWORD)) {
-			if (d < asm_generator_t::size_of(AMT_WORD))
+		if (d < asm_gen_t::size_of(AMT_DWORD)) {
+			if (d < asm_gen_t::size_of(AMT_WORD))
 				d = 1;
 			else
-				d = asm_generator_t::size_of(AMT_WORD);
+				d = asm_gen_t::size_of(AMT_WORD);
 		} else
-			d = min(d, asm_generator_t::size_of(AMT_DWORD));
+			d = min(d, asm_gen_t::size_of(AMT_DWORD));
 		mov_rderef(AR_EDX, src_reg, d, i + src_offset);
 		mov_lderef(dest_reg, AR_EDX, d, i + dst_offset);
-		if (copy_to_stack)
-			mov_lderef(AR_ESP, AR_EDX, d, -size + i);
 		i += d;
 	}
 }
 
-void asm_cmd_list_t::_push_copy_to_stack_cmd(ASM_REGISTER src_reg, int size, int src_offset) {
-	size = asm_generator_t::alignment(size) - asm_generator_t::size_of(AMT_DWORD);
-	for (int i = size; i >= 0; i -= asm_generator_t::size_of(AMT_DWORD))
+void asm_cmd_list_t::_copy_to_stack(ASM_REGISTER src_reg, int size, int src_offset) {
+	size = asm_gen_t::alignment(size) - asm_gen_t::size_of(AMT_DWORD);
+	for (int i = size; i >= 0; i -= asm_gen_t::size_of(AMT_DWORD))
 		push_deref(src_reg, AMT_DWORD, i + src_offset);
 }
 
-void asm_cmd_list_t::_push_alloc_cmd(int size) {
-	sub(AR_ESP, new_var<int>(asm_generator_t::alignment(size)));
+void asm_cmd_list_t::_alloc_in_stack(int size) {
+	sub(AR_ESP, new_var<int>(asm_gen_t::alignment(size)));
 }
 
-void asm_cmd_list_t::_push_free_cmd(int size) {
-	add(AR_ESP, new_var<int>(asm_generator_t::alignment(size)));
+void asm_cmd_list_t::_free_in_stack(int size) {
+	add(AR_ESP, new_var<int>(asm_gen_t::alignment(size)));
 }
 
-void asm_cmd_list_t::_push_int_to_double_cmd(ASM_REGISTER src_reg) {
+void asm_cmd_list_t::_cast_int_to_double(ASM_REGISTER src_reg) {
 	mov(INT_BUFF_NAME, src_reg);
 	fild(INT_BUFF_NAME);
 }
 
-void asm_cmd_list_t::_push_double_to_int_cmd(ASM_REGISTER dst_reg) {
+void asm_cmd_list_t::_cast_double_to_int(ASM_REGISTER dst_reg) {
 	fistp(INT_BUFF_NAME);
 	mov(dst_reg, INT_BUFF_NAME);
 }
 
-void asm_cmd_list_t::_push_double_cmd(var_ptr var) {
-	fld(var);
+void asm_cmd_list_t::_cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg) {
+	xor_(dst_reg, dst_reg);
+	mov(src_reg, dst_reg, asm_gen_t::size_of(AMT_BYTE));
 }
 
 void asm_cmd_list_t::_push_str(string str) {
@@ -421,7 +389,7 @@ void asm_cmd_list_t::print(ostream& os) {
 
 //------------------------------ASM_GENERATOR-------------------------------------------
 
-void asm_generator_t::print_header(ostream& os) {
+void asm_gen_t::print_header(ostream& os) {
 	os <<
 		".386" << endl <<
 		".model flat, C" << endl <<
@@ -447,23 +415,23 @@ void asm_generator_t::print_header(ostream& os) {
 		INT_BUFF_NAME << " DWORD 0" << endl;
 }
 
-void asm_generator_t::add_global_var(string name, ASM_MEM_TYPE mem_type, int dup) {
+void asm_gen_t::add_global_var(string name, ASM_MEM_TYPE mem_type, int dup) {
 	global_vars.push_back(shared_ptr<asm_global_var_t>(new asm_global_var_t(name, mem_type, dup)));
 }
 
-void asm_generator_t::add_global_var(string name, ASM_MEM_TYPE mem_type, asm_cmd_list_ptr init_cmd_list, int dup) {
+void asm_gen_t::add_global_var(string name, ASM_MEM_TYPE mem_type, asm_cmd_list_ptr init_cmd_list, int dup) {
 	global_vars.push_back(shared_ptr<asm_global_var_t>(new asm_global_var_t(name, mem_type, init_cmd_list, dup)));
 }
 
-void asm_generator_t::add_function(string name, asm_cmd_list_ptr cmd_list) {
+void asm_gen_t::add_function(string name, asm_cmd_list_ptr cmd_list) {
 	functions.push_back(shared_ptr<asm_function_t>(new asm_function_t(name, cmd_list)));
 }
 
-void asm_generator_t::set_main_cmd_list(asm_cmd_list_ptr cmd_list) {
+void asm_gen_t::set_main_cmd_list(asm_cmd_list_ptr cmd_list) {
 	main_cmd_list = cmd_list;
 }
 
-void asm_generator_t::print(ostream& os) {
+void asm_gen_t::print(ostream& os) {
 	print_header(os);
 
 	for each (auto var in global_vars)
@@ -480,11 +448,11 @@ void asm_generator_t::print(ostream& os) {
 	os << "end start" << endl;
 }
 
-int asm_generator_t::alignment(int size) {
+int asm_gen_t::alignment(int size) {
 	return size + (size_of(AMT_DWORD) - size % size_of(AMT_DWORD)) % size_of(AMT_DWORD);
 }
 
-int asm_generator_t::align_size(int size) {
+int asm_gen_t::align_size(int size) {
 	return 
 		size >= size_of(AMT_DWORD) ? alignment(size) : 
 		size > size_of(AMT_WORD) ? size_of(AMT_DWORD) :
@@ -493,22 +461,22 @@ int asm_generator_t::align_size(int size) {
 		size;
 }
 
-ASM_REGISTER asm_generator_t::reg_by_size(ASM_REGISTER reg, int size) {
-	return child_by_size.at(parent_of.at(reg)).at(size);
+ASM_REGISTER asm_gen_t::reg_by_size(ASM_REGISTER reg, int size) {
+	return size ? child_by_size.at(parent_of.at(reg)).at(size) : reg;
 }
 
-ASM_REGISTER asm_generator_t::reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype) {
+ASM_REGISTER asm_gen_t::reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype) {
 	return reg_by_size(reg, size_of(mtype));
 }
 
-int asm_generator_t::size_of(ASM_REGISTER reg) {
+int asm_gen_t::size_of(ASM_REGISTER reg) {
 	return size_of_reg.at(reg);
 }
 
-int asm_generator_t::size_of(ASM_MEM_TYPE mtype) {
+int asm_gen_t::size_of(ASM_MEM_TYPE mtype) {
 	return size_of_mtype.at(mtype);
 }
 
-ASM_MEM_TYPE asm_generator_t::mtype_by_size(int size) {
+ASM_MEM_TYPE asm_gen_t::mtype_by_size(int size) {
 	return mem_type_by_size.at(size);
 }
