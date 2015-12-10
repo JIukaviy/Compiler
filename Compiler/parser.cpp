@@ -235,17 +235,10 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bo
 
 void parser_t::optimize_type(type_ptr type) {
 	type_base_ptr base_type = type->get_base_type();
-	bool struct_definition = base_type == ST_STRUCT && base_type->completed();
-	type_base_ptr finded_type = dynamic_pointer_cast<type_base_t>(struct_definition ?
-																	sym_table->find_local(base_type) : sym_table->find_global(base_type));
+	type_base_ptr finded_type = dynamic_pointer_cast<type_base_t>(sym_table->find_global(base_type));
 	if (finded_type) {
 		shared_ptr<sym_type_alias_t> alias = dynamic_pointer_cast<sym_type_alias_t>(finded_type);
 		finded_type = alias ? alias->get_type() : finded_type;
-		if (struct_definition) {
-			if (finded_type->completed())
-				throw RedefinitionOfSymbol(finded_type, base_type);
-			static_pointer_cast<sym_type_struct_t>(finded_type)->set_sym_table(static_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
-		}
 		type->set_base_type(finded_type);
 		return;
 	}
@@ -279,7 +272,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 			else if (type_spec == T_KWRD_STRUCT) {
 				la->next();
 				struct_ident = la->require(T_IDENTIFIER, 0);
-				sym_table_ptr  struct_sym_table = nullptr;
+				sym_table_ptr struct_sym_table = nullptr;
 				auto strct = shared_ptr<sym_type_struct_t>(new sym_type_struct_t(struct_ident));
 				if (la->get() == T_BRACE_OPEN) {
 					sym_table_ptr strct_table = sym_table_ptr(new sym_table_t(prelude_sym_table));
@@ -299,7 +292,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 
 	if (!type_spec)
 		throw TypeSpecIsExpected(la->get());
-	
+
 	type_chain_t chain = parse_declarator();
 	decl_raw_t res(chain);
 	bool is_ptr = false;
@@ -307,6 +300,19 @@ decl_raw_t parser_t::parse_declaration_raw() {
 	type_ptr type(new type_t(base_type));
 	type->set_is_const(has_const);
 	if (chain) {
+		if (type != ST_ARRAY) {
+			if (type == ST_ARRAY) {
+				auto finded_struct = dynamic_pointer_cast<sym_type_struct_t>(type->completed() ? sym_table->find_local(base_type) : sym_table->find_global(base_type));
+				if (finded_struct) {
+					if (finded_struct->completed() && base_type->completed())
+						throw RedefinitionOfSymbol(finded_struct, base_type);
+					else if (base_type->completed())
+						finded_struct->set_sym_table(dynamic_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
+					type->set_base_type(finded_struct);
+				}
+			}
+			type->set_base_type(dynamic_pointer_cast<type_base_t>(sym_table->find_global(base_type)));
+		}
 		static_pointer_cast<updatable_base_type_t>(chain.last->get_base_type())->set_element_type(type);
 		type = chain.last;
 	} else
