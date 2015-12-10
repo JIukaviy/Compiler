@@ -1307,6 +1307,8 @@ void expr_printf_op_t::set_operands(vector<expr_t*> args_) {
 		throw SemanticError("Printf operator requires at least one parameter", get_pos());
 	if (args_[0]->get_type() != ST_PTR && args_[0]->get_type() != ST_ARRAY)
 		throw SemanticError("Printf operator requires pointer to char as first parameter", get_pos());
+	for (int i = 0; i < args_.size(); i++)
+		tc_uo_arr_func_to_ptr(&args_[i]);
 	args = args_;
 }
 
