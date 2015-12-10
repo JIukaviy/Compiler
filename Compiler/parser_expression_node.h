@@ -180,6 +180,7 @@ public:
 
 class expr_base_assign_bin_op_t : public expr_bin_op_t {
 protected:
+	virtual void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
 	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
 	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
 	void _asm_fp_assign(asm_cmd_list_ptr cmd_list, bool keep_val);
@@ -190,6 +191,7 @@ public:
 };
 
 class expr_assign_bin_op_t : public expr_base_assign_bin_op_t {
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
 public:
 	expr_assign_bin_op_t(token_ptr op);
 };
