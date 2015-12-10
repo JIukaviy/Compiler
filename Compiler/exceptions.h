@@ -319,3 +319,12 @@ class MainFuncNotFound : public CompileError {
 public:
 	MainFuncNotFound() : CompileError("Main function not found") {};
 };
+
+class FuncNotDefined : public CompileError {
+public:
+	FuncNotDefined(sym_ptr func) {
+		err << func->get_token()->get_pos();
+		func->short_print(err);
+		err << " is not defined";
+	};
+};

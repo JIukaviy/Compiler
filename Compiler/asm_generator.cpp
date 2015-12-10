@@ -2,6 +2,9 @@
 #include <assert.h>
 #include <map>
 
+#define DOUBLE_BUFF_NAME string("_double")
+#define INT_BUFF_NAME string("_int")
+
 map<ASM_REGISTER, string> asm_reg_to_str;
 map<ASM_REGISTER, int> size_of_reg;
 map<ASM_REGISTER, ASM_REGISTER> parent_of;
@@ -154,10 +157,14 @@ void asm_str_cmd_t::print(ostream& os) {
 
 asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op, asm_oprnd_ptr operand) : op(op), operand(operand) {}
 
+asm_un_oprtr_t::asm_un_oprtr_t(ASM_UN_OPERATOR op) : op(op) {}
+
 void asm_un_oprtr_t::print(ostream& os) {
 	os << asm_un_op_to_str.at(op);
-	os << ' ';
-	operand->print(os);
+	if (operand) {
+		os << ' ';
+		operand->print(os);
+	}
 }
 
 //------------------------------ASM_BINARY_OPERATOR-------------------------------------------
@@ -165,17 +172,24 @@ void asm_un_oprtr_t::print(ostream& os) {
 asm_bin_oprtr_t::asm_bin_oprtr_t(ASM_BIN_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand) : 
 	op(op), left_operand(left_operand), right_operand(right_operand) {}
 
+asm_bin_oprtr_t::asm_bin_oprtr_t(ASM_BIN_OPERATOR op) : op(op) {}
+
 void asm_bin_oprtr_t::print(ostream& os) {
 	os << asm_bin_op_to_str.at(op);
-	os << ' ';
-	left_operand->print(os);
-	os << ", ";
-	right_operand->print(os);
+	if (left_operand && right_operand) {
+		os << ' ';
+		left_operand->print(os);
+		os << ", ";
+		right_operand->print(os);
+	}
 }
 
 //------------------------------ASM_COMANNDS_LIST-------------------------------------------
 
 #define register_un_op(op_name, op_incode_name) \
+	void asm_cmd_list_t::op_incode_name() { \
+		_push_un_oprtr(AUO_##op_name); \
+	} \
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand) { \
 		_push_un_oprtr(AUO_##op_name, operand); \
 	} \
@@ -204,6 +218,9 @@ void asm_bin_oprtr_t::print(ostream& os) {
 #undef register_un_op
 
 #define register_bin_op(op_name, op_incode_name) \
+	void asm_cmd_list_t::op_incode_name() { \
+		_push_bin_oprtr(ABO_##op_name); \
+	} \
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER left, ASM_REGISTER right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
 	} \
@@ -223,6 +240,9 @@ void asm_bin_oprtr_t::print(ostream& os) {
 		_push_bin_oprtr(ABO_##op_name, left, right, offset, scale); \
 	} \
 	void asm_cmd_list_t::op_incode_name(string left, ASM_REGISTER right) { \
+		_push_bin_oprtr(ABO_##op_name, left, right); \
+	} \
+	void asm_cmd_list_t::op_incode_name(string left, var_ptr right) { \
 		_push_bin_oprtr(ABO_##op_name, left, right); \
 	} \
 	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) { \
@@ -272,6 +292,14 @@ void asm_cmd_list_t::_push_un_oprtr_deref(ASM_UN_OPERATOR op, ASM_REGISTER opera
 	_push_un_oprtr_deref(op, operand, asm_generator_t::mtype_by_size(operand_size), offset, scale);
 }
 
+void asm_cmd_list_t::_push_un_oprtr(ASM_UN_OPERATOR op) {
+	commands.push_back(asm_cmd_ptr(new asm_un_oprtr_t(op)));
+}
+
+void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op) {
+	commands.push_back(asm_cmd_ptr(new asm_bin_oprtr_t(op)));
+}
+
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
 	commands.push_back(asm_cmd_ptr(new asm_bin_oprtr_t(op, left, right)));
 }
@@ -303,6 +331,10 @@ void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, ASM_REGISTER left, str
 
 void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, string left, ASM_REGISTER right) {
 	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+}
+
+void asm_cmd_list_t::_push_bin_oprtr(ASM_BIN_OPERATOR op, string left, var_ptr right) {
+	_push_bin_oprtr(op, asm_oprnd_ptr(new asm_ident_operand_t(left)), asm_oprnd_ptr(new asm_const_oprnd_t(right)));
 }
 
 void asm_cmd_list_t::_push_bin_oprtr_lderef(ASM_BIN_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, int scale) {
@@ -360,6 +392,20 @@ void asm_cmd_list_t::_push_alloc_cmd(int size) {
 
 void asm_cmd_list_t::_push_free_cmd(int size) {
 	add(AR_ESP, new_var<int>(asm_generator_t::alignment(size)));
+}
+
+void asm_cmd_list_t::_push_int_to_double_cmd(ASM_REGISTER src_reg) {
+	mov(INT_BUFF_NAME, src_reg);
+	fild(INT_BUFF_NAME);
+}
+
+void asm_cmd_list_t::_push_double_to_int_cmd(ASM_REGISTER dst_reg) {
+	fistp(INT_BUFF_NAME);
+	mov(dst_reg, INT_BUFF_NAME);
+}
+
+void asm_cmd_list_t::_push_double_cmd(var_ptr var) {
+	fld(var);
 }
 
 void asm_cmd_list_t::_push_str(string str) {

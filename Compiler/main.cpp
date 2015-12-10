@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
 		cerr << "Parse error: " << e << endl;
 	} catch (SemanticError& e) {
 		cerr << "Semantic error: " << e << endl;
+	} catch (CompileError& e) {
+		cerr << "Compile error: " << e << endl;
 	}
 	system("pause");
 		

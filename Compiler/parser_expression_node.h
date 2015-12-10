@@ -154,6 +154,7 @@ protected:
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
+	virtual void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
 	virtual void _asm_get_val(asm_cmd_list_ptr cmd_list);
 	virtual ASM_BIN_OPERATOR _asm_get_operator();
 public:
@@ -174,7 +175,9 @@ public:
 
 class expr_base_assign_bin_op_t : public expr_bin_op_t {
 protected:
-	virtual void _asm_get_val(asm_cmd_list_ptr cmd_list);
+	void _asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void _asm_double_assign(asm_cmd_list_ptr cmd_list, bool keep_val);
+	void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
 public:
 	void asm_get_val(asm_cmd_list_ptr) override;
 	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
@@ -208,6 +211,7 @@ public:
 
 class expr_arithmetic_assign_bin_op_t : public expr_base_assign_bin_op_t {
 	void _asm_get_val(asm_cmd_list_ptr) override;
+	void _asm_get_double_val(asm_cmd_list_ptr cmd_list);
 public:
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
@@ -329,6 +333,7 @@ class expr_func_t : public expr_t {
 	expr_t* func;
 	token_ptr brace;
 	shared_ptr<sym_type_func_t> _get_func_type();
+	void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
 protected:
 	vector<expr_t*> args;
 	string asm_func_name;

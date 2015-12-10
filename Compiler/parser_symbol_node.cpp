@@ -326,7 +326,7 @@ sym_type_double_t::sym_type_double_t() : symbol_t(ST_DOUBLE) {
 }
 
 int sym_type_double_t::get_size() {
-	return sizeof(float);
+	return sizeof(double);
 }
 
 //--------------------------------SYMBOL_WITH_TYPE-------------------------------
@@ -427,7 +427,7 @@ void sym_global_var_t::asm_register(asm_gen_ptr gen) {
 		cmd_list->mov(asm_get_name(), asm_generator_t::reg_by_size(AR_EAX, get_type_size()));
 	} else if (type == ST_STRUCT || type == ST_ARRAY)
 		dup = asm_generator_t::alignment(type->get_size() / asm_generator_t::size_of(AMT_DWORD));
-	gen->add_global_var(asm_get_name(), AMT_DWORD, cmd_list, dup);
+	gen->add_global_var(asm_get_name(), type == ST_DOUBLE ? AMT_QWORD : AMT_DWORD, cmd_list, dup);
 }
 
 void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
@@ -440,7 +440,9 @@ void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 			cmd_list->mov(AR_EAX, asm_get_name(), i);
 			cmd_list->push(AR_EAX);
 		}
-	} else
+	} else if (type == ST_DOUBLE)
+		cmd_list->fld(asm_get_name());
+	else
 		cmd_list->mov(AR_EAX, asm_get_name());
 }
 
@@ -469,7 +471,7 @@ void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
 	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
 		cmd_list->mov_lderef(offset_reg, AR_EAX, get_type_size(), offset);
-	} else if (type->is_arithmetic());
+	} else if (type == ST_DOUBLE);
 	else if (type == ST_ARRAY && !init_list.empty()) {
 		auto arr = dynamic_pointer_cast<sym_type_array_t>(type->get_base_type());
 		int elem_size = arr->get_element_type()->get_size();
@@ -495,6 +497,8 @@ void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = type->get_size();
 	if (type == ST_STRUCT)
 		asm_get_addr(cmd_list);
+	else if (type == ST_DOUBLE)
+		cmd_list->fld_deref(offset_reg, AMT_QWORD, offset);
 	else
 		cmd_list->mov_rderef(AR_EAX, offset_reg, type_size, offset);
 }
@@ -714,11 +718,15 @@ void sym_func_t::print_l(ostream& os, int level) {
 }
 
 void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
+	if (!block)
+		throw FuncNotDefined(sym_ptr(this));
 	cmd_list->mov(AR_EBP, AR_ESP);
 	block->asm_generate_code(cmd_list, -4);
 }
 
 void sym_func_t::asm_set_offset() {
+	if (!sym_table)
+		throw FuncNotDefined(sym_ptr(this));
 	int offset = 4;
 	for each (auto var in *sym_table) {
 		if (var == ST_VAR) {

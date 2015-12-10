@@ -151,5 +151,5 @@ void stmt_return_t::set_ret_expr(expr_t* expr_) {
 void stmt_return_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	expr->asm_get_val(cmd_list);
 	cmd_list->mov(AR_ESP, AR_EBP);
-	cmd_list->ret(new_var<int>(0));
+	cmd_list->ret();
 }

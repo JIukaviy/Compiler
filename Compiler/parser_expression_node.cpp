@@ -130,7 +130,12 @@ bool expr_const_t::is_null() {
 }
 
 void expr_const_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	cmd_list->mov(AR_EAX, static_pointer_cast<token_base_with_value_t>(constant)->get_var());
+	auto var = static_pointer_cast<token_base_with_value_t>(constant)->get_var();
+	if (get_type() == ST_DOUBLE)
+		cmd_list->_push_double_cmd(var);
+	else
+		cmd_list->mov(AR_EAX, var);
+}
 
 void expr_const_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 	assert(constant == T_STRING);
@@ -516,6 +521,8 @@ expr_bin_op_t* expr_bin_op_t::make_bin_op(token_ptr op) {
 		(assert(false), nullptr);
 }
 
+void expr_bin_op_t::_asm_get_double_val(asm_cmd_list_ptr cmd_list) {}
+
 void expr_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->_push_bin_oprtr(_asm_get_operator(), AR_EAX, AR_EBX);
 }
@@ -525,10 +532,15 @@ ASM_BIN_OPERATOR expr_bin_op_t::_asm_get_operator() {
 }
 
 void expr_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	right->asm_get_val(cmd_list);
-	cmd_list->push(AR_EAX);
-	left->asm_get_val(cmd_list);
-	cmd_list->pop(AR_EBX);
+	if (get_type() == ST_DOUBLE) {
+		right->asm_get_val(cmd_list);
+		left->asm_get_val(cmd_list);
+	} else {
+		right->asm_get_val(cmd_list);
+		cmd_list->push(AR_EAX);
+		left->asm_get_val(cmd_list);
+		cmd_list->pop(AR_EBX);
+	}
 	_asm_get_val(cmd_list);
 }
 
@@ -675,14 +687,49 @@ void expr_base_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	cmd_list->_push_bin_oprtr_lderef(_asm_get_operator(), AR_EAX, AR_EBX, get_type_size());
 }
 
+void expr_base_assign_bin_op_t::_asm_double_assign(asm_cmd_list_ptr cmd_list, bool keep_val) {
+	if (left->get_type() == ST_DOUBLE && right->get_type() == ST_DOUBLE) {
+		right->asm_get_val(cmd_list);
+		left->asm_get_addr(cmd_list);
+		_asm_get_double_val(cmd_list);
+		cmd_list->_push_un_oprtr_deref(keep_val ? AUO_FST : AUO_FSTP, AR_EAX, AMT_QWORD);
+	} else if (left->get_type() == ST_DOUBLE) {
+		right->asm_get_val(cmd_list);
+		cmd_list->push(AR_EAX);
+		left->asm_get_addr(cmd_list);
+		cmd_list->pop(AR_EBX);
+		_asm_get_double_val(cmd_list);
+		cmd_list->_push_int_to_double_cmd(AR_EBX);
+		cmd_list->_push_un_oprtr_deref(keep_val ? AUO_FST : AUO_FSTP, AR_EAX, AMT_QWORD);
+	} else {
+		right->asm_get_val(cmd_list);
+		left->asm_get_addr(cmd_list);
+		_asm_get_double_val(cmd_list);
+		if (left->get_type() == ST_INTEGER)
+			cmd_list->_push_un_oprtr_deref(keep_val ? AUO_FIST : AUO_FISTP, AR_EAX, AMT_DWORD);
+		else {
+			cmd_list->_push_double_to_int_cmd(AR_EBX);
+			cmd_list->xor_(AR_EDX, AR_EDX);
+			cmd_list->mov(AR_DL, AR_BL);
+			cmd_list->mov_lderef(AR_EAX, AR_EDX, AMT_BYTE);
+			if (keep_val)
+				cmd_list->mov(AR_EAX, AR_EDX);
+		}
+	}
+}
+
+void expr_base_assign_bin_op_t::_asm_get_double_val(asm_cmd_list_ptr cmd_list) {}
+
 void expr_base_assign_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_STRUCT) {
+	if (get_type() == ST_STRUCT) {
 		left->asm_get_addr(cmd_list);
 		cmd_list->push(AR_EAX);
 		right->asm_get_val(cmd_list);
 		cmd_list->pop(AR_EBX);
 		cmd_list->_push_copy_cmd(AR_EAX, AR_EBX, get_type_size());
-	} else {
+	} else if (get_type() == ST_DOUBLE)
+		_asm_double_assign(cmd_list, false);
+	else {
 		right->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
 		left->asm_get_addr(cmd_list);
@@ -692,11 +739,13 @@ void expr_base_assign_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
 }
 
 void expr_base_assign_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	asm_gen_code(cmd_list);
-	if (left->get_type() == ST_STRUCT)
-		cmd_list->mov(AR_EAX, AR_EBX);
-	else
-		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+	if (get_type() == ST_DOUBLE)
+		_asm_double_assign(cmd_list, true);
+	else {
+		asm_gen_code(cmd_list);
+		if (get_type() != ST_STRUCT)
+			cmd_list->mov_rderef(AR_EAX, AR_EBX, get_type_size());
+	}
 }
 
 //-----------------------------------ASSIGN---------------------------------------------
@@ -739,11 +788,18 @@ ASM_BIN_OPERATOR expr_integer_assign_bin_op_t::_asm_get_operator() {
 
 void expr_arithmetic_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	assert(op->is(T_OP_MUL, T_OP_DIV, 0));
-	if (op == T_OP_MUL)
-		cmd_list->imul(AR_EAX, AR_EBX);
-	else if (op == T_OP_DIV) {
-		cmd_list->xor_(AR_EDX, AR_EDX);
-		cmd_list->div(AR_EBX);
+	if (op == T_OP_MUL) {
+		if (get_type() == ST_DOUBLE)
+			cmd_list->fmul();
+		else
+			cmd_list->imul(AR_EAX, AR_EBX);
+	} else if (op == T_OP_DIV) {
+		if (get_type() == ST_DOUBLE)
+			cmd_list->fdiv();
+		else {
+			cmd_list->xor_(AR_EDX, AR_EDX);
+			cmd_list->div(AR_EBX);
+		}
 	}
 }
 
@@ -753,24 +809,45 @@ expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_o
 	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
+void expr_arithmetic_assign_bin_op_t::_asm_get_double_val(asm_cmd_list_ptr cmd_list) {
+	if (left->get_type() == ST_DOUBLE) {
+		cmd_list->fld_deref(AR_EAX, AMT_QWORD);
+	} else if (left->get_type() == ST_INTEGER)
+		cmd_list->fild(AR_EAX, AMT_DWORD);
+	else {
+		cmd_list->xor_(AR_EDX, AR_EDX);
+		cmd_list->mov(AR_EAX, AR_EDX, AMT_BYTE);
+		cmd_list->_push_int_to_double_cmd(AR_EDX);
+	}
+	_asm_get_val(cmd_list);
+}
+
 void expr_arithmetic_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = get_type_size();
 	if (op == T_OP_MUL_ASSIGN) {
-		cmd_list->xor_(AR_EDX, AR_EDX);
-		cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
-		cmd_list->imul(AR_EDX, AR_EBX);
-		cmd_list->mov_lderef(AR_EAX, AR_EDX, type_size);
-	} else if (op == T_OP_DIV_ASSIGN) {
-		cmd_list->mov(AR_ECX, AR_EAX);
-		if (type_size < asm_generator_t::size_of(AR_EAX)) {
+		if (get_type() == ST_DOUBLE)
+			cmd_list->fmul();
+		else {
 			cmd_list->xor_(AR_EDX, AR_EDX);
 			cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
-			cmd_list->mov(AR_EAX, AR_EDX);
-		} else
-			cmd_list->mov_rderef(AR_EAX, AR_EAX, type_size);
-		cmd_list->xor_(AR_EDX, AR_EDX);
-		cmd_list->div(AR_EBX);
-		cmd_list->mov_lderef(AR_ECX, AR_EAX, type_size);
+			cmd_list->imul(AR_EDX, AR_EBX);
+			cmd_list->mov_lderef(AR_EAX, AR_EDX, type_size);
+		}
+	} else if (op == T_OP_DIV_ASSIGN) {
+		if (get_type() == ST_DOUBLE)
+			cmd_list->fdiv();
+		else {
+			cmd_list->mov(AR_ECX, AR_EAX);
+			if (type_size < asm_generator_t::size_of(AMT_DWORD)) {
+				cmd_list->xor_(AR_EDX, AR_EDX);
+				cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
+				cmd_list->mov(AR_EAX, AR_EDX);
+			} else
+				cmd_list->mov_rderef(AR_EAX, AR_EAX, type_size);
+			cmd_list->xor_(AR_EDX, AR_EDX);
+			cmd_list->div(AR_EBX);
+			cmd_list->mov_lderef(AR_ECX, AR_EAX, type_size);
+		}
 	} else
 		expr_base_assign_bin_op_t::_asm_get_val(cmd_list);
 }
@@ -794,11 +871,15 @@ inline void mul_reg_to_elem_size(asm_cmd_list_ptr cmd_list, ASM_REGISTER reg, in
 }
 
 void expr_add_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_PTR)
-		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
-	else if (right->get_type() == ST_PTR)
-		mul_reg_to_elem_size(cmd_list, AR_EAX, get_ptr_elem_size(get_type()));
-	cmd_list->add(AR_EAX, AR_EBX);
+	if (get_type() == ST_DOUBLE)
+		cmd_list->fadd();
+	else {
+		if (left->get_type() == ST_PTR)
+			mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
+		else if (right->get_type() == ST_PTR)
+			mul_reg_to_elem_size(cmd_list, AR_EAX, get_ptr_elem_size(get_type()));
+		cmd_list->add(AR_EAX, AR_EBX);
+	}
 }
 
 ASM_BIN_OPERATOR expr_add_assign_bin_op_t::_asm_get_operator() {
@@ -811,9 +892,13 @@ expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmet
 }
 
 void expr_add_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_PTR)
-		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
-	cmd_list->add_lderef(AR_EAX, AR_EBX, get_type_size());
+	if (get_type() == ST_DOUBLE)
+		cmd_list->fadd();
+	else {
+		if (left->get_type() == ST_PTR)
+			mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
+		cmd_list->add_lderef(AR_EAX, AR_EBX, get_type_size());
+	}
 }
 
 //--------------------------------------SUB----------------------------------------------
@@ -830,9 +915,13 @@ ASM_BIN_OPERATOR expr_sub_assign_bin_op_t::_asm_get_operator() {
 }
 
 void expr_sub_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_PTR)
-		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
-	cmd_list->sub(AR_EAX, AR_EBX);
+	if (get_type() == ST_DOUBLE)
+		cmd_list->fsub();
+	else {
+		if (left->get_type() == ST_PTR)
+			mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
+		cmd_list->sub(AR_EAX, AR_EBX);
+	}
 }
 
 expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
@@ -841,9 +930,13 @@ expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmet
 }
 
 void expr_sub_assign_bin_op_t::_asm_get_val(asm_cmd_list_ptr cmd_list) {
-	if (left->get_type() == ST_PTR)
-		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
-	cmd_list->sub_lderef(AR_EAX, AR_EBX, get_type_size());
+	if (get_type() == ST_DOUBLE)
+		cmd_list->fsub();
+	else {
+		if (left->get_type() == ST_PTR)
+			mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
+		cmd_list->sub_lderef(AR_EAX, AR_EBX, get_type_size());
+	}
 }
 
 //--------------------------------------MOD----------------------------------------------
@@ -1199,25 +1292,35 @@ void expr_func_t::set_operands(expr_t* func_, vector<expr_t*> args_) {
 	args.resize(func_args.size());
 	for (int i = 0; i < func_args.size(); i++)
 		args[i] = auto_convert(args_[i], func_args[i]);
+	asm_func_name = dynamic_cast<expr_var_t*>(func)->get_var()->asm_get_name();
 }
 
 type_ptr expr_func_t::get_type() {
 	return _get_func_type()->get_element_type();
 }
 
-void expr_func_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
-	int args_size = _get_func_type()->get_args_size();
+void expr_func_t::_asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) {
+	int args_size = get_args_size();
 	cmd_list->push(AR_EBP);
 	for (int i = args.size() - 1; i >= 0; i--) {
 		args[i]->asm_get_val(cmd_list);
 		if (args[i]->get_type() == ST_STRUCT)
 			cmd_list->_push_copy_to_stack_cmd(AR_EAX, args[i]->get_type_size());
-		else
+		else if (args[i]->get_type() == ST_DOUBLE) {
+			cmd_list->_push_alloc_cmd(args[i]->get_type_size());
+			cmd_list->fstp_deref(AR_ESP, AMT_QWORD);
+		} else
 			cmd_list->push(AR_EAX);
 	}
 	cmd_list->call(asm_func_name);
 	cmd_list->_push_free_cmd(args_size);
 	cmd_list->pop(AR_EBP);
+	if (!keep_val && get_type() == ST_DOUBLE)
+		cmd_list->fdecstp();
+}
+
+void expr_func_t::asm_gen_code(asm_cmd_list_ptr cmd_list) {
+	_asm_gen_code(cmd_list, false);
 }
 
 int expr_func_t::get_args_size() {
@@ -1228,7 +1331,7 @@ int expr_func_t::get_args_size() {
 }
 
 void expr_func_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
-	asm_gen_code(cmd_list);
+	_asm_gen_code(cmd_list, true);
 }
 
 pos_t expr_func_t::get_pos() {
@@ -1309,8 +1412,15 @@ void expr_cast_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 		cmd_list->mov(AR_EBX, AR_EAX);
 		cmd_list->xor_(AR_EAX, AR_EAX);
 		cmd_list->mov(AR_AL, AR_BL);
-	} else if (expr->get_type() == ST_ARRAY)
+	} else if (expr->get_type() == ST_ARRAY && type == ST_PTR)
 		expr->asm_get_addr(cmd_list);
+	else if (expr->get_type() == ST_DOUBLE && type == ST_INTEGER) {
+		expr->asm_get_val(cmd_list);
+		cmd_list->_push_double_to_int_cmd(AR_EAX);
+	} else if (expr->get_type() == ST_INTEGER && type == ST_DOUBLE) {
+		expr->asm_get_val(cmd_list);
+		cmd_list->_push_int_to_double_cmd(AR_EAX);
+	}
 }
 
 var_ptr expr_cast_t::eval() {
