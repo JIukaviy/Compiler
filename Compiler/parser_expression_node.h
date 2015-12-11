@@ -250,6 +250,7 @@ public:
 
 class expr_mod_assign_bin_op_t : public expr_base_assign_bin_op_t {
 	void _asm_gen_code_int(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
 public:
 	expr_mod_assign_bin_op_t(token_ptr op);
 };

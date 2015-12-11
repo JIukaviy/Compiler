@@ -947,6 +947,10 @@ void expr_mod_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	cmd_list->xor_(AR_EDX, AR_EDX);
 	cmd_list->div(AR_EBX);
 	cmd_list->mov_lderef(AR_ECX, AR_EDX, type_size);
+}
+
+void expr_mod_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+	_asm_gen_code_int(cmd_list);
 	cmd_list->mov(AR_EAX, AR_EDX);
 }
 
