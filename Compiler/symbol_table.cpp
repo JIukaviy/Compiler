@@ -112,6 +112,9 @@ void sym_table_t::asm_set_offset_for_local_vars(int offset, ASM_REGISTER offset_
 				offset = asm_gen_t::alignment(offset);
 			local_var->asm_set_offset(offset, offset_reg);
 			offset += local_var->get_type_size();
+		} else if (var == ST_STRUCT) {
+			auto str = dynamic_pointer_cast<sym_type_struct_t>(var);
+			str->get_sym_table()->asm_set_offset_for_local_vars(0, AR_EAX);
 		}
 	}
 }

@@ -94,7 +94,9 @@ void asm_addr_reg_oprnd_t::print(ostream& os) {
 asm_deref_oprnd_t::asm_deref_oprnd_t(int offset, int scale) : offset(offset), scale(scale) {}
 
 asm_deref_reg_oprnd_t::asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset, ASM_REGISTER offset_reg, int scale) : 
-	asm_deref_oprnd_t(offset, scale), mtype(mtype), reg(reg), offset_reg(offset_reg) {}
+	asm_deref_oprnd_t(offset, scale), mtype(mtype), reg(reg), offset_reg(offset_reg) {
+	assert(reg);
+}
 
 void asm_deref_reg_oprnd_t::print(ostream& os) {
 	os << asm_mt_to_str.at(mtype) << " PTR [" << asm_reg_to_str.at(reg);

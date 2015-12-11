@@ -506,11 +506,7 @@ void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 void sym_local_var_t::asm_set_offset(int offset_, ASM_REGISTER offset_reg_) {
 	offset = offset_;
 	offset_reg = offset_reg_;
-	if (type == ST_STRUCT) {
-		auto struct_type = dynamic_pointer_cast<sym_type_struct_t>(type->get_base_type());
-		sym_table_ptr sym_table = struct_type->get_sym_table();
-		sym_table->asm_set_offset_for_local_vars(0, AR_EAX);
-	}
+	assert(offset_reg_);
 }
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
