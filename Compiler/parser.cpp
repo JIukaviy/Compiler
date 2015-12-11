@@ -740,6 +740,7 @@ void parser_t::print_asm_code(ostream& os) {
 		asm_gen_ptr gen(new asm_gen_t);
 		stmt_ptr main_block;
 		parse_top_level_stmt();
+		top_sym_table->asm_set_offset_for_local_vars(0, AR_NONE);
 		for each (auto sym in *top_sym_table) {
 			if (sym == ST_FUNC) {
 				auto sym_func = dynamic_pointer_cast<sym_func_t>(sym);
