@@ -907,7 +907,7 @@ expr_sub_bin_op_t::expr_sub_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op
 void expr_sub_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
 	if (left->get_type() == ST_PTR)
 		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
-	cmd_list->sub(AR_EAX, AR_EAX);
+	cmd_list->sub(AR_EAX, AR_EBX);
 }
 
 expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmetic_assign_bin_op_t(op) {
