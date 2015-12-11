@@ -315,6 +315,12 @@ public:
 	InvalidInitListSize(pos_t pos) : SemanticError("Too many init arguments", pos) {}
 };
 
+class CantGetSize : public SemanticError {
+public:
+	CantGetSize() : SemanticError("Can't get size of symbol") {}
+	CantGetSize(pos_t pos) : SemanticError("Can't get size of symbol", pos) {}
+};
+
 class MainFuncNotFound : public CompileError {
 public:
 	MainFuncNotFound() : CompileError("Main function not found") {};

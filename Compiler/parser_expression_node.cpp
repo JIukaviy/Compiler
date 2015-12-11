@@ -61,7 +61,11 @@ var_ptr expr_t::eval() {
 }
 
 int expr_t::get_type_size() {
-	return get_type()->get_size();
+	try {
+		return get_type()->get_size();
+	} catch (...) {
+		throw CantGetSize(get_pos());
+	}
 }
 
 ASM_OPERATOR expr_t::token_to_fp_op(token_ptr token) {

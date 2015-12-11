@@ -122,7 +122,7 @@ bool type_base_t::completed() {
 }
 
 int type_base_t::get_size() {
-	throw SemanticError("Can't get size of the symbol", token->get_pos());
+	throw CantGetSize();
 }
 
 int type_base_t::get_aligned_size() {
