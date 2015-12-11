@@ -862,6 +862,14 @@ void expr_arithmetic_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_lis
 		expr_base_assign_bin_op_t::_asm_gen_code_int(cmd_list);
 }
 
+void expr_arithmetic_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+	_asm_gen_code_int(cmd_list);
+	if (op == T_OP_DIV_ASSIGN)
+		cmd_list->mov_rderef(AR_EAX, AR_ECX, get_type_size());
+	else
+		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+}
+
 //--------------------------------------ADD----------------------------------------------
 
 expr_add_bin_op_t::expr_add_bin_op_t(token_ptr op) : expr_arithmetic_bin_op_t(op) {

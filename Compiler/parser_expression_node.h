@@ -214,6 +214,7 @@ public:
 
 class expr_arithmetic_assign_bin_op_t : public expr_base_assign_bin_op_t {
 	void _asm_gen_code_int(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr) override;
 public:
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
