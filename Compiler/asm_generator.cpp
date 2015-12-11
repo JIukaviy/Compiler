@@ -387,7 +387,7 @@ void asm_cmd_list_t::_cast_double_to_int(ASM_REGISTER dst_reg) {
 
 void asm_cmd_list_t::_cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg) {
 	xor_(dst_reg, dst_reg);
-	mov(src_reg, dst_reg, asm_gen_t::size_of(AMT_BYTE));
+	mov(dst_reg, src_reg, asm_gen_t::size_of(AMT_BYTE));
 }
 
 void asm_cmd_list_t::_push_str(string str) {
