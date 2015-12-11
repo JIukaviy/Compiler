@@ -841,6 +841,7 @@ void expr_arithmetic_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_lis
 	if (op == T_OP_MUL_ASSIGN) {
 		cmd_list->xor_(AR_EDX, AR_EDX);
 		cmd_list->mov_rderef(AR_EDX, AR_EAX, type_size);
+		//cmd_list->mov(AR_EDX, Deref(AR_EAX, type_size));
 		cmd_list->imul(AR_EDX, AR_EBX);
 		cmd_list->mov_lderef(AR_EAX, AR_EDX, type_size);
 	} else if (op == T_OP_DIV_ASSIGN) {
@@ -1272,13 +1273,22 @@ void expr_func_t::_asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) {
 	cmd_list->push(AR_EBP);
 	for (int i = args.size() - 1; i >= 0; i--) {
 		args[i]->asm_get_val(cmd_list);
-		if (args[i]->get_type() == ST_STRUCT)
-			cmd_list->_copy_to_stack(AR_EAX, args[i]->get_type_size());
-		else if (args[i]->get_type() == ST_DOUBLE) {
-			cmd_list->_alloc_in_stack(args[i]->get_type_size());
-			cmd_list->fstp_deref(AR_ESP, AMT_QWORD);
-		} else
-			cmd_list->push(AR_EAX);
+		switch (args[i]->get_type()->get_base_type()->get_sym_type()) {
+			case ST_STRUCT:
+				cmd_list->_copy_to_stack(AR_EAX, args[i]->get_type_size()); 
+				break;
+			case ST_DOUBLE:
+				cmd_list->_alloc_in_stack(args[i]->get_type_size());
+				cmd_list->fstp_deref(AR_ESP, AMT_QWORD);
+				break;
+			case ST_CHAR:
+				cmd_list->_cast_char_to_int(AR_EAX, AR_EBX);
+				cmd_list->push(AR_EBX);
+				break;
+			default:
+				cmd_list->push(AR_EAX);
+		}
+			
 	}
 	cmd_list->call(asm_func_name);
 	cmd_list->_free_in_stack(args_size);
