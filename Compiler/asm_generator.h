@@ -184,6 +184,8 @@ public:
 \
 	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
 	void op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
+	void op_incode_name##_lderef_ls(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
+	void op_incode_name##_lderef_ls(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
 	void op_incode_name##_lderef(ASM_REGISTER left, string right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
 	void op_incode_name##_lderef(ASM_REGISTER left, string right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
 	void op_incode_name##_lderef(ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);\
@@ -218,6 +220,8 @@ public:
 
 	void _add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
 	void _add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
+	void _add_op_lderef_ls(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
+	void _add_op_lderef_ls(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
 	void _add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, string right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
 	void _add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, string right, int operand_size, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
 	void _add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);

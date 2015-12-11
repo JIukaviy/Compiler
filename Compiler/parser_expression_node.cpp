@@ -836,7 +836,7 @@ expr_arithmetic_bin_op_t::expr_arithmetic_bin_op_t(token_ptr token) : expr_bin_o
 	type_convertions.push_back(tc_bo_arithmetic_conversion);
 }
 
-void expr_arithmetic_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+void expr_arithmetic_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	int type_size = get_type_size();
 	if (op == T_OP_MUL_ASSIGN) {
 		cmd_list->xor_(AR_EDX, AR_EDX);
@@ -855,7 +855,7 @@ void expr_arithmetic_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list
 		cmd_list->div(AR_EBX);
 		cmd_list->mov_lderef(AR_ECX, AR_EAX, type_size);
 	} else
-		expr_base_assign_bin_op_t::_asm_get_val_int(cmd_list);
+		expr_base_assign_bin_op_t::_asm_gen_code_int(cmd_list);
 }
 
 expr_arithmetic_assign_bin_op_t::expr_arithmetic_assign_bin_op_t(token_ptr token) : expr_base_assign_bin_op_t(token) {
@@ -889,7 +889,7 @@ expr_add_assign_bin_op_t::expr_add_assign_bin_op_t(token_ptr op) : expr_arithmet
 	or_conditions.push_back(oc_bo_integer_and_ptr);
 }
 
-void expr_add_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+void expr_add_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	if (left->get_type() == ST_PTR)
 		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
 	cmd_list->add_lderef(AR_EAX, AR_EBX, get_type_size());
@@ -915,7 +915,7 @@ expr_sub_assign_bin_op_t::expr_sub_assign_bin_op_t(token_ptr op) : expr_arithmet
 	or_conditions.push_back(oc_bo_ptr_and_integer);
 }
 
-void expr_sub_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+void expr_sub_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	if (left->get_type() == ST_PTR)
 		mul_reg_to_elem_size(cmd_list, AR_EBX, get_ptr_elem_size(get_type()));
 	cmd_list->sub_lderef(AR_EAX, AR_EBX, get_type_size());
@@ -935,7 +935,7 @@ expr_mod_bin_op_t::expr_mod_bin_op_t(token_ptr op) : expr_bin_op_t(op) {
 	type_convertions.push_back(tc_bo_integer_increase);
 }
 
-void expr_mod_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+void expr_mod_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	int type_size = get_type_size();
 	cmd_list->mov(AR_ECX, AR_EAX);
 	if (type_size < asm_gen_t::size_of(AR_EAX)) {
@@ -1001,9 +1001,9 @@ expr_shift_assign_bin_op_t::expr_shift_assign_bin_op_t(token_ptr op) : expr_base
 	or_conditions.push_back(oc_bo_is_integer);
 }
 
-void expr_shift_assign_bin_op_t::_asm_get_val_int(asm_cmd_list_ptr cmd_list) {
+void expr_shift_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list) {
 	cmd_list->mov(AR_CL, AR_BL);
-	cmd_list->_add_op(token_to_int_op(op),
+	cmd_list->_add_op_lderef_ls(token_to_int_op(op),
 		AR_EAX, AR_CL, asm_gen_t::mtype_by_size(get_type_size()));
 }
 

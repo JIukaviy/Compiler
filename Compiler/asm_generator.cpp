@@ -209,6 +209,10 @@ void asm_oprtr_t::print(ostream& os) {
 	{_add_op_lderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
 	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
 	{_add_op_lderef(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef_ls(ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef_ls(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
+	void asm_cmd_list_t::op_incode_name##_lderef_ls(ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
+	{_add_op_lderef_ls(AO_##op_name, left, right, operand_size, offset, offset_reg, scale);}\
 	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, string right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale)\
 	{_add_op_lderef(AO_##op_name, left, right, mtype, offset, offset_reg, scale);}\
 	void asm_cmd_list_t::op_incode_name##_lderef(ASM_REGISTER left, string right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale)\
@@ -299,6 +303,14 @@ void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGI
 
 void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
 	_add_op_lderef(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
+}
+
+void asm_cmd_list_t::_add_op_lderef_ls(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op(op, asm_oprnd_ptr(new asm_deref_reg_oprnd_t(mtype, left, offset, offset_reg, scale)), asm_oprnd_ptr(new asm_reg_oprnd_t(right)));
+}
+
+void asm_cmd_list_t::_add_op_lderef_ls(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size, int offset, ASM_REGISTER offset_reg, int scale) {
+	_add_op_lderef_ls(op, left, right, asm_gen_t::mtype_by_size(operand_size), offset, offset_reg, scale);
 }
 
 void asm_cmd_list_t::_add_op_lderef(ASM_OPERATOR op, ASM_REGISTER left, var_ptr right, ASM_MEM_TYPE mtype, int offset, ASM_REGISTER offset_reg, int scale) {
