@@ -361,7 +361,13 @@ expr_dereference_op_t::expr_dereference_op_t(token_ptr op) : expr_prefix_un_op_t
 
 void expr_dereference_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	expr->asm_get_val(cmd_list);
-	cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+	if (get_type() == ST_INTEGER)
+		cmd_list->mov_rderef(AR_EAX, AR_EAX, get_type_size());
+	else if (get_type() == ST_CHAR) {
+		cmd_list->mov_rderef(AR_EBX, AR_EAX, asm_gen_t::size_of(AMT_BYTE));
+		cmd_list->_cast_char_to_int(AR_EBX, AR_EAX);
+	} else if (get_type() == ST_DOUBLE)
+		cmd_list->fld_deref(AR_EAX, AMT_QWORD);
 }
 
 void expr_dereference_op_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
