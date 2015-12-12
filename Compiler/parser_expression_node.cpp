@@ -1211,7 +1211,11 @@ void expr_struct_access_t::set_operands(expr_t* expr_, token_ptr member_token) {
 			throw SemanticError("Expected pointer to struct as left operand of '->'", expr_->get_pos());
 		structure = static_pointer_cast<sym_type_struct_t>(sym_type_ptr_t::dereference(expr_->get_type())->get_base_type());
 	}
-	member = structure->get_member(member_token);
+	try {
+		member = structure->get_member(member_token);
+	} catch (InvalidIncompleteType&) {
+		throw InvalidIncompleteType(get_pos());
+	}
 	struct_expr = expr_;
 }
 

@@ -827,6 +827,8 @@ sym_table_ptr  sym_type_struct_t::get_sym_table() {
 }
 
 shared_ptr<sym_var_t> sym_type_struct_t::get_member(token_ptr member) {
+	if (!sym_table)
+		throw InvalidIncompleteType(token->get_pos());
 	auto res = dynamic_pointer_cast<sym_var_t>(sym_table->find_global(member));
 	if (!res)
 		throw StructHasNoMember(this, member);

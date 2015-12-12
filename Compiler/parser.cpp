@@ -274,13 +274,29 @@ decl_raw_t parser_t::parse_declaration_raw() {
 				struct_ident = la->require(T_IDENTIFIER, 0);
 				sym_table_ptr struct_sym_table = nullptr;
 				auto strct = shared_ptr<sym_type_struct_t>(new sym_type_struct_t(struct_ident));
+				strct->set_token(type_spec);
+				shared_ptr<sym_type_struct_t> finded_struct;
 				if (la->get() == T_BRACE_OPEN) {
+					finded_struct = dynamic_pointer_cast<sym_type_struct_t>(sym_table->find_local(strct));
+					if (finded_struct && finded_struct->completed())
+						throw RedefinitionOfSymbol(finded_struct, strct);
 					sym_table_ptr strct_table = sym_table_ptr(new sym_table_t(prelude_sym_table));
-					parse_struct_decl_list(strct_table);
 					strct->set_sym_table(strct_table);
+					if (!finded_struct)
+						sym_table->insert(strct);
+					parse_struct_decl_list(strct_table);
+					if (finded_struct) {
+						finded_struct->set_sym_table(strct_table);
+						strct = finded_struct;
+					}
+				} else {
+					finded_struct = dynamic_pointer_cast<sym_type_struct_t>(sym_table->find_global(strct));
+					if (finded_struct)
+						strct = finded_struct;
+					else
+						sym_table->insert(strct);
 				}
 				base_type = strct;
-				base_type->set_token(type_spec);
 				continue;
 			} else
 				assert(false);
@@ -300,19 +316,6 @@ decl_raw_t parser_t::parse_declaration_raw() {
 	type_ptr type(new type_t(base_type));
 	type->set_is_const(has_const);
 	if (chain) {
-		if (type != ST_ARRAY) {
-			if (type == ST_ARRAY) {
-				auto finded_struct = dynamic_pointer_cast<sym_type_struct_t>(type->completed() ? sym_table->find_local(base_type) : sym_table->find_global(base_type));
-				if (finded_struct) {
-					if (finded_struct->completed() && base_type->completed())
-						throw RedefinitionOfSymbol(finded_struct, base_type);
-					else if (base_type->completed())
-						finded_struct->set_sym_table(dynamic_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
-					type->set_base_type(finded_struct);
-				}
-			}
-			type->set_base_type(dynamic_pointer_cast<type_base_t>(sym_table->find_global(base_type)));
-		}
 		static_pointer_cast<updatable_base_type_t>(chain.last->get_base_type())->set_element_type(type);
 		type = chain.last;
 	} else
