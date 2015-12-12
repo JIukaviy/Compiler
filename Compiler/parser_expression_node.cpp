@@ -584,8 +584,8 @@ void expr_bin_op_t::_asm_get_val_fp(asm_cmd_list_ptr cmd_list) {
 
 void expr_bin_op_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	if (get_type() == ST_DOUBLE) {
-		right->asm_get_val(cmd_list);
 		left->asm_get_val(cmd_list);
+		right->asm_get_val(cmd_list);
 		_asm_get_val_fp(cmd_list);
 	} else {
 		right->asm_get_val(cmd_list);
@@ -1419,11 +1419,16 @@ void expr_cast_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 		cmd_list->mov(AR_AL, AR_BL);
 	} else if (expr->get_type() == ST_ARRAY && type == ST_PTR)
 		expr->asm_get_addr(cmd_list);
-	else if (expr->get_type() == ST_DOUBLE && type == ST_INTEGER) {
+	else if (expr->get_type() == ST_DOUBLE && type->is_integer()) {
 		expr->asm_get_val(cmd_list);
 		cmd_list->_cast_double_to_int(AR_EAX);
 	} else if (expr->get_type() == ST_INTEGER && type == ST_DOUBLE) {
 		expr->asm_get_val(cmd_list);
+		cmd_list->_cast_int_to_double(AR_EAX);
+	} else if (expr->get_type() == ST_CHAR && type == ST_DOUBLE) {
+		expr->asm_get_val(cmd_list);
+		cmd_list->_cast_char_to_int(AR_EAX, AR_EBX);
+		cmd_list->mov(AR_EAX, AR_EBX);
 		cmd_list->_cast_int_to_double(AR_EAX);
 	}
 }
