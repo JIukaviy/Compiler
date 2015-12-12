@@ -781,10 +781,7 @@ void expr_base_assign_bin_op_t::_asm_gen_code(asm_cmd_list_ptr cmd_list, bool ke
 		cmd_list->pop(AR_EBX);
 		cmd_list->_copy_to_mem(AR_EAX, AR_EBX, get_type_size());
 	} else if (get_type() == ST_DOUBLE)
-		if (keep_val)
-			_asm_fp_assign(cmd_list, keep_val);
-		else
-			_asm_gen_code_fp(cmd_list);
+		_asm_fp_assign(cmd_list, keep_val);
 	else {
 		right->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
