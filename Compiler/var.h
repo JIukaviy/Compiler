@@ -91,6 +91,11 @@ inline void var_t<double>::asm_print(ostream& os) {
 }
 
 template<>
+inline void var_t<char>::asm_print(ostream& os) {
+	os << (int)val;
+}
+
+template<>
 inline void var_t<string>::asm_print(ostream& os) {
 	os << "OFFSET STR_LITERAL(\"" << val << "\")";
 }
