@@ -33,6 +33,8 @@ public:
 	virtual operator bool() = 0;
 	virtual void print(ostream& os) = 0;
 	virtual void asm_print(ostream& os) = 0;
+	virtual void full_print(ostream& os) = 0;
+	virtual bool is_null() = 0;
 };
 
 template <typename T>
@@ -49,7 +51,9 @@ public:
 	operator bool() override;
 	T& get_val();
 	void print(ostream& os) override;
+	void full_print(ostream& os) override;
 	void asm_print(ostream& os) override;
+	bool is_null() override;
 };
 
 template<typename T>
@@ -63,8 +67,22 @@ inline void var_t<T>::print(ostream& os) {
 }
 
 template<typename T>
+inline void var_t<T>::full_print(ostream & os) {
+	print(os);
+}
+
+template<typename T>
 inline void var_t<T>::asm_print(ostream & os) {
 	print(os);
+}
+
+template<typename T>
+inline bool var_t<T>::is_null() {
+	return val == 0;
+}
+template<>
+inline bool var_t<string>::is_null() {
+	return val.empty();
 }
 
 template<>
@@ -72,19 +90,18 @@ inline void var_t<double>::asm_print(ostream& os) {
 	os << "R8(" << scientific << val << ')';
 }
 
-
 template<>
 inline void var_t<string>::asm_print(ostream& os) {
 	os << "OFFSET STR_LITERAL(\"" << val << "\")";
 }
 
 template<>
-inline void var_t<char>::print(ostream& os) {
+inline void var_t<char>::full_print(ostream& os) {
 	os << '\'' << val << '\'';
 }
 
 template<>
-inline void var_t<string>::print(ostream& os) {
+inline void var_t<string>::full_print(ostream& os) {
 	os << '\"' << val << '\"';
 }
 
