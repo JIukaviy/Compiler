@@ -16,8 +16,7 @@ public:
 	bool is_lvalue();
 	virtual pos_t get_pos() = 0;
 	virtual type_ptr get_type() = 0;
-	virtual void asm_gen_code(asm_cmd_list_ptr cmd_list);
-	virtual void asm_get_val(asm_cmd_list_ptr cmd_list);
+	virtual void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
 	virtual void asm_get_addr(asm_cmd_list_ptr cmd_list);
 	virtual var_ptr eval(); //  идает исключение в случае если выражение невозможно вычислить во врем€ компил€ции
 	virtual int get_type_size();
@@ -37,7 +36,7 @@ public:
 	type_ptr get_type() override;
 	pos_t get_pos();
 	bool is_null();
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	var_ptr eval() override;
 };
@@ -56,7 +55,7 @@ public:
 	type_ptr get_type() override;
 	shared_ptr<sym_with_type_t> get_var();
 	pos_t get_pos();
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	var_ptr eval() override;
 };
@@ -75,7 +74,7 @@ public:
 	expr_un_op_t(token_ptr op, bool lvalue = false);
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_t* get_expr();
 	void set_operand(expr_t* operand);
 	token_ptr get_op();
@@ -95,28 +94,27 @@ public:
 class expr_get_addr_un_op_t : public expr_prefix_un_op_t {
 public:
 	expr_get_addr_un_op_t(token_ptr op);
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	type_ptr get_type() override;
 };
 
 class expr_dereference_op_t : public expr_prefix_un_op_t {
 public:
 	expr_dereference_op_t(token_ptr op);
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
 	type_ptr get_type();
 };
 
 class expr_prefix_inc_dec_op_t : public expr_prefix_un_op_t {
 public:
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_prefix_inc_dec_op_t(token_ptr op);
 };
 
 class expr_prefix_add_sub_un_op_t : public expr_prefix_un_op_t {
 public:
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_prefix_add_sub_un_op_t(token_ptr op);
 };
 
@@ -128,7 +126,7 @@ public:
 
 class expr_prefix_bit_not_un_op_t : public expr_prefix_un_op_t {
 public:
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_prefix_bit_not_un_op_t(token_ptr op);
 };
 
@@ -142,8 +140,7 @@ public:
 
 class expr_postfix_inc_dec_op_t : public expr_postfix_un_op_t {
 public:
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_postfix_inc_dec_op_t(token_ptr op);
 };
 
@@ -158,10 +155,8 @@ protected:
 	vector<bool(*)(expr_t* left, expr_t* right)> or_conditions;
 	vector<bool(*)(expr_t** left, expr_t** right)> type_convertions;
 	vector<bool(*)(expr_t** left, expr_t** right)> pre_check_type_convertions;
-	virtual void _asm_gen_code_int(asm_cmd_list_ptr cmd_list);
-	virtual void _asm_get_val_int(asm_cmd_list_ptr cmd_list);
-	virtual void _asm_gen_code_fp(asm_cmd_list_ptr cmd_list);
-	virtual void _asm_get_val_fp(asm_cmd_list_ptr cmd_list);
+	virtual void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val);
+	virtual void _asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val);
 public:
 	expr_bin_op_t(token_ptr op);
 	void print_l(ostream& os, int level) override;
@@ -173,26 +168,22 @@ public:
 	pos_t get_pos() override;
 	type_ptr get_type() override;
 	static expr_bin_op_t* make_bin_op(token_ptr op);
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	var_ptr eval() override;
 };
 
 class expr_base_assign_bin_op_t : public expr_bin_op_t {
 protected:
-	void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
-	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	virtual void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val);
 	virtual void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val);
 public:
-	void asm_get_val(asm_cmd_list_ptr) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	expr_base_assign_bin_op_t(token_ptr op);
 };
 
 class expr_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
@@ -210,14 +201,13 @@ public:
 };
 
 class expr_arithmetic_bin_op_t : public expr_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_arithmetic_bin_op_t(token_ptr token);
 };
 
 class expr_arithmetic_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;;
 	void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
@@ -225,40 +215,37 @@ public:
 };
 
 class expr_add_bin_op_t : public expr_arithmetic_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_add_bin_op_t(token_ptr op);
 };
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr) override;
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
 
 class expr_sub_bin_op_t : public expr_arithmetic_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_sub_bin_op_t(token_ptr op);
 };
 
 class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr) override;
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
 
 class expr_mod_bin_op_t : public expr_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_mod_bin_op_t(token_ptr op);
 };
 
 class expr_mod_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr) override;
-	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_mod_assign_bin_op_t(token_ptr op);
 };
@@ -280,13 +267,13 @@ public:
 };
 
 class expr_shift_bin_op_t : public expr_bin_op_t {
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_shift_bin_op_t(token_ptr op);
 };
 
 class expr_shift_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_shift_assign_bin_op_t(token_ptr op);
 };
@@ -329,7 +316,7 @@ public:
 	expr_t* get_index();
 	void set_operands(expr_t* arr, expr_t* index);
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	type_ptr get_type() override;
 	pos_t get_pos();
 };
@@ -340,7 +327,6 @@ class expr_func_t : public expr_t {
 	expr_t* func;
 	token_ptr brace;
 	shared_ptr<sym_type_func_t> _get_func_type();
-	void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
 protected:
 	vector<expr_t*> args;
 	string asm_func_name;
@@ -350,8 +336,7 @@ public:
 	void short_print_l(ostream& os, int level) override;
 	void set_operands(expr_t* f, vector<expr_t*> args_);
 	type_ptr get_type() override;
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	int get_args_size();
 	pos_t get_pos() override;
 };
@@ -383,7 +368,7 @@ public:
 	token_ptr get_op();
 	token_ptr get_member();
 	void asm_get_addr(asm_cmd_list_ptr cmd_list) override;
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	type_ptr get_type() override;
 	pos_t get_pos() override;
 };
@@ -398,9 +383,8 @@ public:
 	void print_l(ostream& os, int level) override;
 	void short_print_l(ostream& os, int level) override;
 	void set_operand(expr_t* expr, type_ptr type);
-	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
+	void asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 	type_ptr get_type() override;
 	pos_t get_pos() override;
-	void asm_get_val(asm_cmd_list_ptr cmd_list) override;
 	var_ptr eval() override;
 };
