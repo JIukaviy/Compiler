@@ -33,11 +33,11 @@ void asm_generator_init() {
 #include "asm_mem_type.h"
 #undef register_mem_type
 
-#define register_register(reg_name, parent_reg_name, size) \
-	asm_reg_to_str[AR_##reg_name] = lower_case(#reg_name); \
-	size_of_reg[AR_##reg_name] = size; \
-	parent_of[AR_##reg_name] = AR_##parent_reg_name; \
-	child_by_size[AR_##parent_reg_name][size] = AR_##reg_name;
+#define register_register(reg_name, reg_incode_name, parent_reg_name, size) \
+	asm_reg_to_str[AR_##reg_incode_name] = #reg_name; \
+	size_of_reg[AR_##reg_incode_name] = size; \
+	parent_of[AR_##reg_incode_name] = AR_##parent_reg_name; \
+	child_by_size[AR_##parent_reg_name][size] = AR_##reg_incode_name;
 #include "asm_registers.h"
 #undef register_register
 

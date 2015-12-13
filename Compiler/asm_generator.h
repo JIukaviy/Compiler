@@ -14,7 +14,7 @@ void asm_generator_init();
 
 enum ASM_REGISTER {
 AR_NONE,
-#define register_register(reg_name, parent_reg_name, size) AR_##reg_name,
+#define register_register(reg_name, reg_incode_name, parent_reg_name, size) AR_##reg_incode_name,
 #include "asm_registers.h"
 #undef register_register
 };
