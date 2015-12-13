@@ -1079,6 +1079,8 @@ void expr_shift_assign_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list, bo
 	cmd_list->mov(AR_CL, AR_AL);
 	cmd_list->_add_op_lderef_ls(token_to_int_op(op),
 		AR_EBX, AR_CL, asm_gen_t::mtype_by_size(get_type_size()));
+	if (keep_val)
+		cmd_list->mov_rderef(AR_EAX, AR_EBX, get_type_size());
 }
 
 //-----------------------------------TERNARY_OPERATOR-----------------------------------

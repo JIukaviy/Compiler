@@ -344,8 +344,6 @@ public:
 //----------------PRINTF_OPERATOR---------------
 
 class expr_printf_op_t : public expr_func_t {
-protected:
-	void set_operands(expr_t* f, vector<expr_t*> args_);
 public:
 	expr_printf_op_t(token_ptr op);
 	void set_operands(vector<expr_t*> args);
