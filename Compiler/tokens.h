@@ -113,7 +113,7 @@ void token_with_value_t<T>::short_print_l(ostream& os, int level) {
 
 template<typename T>
 inline bool token_with_value_t<T>::is_null() {
-	return var == 0;
+	return var->is_null();
 }
 
 template<>

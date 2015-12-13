@@ -95,7 +95,7 @@ expr_t* parser_t::tern_op() {
 
 expr_t* parser_t::left_associated_bin_op(int p) {
 	if (p == 4)
-		return printf_un_op();
+		return printf_op();
 	expr_t* left = left_associated_bin_op(p-1);
 	token_ptr op = la->get();
 	while (op->is(op_by_priority[p-1])) {
@@ -108,15 +108,13 @@ expr_t* parser_t::left_associated_bin_op(int p) {
 	return left;
 }
 
-expr_t* parser_t::printf_un_op() {
+expr_t* parser_t::printf_op() {
 	token_ptr op = la->get();
 	if (op == T_KWRD_PRINTF) {
 		la->next();
-		la->require(T_BRACKET_OPEN, 0);
-		expr_un_op_t* un_op = expr_prefix_un_op_t::make_prefix_un_op(op);
-		un_op->set_operand(parse_expr());
-		la->require(T_BRACKET_CLOSE, 0);
-		return un_op;
+		expr_printf_op_t* printf_op = new expr_printf_op_t(op);
+		printf_op->set_operands(parse_func_args());
+		return printf_op;
 	} else
 		return prefix_un_op();
 }
@@ -237,17 +235,10 @@ sym_ptr parser_t::parse_declaration(decl_raw_t decl, sym_table_ptr sym_table, bo
 
 void parser_t::optimize_type(type_ptr type) {
 	type_base_ptr base_type = type->get_base_type();
-	bool struct_definition = base_type == ST_STRUCT && base_type->completed();
-	type_base_ptr finded_type = dynamic_pointer_cast<type_base_t>(struct_definition ?
-																	sym_table->find_local(base_type) : sym_table->find_global(base_type));
+	type_base_ptr finded_type = dynamic_pointer_cast<type_base_t>(sym_table->find_global(base_type));
 	if (finded_type) {
 		shared_ptr<sym_type_alias_t> alias = dynamic_pointer_cast<sym_type_alias_t>(finded_type);
 		finded_type = alias ? alias->get_type() : finded_type;
-		if (struct_definition) {
-			if (finded_type->completed())
-				throw RedefinitionOfSymbol(finded_type, base_type);
-			static_pointer_cast<sym_type_struct_t>(finded_type)->set_sym_table(static_pointer_cast<sym_type_struct_t>(base_type)->get_sym_table());
-		}
 		type->set_base_type(finded_type);
 		return;
 	}
@@ -281,15 +272,31 @@ decl_raw_t parser_t::parse_declaration_raw() {
 			else if (type_spec == T_KWRD_STRUCT) {
 				la->next();
 				struct_ident = la->require(T_IDENTIFIER, 0);
-				sym_table_ptr  struct_sym_table = nullptr;
+				sym_table_ptr struct_sym_table = nullptr;
 				auto strct = shared_ptr<sym_type_struct_t>(new sym_type_struct_t(struct_ident));
+				strct->set_token(type_spec);
+				shared_ptr<sym_type_struct_t> finded_struct;
 				if (la->get() == T_BRACE_OPEN) {
+					finded_struct = dynamic_pointer_cast<sym_type_struct_t>(sym_table->find_local(strct));
+					if (finded_struct && finded_struct->completed())
+						throw RedefinitionOfSymbol(finded_struct, strct);
 					sym_table_ptr strct_table = sym_table_ptr(new sym_table_t(prelude_sym_table));
-					parse_struct_decl_list(strct_table);
 					strct->set_sym_table(strct_table);
+					if (!finded_struct)
+						sym_table->insert(strct);
+					parse_struct_decl_list(strct_table);
+					if (finded_struct) {
+						finded_struct->set_sym_table(strct_table);
+						strct = finded_struct;
+					}
+				} else {
+					finded_struct = dynamic_pointer_cast<sym_type_struct_t>(sym_table->find_global(strct));
+					if (finded_struct)
+						strct = finded_struct;
+					else
+						sym_table->insert(strct);
 				}
 				base_type = strct;
-				base_type->set_token(type_spec);
 				continue;
 			} else
 				assert(false);
@@ -301,7 +308,7 @@ decl_raw_t parser_t::parse_declaration_raw() {
 
 	if (!type_spec)
 		throw TypeSpecIsExpected(la->get());
-	
+
 	type_chain_t chain = parse_declarator();
 	decl_raw_t res(chain);
 	bool is_ptr = false;
@@ -733,9 +740,10 @@ void parser_t::print_statements(ostream& os) {
 
 void parser_t::print_asm_code(ostream& os) {
 	if (la->next() != T_EMPTY) {
-		asm_gen_ptr gen(new asm_generator_t);
+		asm_gen_ptr gen(new asm_gen_t);
 		stmt_ptr main_block;
 		parse_top_level_stmt();
+		top_sym_table->asm_set_offset_for_local_vars(0, AR_NONE);
 		for each (auto sym in *top_sym_table) {
 			if (sym == ST_FUNC) {
 				auto sym_func = dynamic_pointer_cast<sym_func_t>(sym);
@@ -798,4 +806,5 @@ void parser_init() {
 #undef register_token
 
 	init_parser_symbol_node();
+	parser_expression_node_init();
 }

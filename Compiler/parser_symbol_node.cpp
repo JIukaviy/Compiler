@@ -122,11 +122,11 @@ bool type_base_t::completed() {
 }
 
 int type_base_t::get_size() {
-	throw SemanticError("Can't get size of the symbol", token->get_pos());
+	throw CantGetSize();
 }
 
 int type_base_t::get_aligned_size() {
-	return asm_generator_t::align_size(get_size());
+	return asm_gen_t::align_size(get_size());
 }
 
 bool type_base_t::is_integer(SYM_TYPE sym_type) {
@@ -326,7 +326,7 @@ sym_type_double_t::sym_type_double_t() : symbol_t(ST_DOUBLE) {
 }
 
 int sym_type_double_t::get_size() {
-	return sizeof(float);
+	return sizeof(double);
 }
 
 //--------------------------------SYMBOL_WITH_TYPE-------------------------------
@@ -424,10 +424,10 @@ void sym_global_var_t::asm_register(asm_gen_ptr gen) {
 	int dup = 0;
 	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
-		cmd_list->mov(asm_get_name(), asm_generator_t::reg_by_size(AR_EAX, get_type_size()));
+		cmd_list->mov(asm_get_name(), asm_gen_t::reg_by_size(AR_EAX, get_type_size()));
 	} else if (type == ST_STRUCT || type == ST_ARRAY)
-		dup = asm_generator_t::alignment(type->get_size() / asm_generator_t::size_of(AMT_DWORD));
-	gen->add_global_var(asm_get_name(), AMT_DWORD, cmd_list, dup);
+		dup = asm_gen_t::alignment(type->get_size() / asm_gen_t::size_of(AMT_DWORD));
+	gen->add_global_var(asm_get_name(), type == ST_DOUBLE ? AMT_QWORD : AMT_DWORD, cmd_list, dup);
 }
 
 void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
@@ -436,11 +436,13 @@ void sym_global_var_t::asm_get_addr(asm_cmd_list_ptr cmd_list) {
 
 void sym_global_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	if (type == ST_ARRAY || type == ST_STRUCT) {
-		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i += asm_generator_t::size_of(AMT_DWORD)) {
+		for (int i = 0; i < asm_gen_t::alignment(type->get_size()); i += asm_gen_t::size_of(AMT_DWORD)) {
 			cmd_list->mov(AR_EAX, asm_get_name(), i);
 			cmd_list->push(AR_EAX);
 		}
-	} else
+	} else if (type == ST_DOUBLE)
+		cmd_list->fld(asm_get_name());
+	else
 		cmd_list->mov(AR_EAX, asm_get_name());
 }
 
@@ -450,13 +452,13 @@ sym_local_var_t::sym_local_var_t(token_ptr identifier) : symbol_t(ST_VAR, identi
 
 int sym_local_var_t::asm_allocate(asm_cmd_list_ptr cmd_list) {
 	/*if (type == ST_STRUCT || type == ST_ARRAY) {
-		for (int i = 0; i < asm_generator_t::alignment(type->get_size()); i++) {
+		for (int i = 0; i < asm_gen_t::alignment(type->get_size()); i++) {
 			cmd_list->mov(AR_EAX, offset_reg, offset);
 			cmd_list->push(AR_EAX);
 		}
 	} else
 		cmd_list->push(offset_reg, offset);*/ // Add inittializer
-	int aligned_size = asm_generator_t::alignment(get_type_size());
+	int aligned_size = asm_gen_t::alignment(get_type_size());
 	if (type->is_integer() && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
 		cmd_list->push(AR_EAX);
@@ -469,7 +471,7 @@ void sym_local_var_t::asm_init(asm_cmd_list_ptr cmd_list) {
 	if ((type->is_integer() || type == ST_PTR) && !init_list.empty()) {
 		init_list[0]->asm_get_val(cmd_list);
 		cmd_list->mov_lderef(offset_reg, AR_EAX, get_type_size(), offset);
-	} else if (type->is_arithmetic());
+	} else if (type == ST_DOUBLE);
 	else if (type == ST_ARRAY && !init_list.empty()) {
 		auto arr = dynamic_pointer_cast<sym_type_array_t>(type->get_base_type());
 		int elem_size = arr->get_element_type()->get_size();
@@ -495,6 +497,8 @@ void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 	int type_size = type->get_size();
 	if (type == ST_STRUCT)
 		asm_get_addr(cmd_list);
+	else if (type == ST_DOUBLE)
+		cmd_list->fld_deref(offset_reg, AMT_QWORD, offset);
 	else
 		cmd_list->mov_rderef(AR_EAX, offset_reg, type_size, offset);
 }
@@ -502,11 +506,7 @@ void sym_local_var_t::asm_get_val(asm_cmd_list_ptr cmd_list) {
 void sym_local_var_t::asm_set_offset(int offset_, ASM_REGISTER offset_reg_) {
 	offset = offset_;
 	offset_reg = offset_reg_;
-	if (type == ST_STRUCT) {
-		auto struct_type = dynamic_pointer_cast<sym_type_struct_t>(type->get_base_type());
-		sym_table_ptr sym_table = struct_type->get_sym_table();
-		sym_table->asm_set_offset_for_local_vars(0, AR_EAX);
-	}
+	assert(offset_reg_);
 }
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
@@ -639,7 +639,7 @@ vector<type_ptr> sym_type_func_t::get_arg_types() {
 int sym_type_func_t::get_args_size() {
 	int res = 0;
 	for each (auto arg in arg_types)
-		res += asm_generator_t::alignment(arg->get_size());
+		res += asm_gen_t::alignment(arg->get_size());
 	return res;
 }
 
@@ -714,17 +714,21 @@ void sym_func_t::print_l(ostream& os, int level) {
 }
 
 void sym_func_t::asm_generate_code(asm_cmd_list_ptr cmd_list) {
+	if (!block)
+		throw FuncNotDefined(sym_ptr(this));
 	cmd_list->mov(AR_EBP, AR_ESP);
 	block->asm_generate_code(cmd_list, -4);
 }
 
 void sym_func_t::asm_set_offset() {
+	if (!sym_table)
+		throw FuncNotDefined(sym_ptr(this));
 	int offset = 4;
 	for each (auto var in *sym_table) {
 		if (var == ST_VAR) {
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			local_var->asm_set_offset(offset, AR_EBP);
-			offset += asm_generator_t::alignment(local_var->get_type_size());
+			offset += asm_gen_t::alignment(local_var->get_type_size());
 		}
 	}
 }
@@ -823,6 +827,8 @@ sym_table_ptr  sym_type_struct_t::get_sym_table() {
 }
 
 shared_ptr<sym_var_t> sym_type_struct_t::get_member(token_ptr member) {
+	if (!sym_table)
+		throw InvalidIncompleteType(token->get_pos());
 	auto res = dynamic_pointer_cast<sym_var_t>(sym_table->find_global(member));
 	if (!res)
 		throw StructHasNoMember(this, member);

@@ -132,10 +132,9 @@
     <ClCompile Include="var.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="asm_bin_op.h" />
     <ClInclude Include="asm_generator.h" />
     <ClInclude Include="asm_mem_type.h" />
-    <ClInclude Include="asm_un_op.h" />
+    <ClInclude Include="asm_op.h" />
     <ClInclude Include="var.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="lexeme_analyzer.h" />

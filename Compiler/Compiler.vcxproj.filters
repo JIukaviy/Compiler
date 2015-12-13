@@ -122,12 +122,6 @@
     <ClInclude Include="parser_symbol_node.h">
       <Filter>Заголовочные файлы\parser_nodes</Filter>
     </ClInclude>
-    <ClInclude Include="asm_bin_op.h">
-      <Filter>Заголовочные файлы\asm</Filter>
-    </ClInclude>
-    <ClInclude Include="asm_un_op.h">
-      <Filter>Заголовочные файлы\asm</Filter>
-    </ClInclude>
     <ClInclude Include="asm_mem_type.h">
       <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
@@ -139,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="var_bin_operators.h">
       <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_op.h">
+      <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
