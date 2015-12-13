@@ -437,8 +437,12 @@ expr_prefix_add_sub_un_op_t::expr_prefix_add_sub_un_op_t(token_ptr op) : expr_pr
 void expr_prefix_add_sub_un_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) {
 	if (keep_val) {
 		expr->asm_gen_code(cmd_list, true);
-		if (op == T_OP_SUB)
-			cmd_list->neg(AR_EAX, get_type_size());
+		if (op == T_OP_SUB) {
+			if (get_type()->is_integer())
+				cmd_list->neg(AR_EAX, get_type_size());
+			else
+				cmd_list->fchs();
+		}
 	}
 }
 
