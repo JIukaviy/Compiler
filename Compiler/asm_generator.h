@@ -237,7 +237,7 @@ public:
 	void _alloc_in_stack(int size);
 	void _free_in_stack(int size);
 	void _cast_int_to_double(ASM_REGISTER src_reg);
-	void _cast_double_to_int(ASM_REGISTER dst_reg);
+	void _cast_double_to_int(ASM_REGISTER dst_reg, bool keep_val);
 	void _cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg);
 
 	void _push_str(string str);

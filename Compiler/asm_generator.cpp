@@ -382,8 +382,11 @@ void asm_cmd_list_t::_cast_int_to_double(ASM_REGISTER src_reg) {
 	fild(INT_BUFF_NAME);
 }
 
-void asm_cmd_list_t::_cast_double_to_int(ASM_REGISTER dst_reg) {
-	fistp(INT_BUFF_NAME);
+void asm_cmd_list_t::_cast_double_to_int(ASM_REGISTER dst_reg, bool keep_val) {
+	if (keep_val)
+		fist(INT_BUFF_NAME);
+	else
+		fistp(INT_BUFF_NAME);
 	mov(dst_reg, INT_BUFF_NAME);
 }
 

@@ -180,10 +180,11 @@ public:
 
 class expr_base_assign_bin_op_t : public expr_bin_op_t {
 protected:
-	virtual void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
+	void _asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val);
 	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
 	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
-	void _asm_fp_assign(asm_cmd_list_ptr cmd_list, bool keep_val);
+	virtual void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val);
+	virtual void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val);
 public:
 	void asm_get_val(asm_cmd_list_ptr) override;
 	void asm_gen_code(asm_cmd_list_ptr cmd_list) override;
@@ -192,6 +193,8 @@ public:
 
 class expr_assign_bin_op_t : public expr_base_assign_bin_op_t {
 	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val) override;
+	void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_assign_bin_op_t(token_ptr op);
 };
@@ -213,8 +216,10 @@ public:
 };
 
 class expr_arithmetic_assign_bin_op_t : public expr_base_assign_bin_op_t {
-	void _asm_gen_code_int(asm_cmd_list_ptr) override;
-	void _asm_get_val_int(asm_cmd_list_ptr) override;
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
+	void _asm_assign_fp_to_fp(asm_cmd_list_ptr cmd_list, bool keep_val) override;
+	void _asm_assign_fp_to_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_arithmetic_assign_bin_op_t(token_ptr token);
 };
@@ -227,6 +232,7 @@ public:
 
 class expr_add_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 	void _asm_gen_code_int(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
 public:
 	expr_add_assign_bin_op_t(token_ptr op);
 };
@@ -239,6 +245,7 @@ public:
 
 class expr_sub_assign_bin_op_t : public expr_arithmetic_assign_bin_op_t {
 	void _asm_gen_code_int(asm_cmd_list_ptr) override;
+	void _asm_get_val_int(asm_cmd_list_ptr cmd_list) override;
 public:
 	expr_sub_assign_bin_op_t(token_ptr op);
 };
