@@ -420,6 +420,7 @@ void expr_prefix_inc_dec_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep
 		cmd_list->_add_op_deref(token_to_int_op(op), AR_EAX, get_type_size());
 	else {
 		cmd_list->fld_deref(AR_EAX, AMT_QWORD);
+		cmd_list->fld1();
 		cmd_list->_add_op(op == T_OP_INC ? AO_FADD : AO_FSUB);
 		cmd_list->_add_op_deref(keep_val ? AO_FST : AO_FSTP, AR_EAX, AMT_QWORD);
 		return;
@@ -518,6 +519,7 @@ void expr_postfix_inc_dec_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list, bool kee
 		cmd_list->fld_deref(AR_EAX, AMT_QWORD);
 		if (keep_val)
 			cmd_list->fld(AR_ST_0);
+		cmd_list->fld1();
 		cmd_list->_add_op(op == T_OP_INC ? AO_FADD : AO_FSUB);
 		cmd_list->fstp_deref(AR_EAX, AMT_QWORD);
 	}
