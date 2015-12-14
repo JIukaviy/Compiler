@@ -33,6 +33,12 @@ void parser_expression_node_init() {
 	token_to_int_op_map[T_OP_RIGHT] = AO_SHR;
 	token_to_int_op_map[T_OP_RIGHT_ASSIGN] = AO_SHR;
 	token_to_int_op_map[T_OP_ASSIGN] = AO_MOV;
+	token_to_int_op_map[T_OP_EQ] = AO_SETE;
+	token_to_int_op_map[T_OP_NEQ] = AO_SETNE;
+	token_to_int_op_map[T_OP_L] = AO_SETL;
+	token_to_int_op_map[T_OP_LE] = AO_SETLE;
+	token_to_int_op_map[T_OP_G] = AO_SETG;
+	token_to_int_op_map[T_OP_GE] = AO_SETGE;
 
 	token_to_fp_op_map[T_OP_ADD] = AO_FADD;
 	token_to_fp_op_map[T_OP_ADD_ASSIGN] = AO_FADD;
@@ -42,6 +48,12 @@ void parser_expression_node_init() {
 	token_to_fp_op_map[T_OP_MUL_ASSIGN] = AO_FMUL;
 	token_to_fp_op_map[T_OP_DIV] = AO_FDIV;
 	token_to_fp_op_map[T_OP_DIV_ASSIGN] = AO_FDIV;
+	token_to_fp_op_map[T_OP_EQ] = AO_SETE;
+	token_to_fp_op_map[T_OP_NEQ] = AO_SETNE;
+	token_to_fp_op_map[T_OP_L] = AO_SETGE;
+	token_to_fp_op_map[T_OP_LE] = AO_SETG;
+	token_to_fp_op_map[T_OP_G] = AO_SETLE;
+	token_to_fp_op_map[T_OP_GE] = AO_SETL;
 
 	token_to_fp_rev_op_map[T_OP_ADD] = AO_FADD;
 	token_to_fp_rev_op_map[T_OP_ADD_ASSIGN] = AO_FADD;
@@ -621,7 +633,7 @@ void expr_bin_op_t::_asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val) {
 
 void expr_bin_op_t::asm_gen_code(asm_cmd_list_ptr cmd_list, bool keep_val) {
 	if (keep_val) {
-		if (get_type() == ST_DOUBLE) {
+		if (left->get_type() == ST_DOUBLE || right->get_type() == ST_DOUBLE) {
 			left->asm_gen_code(cmd_list, true);
 			right->asm_gen_code(cmd_list, true);
 			_asm_gen_code_fp(cmd_list, true);
@@ -1038,6 +1050,20 @@ expr_relational_bin_op_t::expr_relational_bin_op_t(token_ptr op) : expr_arithmet
 
 type_ptr expr_relational_bin_op_t::get_type() {
 	return parser_t::get_type(ST_INTEGER);
+}
+
+void expr_relational_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) {
+	cmd_list->cmp(AR_EAX, AR_EBX);
+	cmd_list->_add_op(token_to_int_op(op), AR_DL);
+	cmd_list->_cast_char_to_int(AR_EDX, AR_EAX);
+}
+
+void expr_relational_bin_op_t::_asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val) {
+	cmd_list->fcompp();
+	cmd_list->fstsw(AR_AX);
+	cmd_list->sahf();
+	cmd_list->_add_op(token_to_fp_op(op), AR_DL);
+	cmd_list->_cast_char_to_int(AR_EDX, AR_EAX);
 }
 
 //--------------------------------------EQUALITY_OPERATORS----------------------------------------------

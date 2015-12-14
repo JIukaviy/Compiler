@@ -143,6 +143,24 @@ void asm_function_t::print(ostream& os) {
 
 //------------------------------ASM_COMMANDS-------------------------------------------
 
+//------------------------------ASM_LABEL-------------------------------------------
+
+asm_label_t::asm_label_t() {
+	id = global_id++;
+}
+
+int asm_label_t::global_id = 0;
+
+void asm_label_t::print(ostream& os) {
+	print_go_to(os);
+	os << ':';
+}
+
+void asm_label_t::print_go_to(ostream & os) {
+	os << "LABEL_" << id;
+}
+
+
 //------------------------------ASM_STR_COMMAND-------------------------------------------
 
 asm_str_cmd_t::asm_str_cmd_t(string str) : str(str) {}
@@ -153,14 +171,14 @@ void asm_str_cmd_t::print(ostream& os) {
 
 //------------------------------ASM_OPERATOR-------------------------------------------
 
-asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand) : 
+asm_operator_t::asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand) : 
 	op(op), left_operand(left_operand), right_operand(right_operand) {}
 
-asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand) : op(op), left_operand(left_operand) {}
+asm_operator_t::asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand) : op(op), left_operand(left_operand) {}
 
-asm_oprtr_t::asm_oprtr_t(ASM_OPERATOR op) : op(op) {}
+asm_operator_t::asm_operator_t(ASM_OPERATOR op) : op(op) {}
 
-void asm_oprtr_t::print(ostream& os) {
+void asm_operator_t::print(ostream& os) {
 	os << asm_op_to_str.at(op);
 	if (left_operand) {
 		os << ' ';
@@ -236,7 +254,7 @@ void asm_oprtr_t::print(ostream& os) {
 #undef register_op
 
 void asm_cmd_list_t::_add_op(ASM_OPERATOR op, asm_oprnd_ptr operand) {
-	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op, operand)));
+	commands.push_back(asm_cmd_ptr(new asm_operator_t(op, operand)));
 }
 
 void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER operand, int operand_size) {
@@ -264,11 +282,11 @@ void asm_cmd_list_t::_add_op_deref(ASM_OPERATOR op, ASM_REGISTER operand, int op
 }
 
 void asm_cmd_list_t::_add_op(ASM_OPERATOR op) {
-	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op)));
+	commands.push_back(asm_cmd_ptr(new asm_operator_t(op)));
 }
 
 void asm_cmd_list_t::_add_op(ASM_OPERATOR op, asm_oprnd_ptr left, asm_oprnd_ptr right) {
-	commands.push_back(asm_cmd_ptr(new asm_oprtr_t(op, left, right)));
+	commands.push_back(asm_cmd_ptr(new asm_operator_t(op, left, right)));
 }
 
 void asm_cmd_list_t::_add_op(ASM_OPERATOR op, ASM_REGISTER left, ASM_REGISTER right, int operand_size) {
@@ -393,6 +411,20 @@ void asm_cmd_list_t::_cast_double_to_int(ASM_REGISTER dst_reg, bool keep_val) {
 void asm_cmd_list_t::_cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg) {
 	xor_(dst_reg, dst_reg);
 	mov(dst_reg, src_reg, asm_gen_t::size_of(AMT_BYTE));
+}
+
+asm_label_ptr asm_cmd_list_t::_new_label() {
+	return asm_label_ptr(new asm_label_t);
+}
+
+asm_label_ptr asm_cmd_list_t::_insert_new_nabel() {
+	asm_label_ptr res = _new_label();
+	_insert_label(res);
+	return res;
+}
+
+void asm_cmd_list_t::_insert_label(asm_label_ptr label) {
+	commands.push_back(label);
 }
 
 void asm_cmd_list_t::_push_str(string str) {

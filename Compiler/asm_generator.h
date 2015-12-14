@@ -48,10 +48,6 @@ class asm_cmd_t : public asm_t {
 	
 };
 
-class asm_operator_t : public asm_cmd_t {
-
-};
-
 class asm_str_cmd_t : public asm_cmd_t {
 	string str;
 public:
@@ -59,15 +55,24 @@ public:
 	void print(ostream& os) override;
 };
 
-class asm_oprtr_t : public asm_operator_t {
+class asm_operator_t : public asm_cmd_t {
 	ASM_OPERATOR op;
 	asm_oprnd_ptr left_operand;
 	asm_oprnd_ptr right_operand;
 public:
-	asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand);
-	asm_oprtr_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand);
-	asm_oprtr_t(ASM_OPERATOR op);
+	asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand);
+	asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand);
+	asm_operator_t(ASM_OPERATOR op);
 	void print(ostream& os) override;
+};
+
+class asm_label_t : public asm_cmd_t {
+	int id;
+	static int global_id;
+public:
+	asm_label_t();
+	void print(ostream& os) override;
+	void print_go_to(ostream& os);
 };
 
 class asm_operand_t : public asm_t {
@@ -239,6 +244,10 @@ public:
 	void _cast_int_to_double(ASM_REGISTER src_reg);
 	void _cast_double_to_int(ASM_REGISTER dst_reg, bool keep_val);
 	void _cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg);
+
+	asm_label_ptr _new_label();
+	asm_label_ptr _insert_new_nabel();
+	void _insert_label(asm_label_ptr label);
 
 	void _push_str(string str);
 	void print(ostream& os) override;

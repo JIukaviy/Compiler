@@ -251,6 +251,8 @@ public:
 };
 
 class expr_relational_bin_op_t : public expr_arithmetic_bin_op_t {
+	void _asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool keep_val) override;
+	void _asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val) override;
 public:
 	expr_relational_bin_op_t(token_ptr op);
 	type_ptr get_type() override;
