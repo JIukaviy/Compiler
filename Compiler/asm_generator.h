@@ -44,9 +44,7 @@ public:
 	virtual void print(ostream& os) {};
 };
 
-class asm_cmd_t : public asm_t {
-	
-};
+class asm_cmd_t : public asm_t {};
 
 class asm_str_cmd_t : public asm_cmd_t {
 	string str;
@@ -66,18 +64,21 @@ public:
 	void print(ostream& os) override;
 };
 
-class asm_label_t : public asm_cmd_t {
+class asm_label_oprtr_t : public asm_cmd_t {
+	asm_label_ptr label;
+public:
+	asm_label_oprtr_t(asm_label_ptr label);
+	void print(ostream& os) override;
+};
+
+class asm_operand_t : public asm_t {};
+
+class asm_label_oprnd_t : public asm_operand_t {
 	int id;
 	static int global_id;
 public:
-	asm_label_t();
+	asm_label_oprnd_t();
 	void print(ostream& os) override;
-	void print_go_to(ostream& os);
-};
-
-class asm_operand_t : public asm_t {
-public:
-	//void print(ostream& os) override;
 };
 
 class asm_reg_oprnd_t : public asm_operand_t {
@@ -170,6 +171,7 @@ protected:
 public:
 #define register_asm_op(op_name, op_incode_name)\
 	void op_incode_name();\
+	void op_incode_name(asm_oprnd_ptr operand);\
 	void op_incode_name(ASM_REGISTER operand, int operand_size = 0);\
 	void op_incode_name(var_ptr operand);\
 	void op_incode_name(string operand);\

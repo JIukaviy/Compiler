@@ -50,10 +50,10 @@ void parser_expression_node_init() {
 	token_to_fp_op_map[T_OP_DIV_ASSIGN] = AO_FDIV;
 	token_to_fp_op_map[T_OP_EQ] = AO_SETE;
 	token_to_fp_op_map[T_OP_NEQ] = AO_SETNE;
-	token_to_fp_op_map[T_OP_L] = AO_SETGE;
-	token_to_fp_op_map[T_OP_LE] = AO_SETG;
-	token_to_fp_op_map[T_OP_G] = AO_SETLE;
-	token_to_fp_op_map[T_OP_GE] = AO_SETL;
+	token_to_fp_op_map[T_OP_L] = AO_SETL;
+	token_to_fp_op_map[T_OP_LE] = AO_SETLE;
+	token_to_fp_op_map[T_OP_G] = AO_SETG;
+	token_to_fp_op_map[T_OP_GE] = AO_SETGE;
 
 	token_to_fp_rev_op_map[T_OP_ADD] = AO_FADD;
 	token_to_fp_rev_op_map[T_OP_ADD_ASSIGN] = AO_FADD;

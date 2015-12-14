@@ -73,6 +73,7 @@ class stmt_if_t : public stmt_named_t<T_KWRD_IF> {
 public:
 	stmt_if_t(expr_t* condition, stmt_ptr then_stmt);
 	stmt_if_t(expr_t* condition, stmt_ptr then_stmt, stmt_ptr else_stmt);
+	void asm_generate_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 	void print_l(ostream& os, int level) override;
 };
 

@@ -71,6 +71,29 @@ void stmt_decl_t::print_l(ostream& os, int level) {
 	os << ';';
 }
 
+void stmt_if_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	if (!then_stmt && !else_stmt) {
+		condition->asm_gen_code(cmd_list, false);
+		return;
+	} else
+		condition->asm_gen_code(cmd_list, true);
+	cmd_list->test(AR_EAX, AR_EAX);
+	asm_label_ptr else_label = cmd_list->_new_label();
+	asm_label_ptr exit_label = cmd_list->_new_label();
+	if (then_stmt) {
+		cmd_list->jz(else_stmt ? else_label : exit_label);
+		then_stmt->asm_generate_code(cmd_list);
+		if (else_stmt)
+			cmd_list->jmp(exit_label);
+	} else
+		cmd_list->jnz(exit_label);
+	if (else_stmt) {
+		cmd_list->_insert_label(else_label);
+		else_stmt->asm_generate_code(cmd_list);
+	}
+	cmd_list->_insert_label(exit_label);
+}
+
 void stmt_if_t::print_l(ostream& os, int level) {
 	short_print_l(os, level);
 	os << " (";
