@@ -50,10 +50,10 @@ void parser_expression_node_init() {
 	token_to_fp_op_map[T_OP_DIV_ASSIGN] = AO_FDIV;
 	token_to_fp_op_map[T_OP_EQ] = AO_SETE;
 	token_to_fp_op_map[T_OP_NEQ] = AO_SETNE;
-	token_to_fp_op_map[T_OP_L] = AO_SETL;
-	token_to_fp_op_map[T_OP_LE] = AO_SETLE;
-	token_to_fp_op_map[T_OP_G] = AO_SETG;
-	token_to_fp_op_map[T_OP_GE] = AO_SETGE;
+	token_to_fp_op_map[T_OP_L] = AO_SETA;
+	token_to_fp_op_map[T_OP_LE] = AO_SETAE;
+	token_to_fp_op_map[T_OP_G] = AO_SETB;
+	token_to_fp_op_map[T_OP_GE] = AO_SETBE;
 
 	token_to_fp_rev_op_map[T_OP_ADD] = AO_FADD;
 	token_to_fp_rev_op_map[T_OP_ADD_ASSIGN] = AO_FADD;
@@ -1059,9 +1059,8 @@ void expr_relational_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool
 }
 
 void expr_relational_bin_op_t::_asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val) {
-	cmd_list->fcompp();
-	cmd_list->fstsw(AR_AX);
-	cmd_list->sahf();
+	cmd_list->fcomip(AR_ST_0, AR_ST_1);
+	cmd_list->fdecstp();
 	cmd_list->_add_op(token_to_fp_op(op), AR_DL);
 	cmd_list->_cast_char_to_int(AR_EDX, AR_EAX);
 }

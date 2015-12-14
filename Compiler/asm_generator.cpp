@@ -447,7 +447,7 @@ void asm_cmd_list_t::print(ostream& os) {
 
 void asm_gen_t::print_header(ostream& os) {
 	os <<
-		".386" << endl <<
+		".686" << endl <<
 		".model flat, C" << endl <<
 		"option casemap : none" << endl <<
 		"include \\masm32\\include\\msvcrt.inc" << endl <<
