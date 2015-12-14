@@ -15,8 +15,18 @@ stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr, stmt_
 stmt_for_t::stmt_for_t(expr_t* init_expr, expr_t* condition, expr_t* expr) : init_expr(init_expr), condition(condition), expr(expr) {}
 
 void statement_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+	asm_gen_entry_code(cmd_list, offset);
+	asm_gen_internal_code(cmd_list, offset);
+	asm_gen_exit_code(cmd_list);
+}
+
+void statement_t::asm_gen_entry_code(asm_cmd_list_ptr cmd_list, int offset) {}
+
+void statement_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
 	assert(false);
 }
+
+void statement_t::asm_gen_exit_code(asm_cmd_list_ptr cmd_list) {}
 
 void stmt_block_t::print_l(ostream& os, int level) {
 	os << '{' << endl;
@@ -37,14 +47,26 @@ void stmt_block_t::print_l(ostream& os, int level) {
 void stmt_block_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
 	if (statements.empty())
 		return;
-	int local_vars_size = asm_gen_t::alignment(sym_table->get_local_vars_size());
-	sym_table->asm_set_offset_for_local_vars(offset - local_vars_size + asm_gen_t::size_of(AMT_DWORD), AR_EBP);
-	cmd_list->_alloc_in_stack(local_vars_size);
+	asm_gen_entry_code(cmd_list, offset);
+	asm_gen_internal_code(cmd_list);
+	asm_gen_exit_code(cmd_list);
+}
+
+void stmt_block_t::asm_gen_entry_code(asm_cmd_list_ptr cmd_list, int offset) {
+	vars_size = asm_gen_t::alignment(sym_table->get_local_vars_size());
+	sym_table->asm_set_offset_for_local_vars(offset - vars_size + asm_gen_t::size_of(AMT_DWORD), AR_EBP);
+	cmd_list->_alloc_in_stack(vars_size);
 	sym_table->asm_init_local_vars(cmd_list);
-	offset -= local_vars_size;
+}
+
+void stmt_block_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	offset -= vars_size;
 	for each (auto stmt in statements)
 		stmt->asm_generate_code(cmd_list, offset);
-	cmd_list->_free_in_stack(local_vars_size);
+}
+
+void stmt_block_t::asm_gen_exit_code(asm_cmd_list_ptr cmd_list) {
+	cmd_list->_free_in_stack(vars_size);
 }
 
 void stmt_block_t::add_statement(stmt_ptr stmt) {
@@ -61,7 +83,7 @@ void stmt_expr_t::print_l(ostream& os, int level) {
 	os << ';';
 }
 
-void stmt_expr_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+void stmt_expr_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
 	expression->asm_gen_code(cmd_list, false);
 }
 
@@ -71,7 +93,7 @@ void stmt_decl_t::print_l(ostream& os, int level) {
 	os << ';';
 }
 
-void stmt_if_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+void stmt_if_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
 	if (!then_stmt && !else_stmt) {
 		condition->asm_gen_code(cmd_list, false);
 		return;
@@ -128,6 +150,24 @@ void stmt_loop_t::set_statement(stmt_ptr statement) {
 	stmt = statement;
 }
 
+void stmt_loop_t::asm_gen_entry_code(asm_cmd_list_ptr cmd_list, int offset) {
+	if (stmt)
+		stmt->asm_gen_entry_code(cmd_list, offset);
+}
+
+void stmt_loop_t::asm_gen_exit_code(asm_cmd_list_ptr cmd_list) {
+	if (stmt)
+		stmt->asm_gen_exit_code(cmd_list);
+}
+
+void stmt_loop_t::asm_gen_jmp_to_loop(asm_cmd_list_ptr cmd_list) {
+	cmd_list->jmp(loop_label);
+}
+
+void stmt_loop_t::asm_gen_jmp_to_exit_loop(asm_cmd_list_ptr cmd_list) {
+	cmd_list->jmp(exit_loop_label);
+}
+
 void stmt_while_t::print_l(ostream& os, int level) {
 	os << " (";
 	condition->short_print(os);
@@ -141,6 +181,21 @@ void stmt_while_t::print_l(ostream& os, int level) {
 			stmt->print_l(os, level);
 	} else
 		os << ';' << endl;
+}
+
+void stmt_while_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	if (!stmt) {
+		condition->asm_gen_code(cmd_list, false);
+		return;
+	}
+	loop_label = cmd_list->_insert_new_nabel();
+	exit_loop_label = cmd_list->_new_label();
+	condition->asm_gen_code(cmd_list, true);
+	cmd_list->test(AR_EAX, AR_EAX);
+	cmd_list->jz(exit_loop_label);
+	stmt->asm_gen_internal_code(cmd_list, offset);
+	cmd_list->jmp(loop_label);
+	cmd_list->_insert_label(exit_loop_label);
 }
 
 void stmt_for_t::print_l(ostream& os, int level) {
@@ -166,12 +221,33 @@ void stmt_for_t::print_l(ostream& os, int level) {
 		os << ';' << endl;
 }
 
+void stmt_for_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	init_expr->asm_gen_code(cmd_list, false);
+	loop_label = cmd_list->_insert_new_nabel();
+	exit_loop_label = cmd_list->_new_label();
+	condition->asm_gen_code(cmd_list, true);
+	cmd_list->test(AR_EAX, AR_EAX);
+	cmd_list->jz(exit_loop_label);
+	stmt->asm_gen_internal_code(cmd_list, offset);
+	expr->asm_gen_code(cmd_list, false);
+	cmd_list->jmp(loop_label);
+	cmd_list->_insert_label(exit_loop_label);
+}
+
+void stmt_break_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	parent->asm_gen_jmp_to_exit_loop(cmd_list);
+}
+
+void stmt_continue_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	parent->asm_gen_jmp_to_loop(cmd_list);
+}
+
 void stmt_return_t::set_ret_expr(expr_t* expr_) {
 	auto func_type = parent->get_func_type();
 	expr = auto_convert(expr_, func_type->get_element_type());
 }
 
-void stmt_return_t::asm_generate_code(asm_cmd_list_ptr cmd_list, int offset) {
+void stmt_return_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
 	expr->asm_gen_code(cmd_list, true);
 	cmd_list->mov(AR_ESP, AR_EBP);
 	cmd_list->ret();
