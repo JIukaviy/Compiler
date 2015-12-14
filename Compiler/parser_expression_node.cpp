@@ -1431,7 +1431,7 @@ void expr_printf_op_t::set_operands(vector<expr_t*> args_) {
 }
 
 type_ptr expr_printf_op_t::get_type() {
-	return parser_t::get_type(ST_VOID);
+	return parser_t::get_type(ST_INTEGER);
 }
 
 
