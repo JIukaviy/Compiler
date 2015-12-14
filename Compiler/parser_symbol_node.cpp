@@ -32,6 +32,7 @@ void init_parser_symbol_node() {
 }
 
 type_base_ptr type_base_t::make_type(SYM_TYPE sym_type) {
+	assert(sym_type != ST_NONE);
 	assert(sym_type != ST_ALIAS);
 	assert(sym_type != ST_FUNC);
 	assert(sym_type != ST_FUNC_TYPE);
@@ -511,7 +512,9 @@ void sym_local_var_t::asm_set_offset(int offset_, ASM_REGISTER offset_reg_) {
 
 //--------------------------------SYMBOL_TYPE_POINTER-------------------------------
 
-sym_type_ptr_t::sym_type_ptr_t() : symbol_t(ST_PTR) {}
+sym_type_ptr_t::sym_type_ptr_t() : symbol_t(ST_PTR) {
+	set_element_type(parser_t::get_type(ST_VOID));
+}
 
 int sym_type_ptr_t::get_size() {
 	return sizeof(void*);

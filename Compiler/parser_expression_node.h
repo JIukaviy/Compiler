@@ -1,4 +1,5 @@
 #pragma once
+
 #include "parser_symbol_node.h"
 #include "asm_generator.h"
 #include "tokens.h"
@@ -343,14 +344,23 @@ public:
 	pos_t get_pos() override;
 };
 
-//----------------PRINTF_OPERATOR---------------
+//----------------RESERVED_FUNCTIONS---------------
 
-class expr_printf_op_t : public expr_func_t {
+class expr_reserved_func_t : public expr_func_t {
 public:
-	expr_printf_op_t(token_ptr op);
-	void set_operands(vector<expr_t*> args);
-	type_ptr get_type() override;
+	expr_reserved_func_t(token_ptr op, char* asm_name); //, void (*check_args_func)(vector<expr_t*> args), SYM_TYPE res_type
+	virtual void set_operands(vector<expr_t*> args) = 0;
 };
+
+#define reg_res_func(incode_name, name, asm_name, check_ops_func, res_type, ...)\
+class expr_##name##_op_t : public expr_reserved_func_t {\
+public:\
+expr_##name##_op_t(token_ptr op);\
+void set_operands(vector<expr_t*> args);\
+type_ptr get_type() override;\
+};
+#include "register_reserved_function.h"
+#undef reg_res_func
 
 //----------------STRUCT_ACCESS-------------------
 

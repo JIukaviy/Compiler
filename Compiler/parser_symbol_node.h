@@ -5,6 +5,7 @@
 #include "asm_generator.h"
 
 enum SYM_TYPE {
+	ST_NONE = 0,
 	ST_INTEGER,
 	ST_DOUBLE,
 	ST_CHAR,

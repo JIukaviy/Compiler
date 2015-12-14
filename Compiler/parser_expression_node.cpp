@@ -1414,26 +1414,29 @@ pos_t expr_func_t::get_pos() {
 	return brace->get_pos();
 }
 
-//-----------------------------------PRINTF_OPERATOR-----------------------------------
+//-----------------------------------RESERVED_FUNCTIONS-----------------------------------
 
-expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_func_t(op) {
-	asm_func_name = "crt_printf";
+expr_reserved_func_t::expr_reserved_func_t(token_ptr op, char* asm_name) : expr_func_t(op) {
+	asm_func_name = asm_name;
 }
 
-void expr_printf_op_t::set_operands(vector<expr_t*> args_) {
-	if (args_.empty())
-		throw SemanticError("Printf operator requires at least one parameter", get_pos());
-	if (args_[0]->get_type() != ST_PTR && args_[0]->get_type() != ST_ARRAY)
-		throw SemanticError("Printf operator requires pointer to char as first parameter", get_pos());
-	for (int i = 0; i < args_.size(); i++)
-		tc_uo_arr_func_to_ptr(&args_[i]);
-	args = args_;
-}
+#define CHECK_ARGS_FUNC_LIST
+#include "register_reserved_function.h"
+#undef CHECK_ARGS_FUNC_LIST
 
-type_ptr expr_printf_op_t::get_type() {
-	return parser_t::get_type(ST_INTEGER);
+#define reg_res_func(incode_name, name, asm_name, check_ops_func, res_type, ...) \
+expr_##name##_op_t::expr_##name##_op_t(token_ptr op) : expr_reserved_func_t(op, #asm_name) {}\
+void expr_##name##_op_t::set_operands(vector<expr_t*> args_) {\
+for (int i = 0; i < args_.size(); i++)\
+tc_uo_arr_func_to_ptr(&args_[i]);\
+args = args_;\
+check_ops_func(args, this, __VA_ARGS__);\
+}\
+type_ptr expr_##name##_op_t::get_type() {\
+	return parser_t::get_type(res_type);\
 }
-
+#include "register_reserved_function.h"
+#undef reg_res_func
 
 //-----------------------------------CAST_OPERATOR-----------------------------------
 

@@ -1,8 +1,54 @@
 #include "parser.h"
 #include <map>
+#include <set>
 #include <assert.h>
 
 sym_table_ptr parser_t::prelude_sym_table;
+
+set<TOKEN> op_by_priority[16];
+map<TOKEN, expr_reserved_func_t* (*)(token_ptr op)> res_funcs_makers;
+
+map<STATEMENT, set<TOKEN>> starting_tokens;
+#define in_set(set_name, key) (set_name.find(key) != set_name.end())
+
+void set_operator_priority(TOKEN op, int priority) {
+	assert(!(priority > 16 || priority < 1 || op_by_priority[priority - 1].find(op) != op_by_priority[priority - 1].end()));
+	op_by_priority[priority - 1].insert(op);
+}
+
+void set_operator_priority(TOKEN op, int priority, int priority2) {
+	set_operator_priority(op, priority);
+	set_operator_priority(op, priority2);
+}
+
+template<class T>
+expr_reserved_func_t* make_res_func(token_ptr op) {
+	return new T(op);
+}
+
+void parser_init() {
+#define register_token(incode_name, printed_name, func_name, statement, ...) set_operator_priority(T_##incode_name, __VA_ARGS__);
+#define TOKEN_LIST
+#define PRIORITY_SET
+#include "token_operator.h"
+#undef PRIORITY_SET
+#undef TOKEN_LIST
+#undef register_token
+
+#define register_token(incode_name, printed_name, func_name, statement, ...) starting_tokens[statement].insert(T_##incode_name);
+#define TOKEN_LIST
+#include "token_register.h"
+#undef TOKEN_LIST
+#undef register_token
+
+#define reg_res_func(incode_name, name, asm_name, check_ops_func, res_type, ...)\
+res_funcs_makers[T_KWRD_##incode_name] = make_res_func<expr_##name##_op_t>;
+#include "register_reserved_function.h"
+#undef reg_res_func
+
+	init_parser_symbol_node();
+	parser_expression_node_init();
+}
 
 parser_t::parser_t(lexeme_analyzer_t* la_): la(la_) {
 	if (!prelude_sym_table) {
@@ -57,8 +103,6 @@ type_chain_t:: operator bool() {
 	return (bool)last;
 }
 
-set<TOKEN> op_by_priority[16];
-
 //-------------------EXPRESSION_PARSER-------------------------------------------
 
 expr_t* parser_t::parse_expr() {
@@ -95,7 +139,7 @@ expr_t* parser_t::tern_op() {
 
 expr_t* parser_t::left_associated_bin_op(int p) {
 	if (p == 4)
-		return printf_op();
+		return reserved_functions();
 	expr_t* left = left_associated_bin_op(p-1);
 	token_ptr op = la->get();
 	while (op->is(op_by_priority[p-1])) {
@@ -108,13 +152,13 @@ expr_t* parser_t::left_associated_bin_op(int p) {
 	return left;
 }
 
-expr_t* parser_t::printf_op() {
+expr_t* parser_t::reserved_functions() {
 	token_ptr op = la->get();
-	if (op == T_KWRD_PRINTF) {
+	if (res_funcs_makers.find(op->get_token_id()) != res_funcs_makers.end()) {
 		la->next();
-		expr_printf_op_t* printf_op = new expr_printf_op_t(op);
-		printf_op->set_operands(parse_func_args());
-		return printf_op;
+		expr_reserved_func_t* res_func = res_funcs_makers.at(op->get_token_id())(op);
+		res_func->set_operands(parse_func_args());
+		return res_func;
 	} else
 		return prefix_un_op();
 }
@@ -180,9 +224,6 @@ expr_t* parser_t::factor() {
 	else 
 		throw UnexpectedToken(t);
 }
-
-map<STATEMENT, set<TOKEN>> starting_tokens;
-#define in_set(set_name, key) (set_name.find(key) != set_name.end())
 
 //-------------------DECLARATION_PARSER-------------------------------------------
 
@@ -794,34 +835,7 @@ type_base_ptr parser_t::get_base_type(SYM_TYPE sym_type) {
 }
 
 type_ptr parser_t::get_type(SYM_TYPE sym_type, bool is_const) {
+	if (sym_type == ST_PTR)
+		return type_t::make_type(ST_PTR, is_const);
 	return type_t::make_type(get_base_type(sym_type), is_const);
-}
-
-void set_operator_priority(TOKEN op, int priority) {
-	assert(!(priority > 16 || priority < 1 || op_by_priority[priority - 1].find(op) != op_by_priority[priority - 1].end()));
-	op_by_priority[priority-1].insert(op);
-}
-
-void set_operator_priority(TOKEN op, int priority, int priority2) {
-	set_operator_priority(op, priority);
-	set_operator_priority(op, priority2);
-}
-
-void parser_init() {
-#define register_token(incode_name, printed_name, func_name, statement, ...) set_operator_priority(T_##incode_name, __VA_ARGS__);
-#define TOKEN_LIST
-#define PRIORITY_SET
-#include "token_operator.h"
-#undef PRIORITY_SET
-#undef TOKEN_LIST
-#undef register_token
-
-#define register_token(incode_name, printed_name, func_name, statement, ...) starting_tokens[statement].insert(T_##incode_name);
-#define TOKEN_LIST
-#include "token_register.h"
-#undef TOKEN_LIST
-#undef register_token
-
-	init_parser_symbol_node();
-	parser_expression_node_init();
 }
