@@ -30,4 +30,5 @@ void check_args(vector<expr_t*> &args, expr_t* func, ...) {
 reg_res_func(PRINTF, printf, crt_printf, check_args_printf, ST_INTEGER, 0)
 reg_res_func(SCANF, scanf, crt_scanf, check_args_scanf, ST_INTEGER, 0)
 reg_res_func(MALLOC, malloc, crt_malloc, check_args, ST_PTR, ST_INTEGER, 0)
+reg_res_func(FREE, free, crt_free, check_args, ST_VOID, ST_PTR, 0)
 #endif
