@@ -90,6 +90,7 @@ class parser_t {
 	void parse_struct_decl_list(sym_table_ptr  sym_table);
 	stmt_ptr parse_if_stmt();
 	stmt_ptr parse_while_stmt();
+	stmt_ptr parse_do_while_stmt();
 	stmt_ptr parse_for_stmt();
 	stmt_ptr parse_break_continue_stmt();
 	stmt_ptr parse_return_stmt();

@@ -248,7 +248,7 @@ public:
 	void _cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_reg);
 
 	asm_label_ptr _new_label();
-	asm_label_ptr _insert_new_nabel();
+	asm_label_ptr _insert_new_label();
 	void _insert_label(asm_label_ptr label);
 
 	void _push_str(string str);

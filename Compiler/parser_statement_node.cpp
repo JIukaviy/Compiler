@@ -188,7 +188,7 @@ void stmt_while_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) 
 		condition->asm_gen_code(cmd_list, false);
 		return;
 	}
-	loop_label = cmd_list->_insert_new_nabel();
+	loop_label = cmd_list->_insert_new_label();
 	exit_loop_label = cmd_list->_new_label();
 	condition->asm_gen_code(cmd_list, true);
 	cmd_list->test(AR_EAX, AR_EAX);
@@ -196,6 +196,25 @@ void stmt_while_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) 
 	stmt->asm_gen_internal_code(cmd_list, offset);
 	cmd_list->jmp(loop_label);
 	cmd_list->_insert_label(exit_loop_label);
+}
+
+stmt_do_while_t::stmt_do_while_t() : stmt_while_t(0) {}
+
+void stmt_do_while_t::set_condition(expr_t* condition_) {
+	condition = condition_;
+}
+
+void stmt_do_while_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
+	if (!stmt) {
+		condition->asm_gen_code(cmd_list, false);
+		return;
+	}
+	loop_label = cmd_list->_insert_new_label();
+	stmt->asm_gen_internal_code(cmd_list, offset);
+	condition->asm_gen_code(cmd_list, true);
+	cmd_list->test(AR_EAX, AR_EAX);
+	cmd_list->jnz(loop_label);
+	exit_loop_label = cmd_list->_insert_new_label();
 }
 
 void stmt_for_t::print_l(ostream& os, int level) {
@@ -223,7 +242,7 @@ void stmt_for_t::print_l(ostream& os, int level) {
 
 void stmt_for_t::asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset) {
 	init_expr->asm_gen_code(cmd_list, false);
-	loop_label = cmd_list->_insert_new_nabel();
+	loop_label = cmd_list->_insert_new_label();
 	exit_loop_label = cmd_list->_new_label();
 	condition->asm_gen_code(cmd_list, true);
 	cmd_list->test(AR_EAX, AR_EAX);

@@ -511,6 +511,7 @@ stmt_ptr parser_t::parse_statement() {
 		is_begin_of(STMT_DECL) ? parse_decl_stmt(), nullptr :
 		is_begin_of(STMT_BLOCK) ? parse_block_stmt() :
 		is_begin_of(STMT_EXPR) ? parse_expr_stmt() :
+		is_begin_of(STMT_DO_WHILE) ? parse_do_while_stmt() :
 		is_begin_of(STMT_WHILE) ? parse_while_stmt() :
 		is_begin_of(STMT_FOR) ? parse_for_stmt() :
 		is_begin_of(STMT_IF) ? parse_if_stmt() : 
@@ -620,6 +621,22 @@ stmt_ptr parser_t::parse_while_stmt() {
 	res->set_statement(parse_statement());
 	loop_stack.pop();
 	return stmt_ptr(res);
+}
+
+stmt_ptr parser_t::parse_do_while_stmt() {
+	la->require(T_KWRD_DO, 0);
+
+	auto res = shared_ptr<stmt_do_while_t>(new stmt_do_while_t);
+	loop_stack.push(res);
+	res->set_statement(parse_statement());
+	loop_stack.pop();
+
+	la->require(T_KWRD_WHILE, 0);
+	la->require(T_BRACKET_OPEN, 0);
+	expr_t* condition = parse_expr();
+	la->require(T_BRACKET_CLOSE, 0);
+	res->set_condition(condition);
+	return res;
 }
 
 stmt_ptr parser_t::parse_for_stmt() {

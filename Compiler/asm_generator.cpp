@@ -422,7 +422,7 @@ asm_label_ptr asm_cmd_list_t::_new_label() {
 	return asm_label_ptr(new asm_label_oprnd_t);
 }
 
-asm_label_ptr asm_cmd_list_t::_insert_new_nabel() {
+asm_label_ptr asm_cmd_list_t::_insert_new_label() {
 	asm_label_ptr res = _new_label();
 	_insert_label(res);
 	return res;

@@ -17,6 +17,7 @@ enum STATEMENT {
 	STMT_EXPR,
 	STMT_IF,
 	STMT_FOR,
+	STMT_DO_WHILE,
 	STMT_WHILE,
 	STMT_BREAK,
 	STMT_CONTINUE,
@@ -100,11 +101,19 @@ public:
 };
 
 class stmt_while_t : public stmt_loop_t, public stmt_named_t<T_KWRD_WHILE> {
+protected:
 	expr_t* condition;
 public:
 	stmt_while_t(expr_t* condition, stmt_ptr stmt);
 	stmt_while_t(expr_t* condition);
 	void print_l(ostream& os, int level) override;
+	void asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
+};
+
+class stmt_do_while_t : public stmt_while_t {
+public:
+	stmt_do_while_t();
+	void set_condition(expr_t* condition);
 	void asm_gen_internal_code(asm_cmd_list_ptr cmd_list, int offset = 0) override;
 };
 
