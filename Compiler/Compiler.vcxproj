@@ -118,6 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="asm_code_optimnizer.cpp" />
     <ClCompile Include="asm_generator.cpp" />
     <ClCompile Include="lexeme_analyzer.cpp" />
     <ClCompile Include="main.cpp" />
@@ -132,6 +133,7 @@
     <ClCompile Include="var.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asm_code_optimnizer.h" />
     <ClInclude Include="asm_generator.h" />
     <ClInclude Include="asm_mem_type.h" />
     <ClInclude Include="asm_op.h" />

@@ -39,12 +39,43 @@ enum ASM_OPERAND_PREFIX {
 #undef register_mem_type
 };
 
+enum ASM_OPERAND_TYPE {
+	AOT_REG,
+	AOT_IDENT,
+	AOT_VAR,
+	AOT_DEREF,
+	AOT_ADDR,
+	AOT_LABEL
+};
+
+class asm_oprnd_ptr : public shared_ptr<asm_operand_t> {
+public:
+	using shared_ptr<asm_operand_t>::shared_ptr;
+	bool operator==(ASM_OPERAND_TYPE);
+	bool operator==(ASM_REGISTER);
+};
+
+class asm_cmd_ptr : public shared_ptr<asm_cmd_t> {
+public:
+	using shared_ptr<asm_cmd_t>::shared_ptr;
+	bool operator==(ASM_OPERATOR);
+};
+
+class asm_cmd_list_ptr : public shared_ptr<asm_cmd_list_t> {
+public:
+	using shared_ptr<asm_cmd_list_t>::shared_ptr;
+	asm_cmd_ptr operator[](int i);
+};
+
 class asm_t {
 public:
 	virtual void print(ostream& os) {};
 };
 
-class asm_cmd_t : public asm_t {};
+class asm_cmd_t : public asm_t {
+public:
+	virtual bool operator==(ASM_OPERATOR);
+};
 
 class asm_str_cmd_t : public asm_cmd_t {
 	string str;
@@ -61,6 +92,11 @@ public:
 	asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_oprnd_ptr right_operand);
 	asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand);
 	asm_operator_t(ASM_OPERATOR op);
+	asm_oprnd_ptr get_left();
+	asm_oprnd_ptr get_right();
+	void set_left(asm_oprnd_ptr);
+	void set_right(asm_oprnd_ptr);
+	bool operator==(ASM_OPERATOR) override;
 	void print(ostream& os) override;
 };
 
@@ -71,13 +107,18 @@ public:
 	void print(ostream& os) override;
 };
 
-class asm_operand_t : public asm_t {};
+class asm_operand_t : public asm_t {
+public:
+	virtual bool operator==(ASM_OPERAND_TYPE);
+	virtual bool operator==(ASM_REGISTER);
+};
 
 class asm_label_oprnd_t : public asm_operand_t {
 	int id;
 	static int global_id;
 public:
 	asm_label_oprnd_t();
+	bool operator==(ASM_OPERAND_TYPE op);
 	void print(ostream& os) override;
 };
 
@@ -87,6 +128,8 @@ public:
 	asm_reg_oprnd_t(ASM_REGISTER reg);
 	asm_reg_oprnd_t(ASM_REGISTER reg, int reg_size);
 	asm_reg_oprnd_t(ASM_REGISTER reg, ASM_MEM_TYPE reg_size);
+	bool operator==(ASM_OPERAND_TYPE op); 
+	bool operator==(ASM_REGISTER reg);
 	void print(ostream& os) override;
 };
 
@@ -94,6 +137,7 @@ class asm_ident_operand_t : public asm_operand_t {
 	string name;
 public:
 	asm_ident_operand_t(string name);
+	bool operator==(ASM_OPERAND_TYPE op);
 	void print(ostream& os) override;
 };
 
@@ -124,6 +168,7 @@ protected:
 	int scale;
 public:
 	asm_deref_oprnd_t(int offset, int scale);
+	bool operator==(ASM_OPERAND_TYPE op);
 };
 
 class asm_deref_reg_oprnd_t : public asm_deref_oprnd_t {
@@ -162,6 +207,7 @@ class asm_function_t : public asm_t {
 	asm_cmd_list_ptr cmd_list;
 public:
 	asm_function_t(string name, asm_cmd_list_ptr cmd_list);
+	void optimize();
 	void print(ostream& os) override;
 };
 
@@ -251,6 +297,12 @@ public:
 	asm_label_ptr _insert_new_label();
 	void _insert_label(asm_label_ptr label);
 
+	int _size();
+	asm_cmd_ptr operator[](int i);
+
+	void _erase(int i);
+	void _erase(int from, int to);
+
 	void _push_str(string str);
 	void print(ostream& os) override;
 };
@@ -266,6 +318,7 @@ public:
 	void add_global_var(string name, ASM_MEM_TYPE mem_type, asm_cmd_list_ptr init_cmd_list, int dup = 0);
 	void add_function(string name, asm_cmd_list_ptr cmd_list);
 	void set_main_cmd_list(asm_cmd_list_ptr cmd_list);
+	void optimize();
 	void print(ostream& os);
 	static int alignment(int size);
 	static int align_size(int size);
