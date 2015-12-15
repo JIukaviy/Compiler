@@ -27,9 +27,7 @@ class asm_gen_t;
 class asm_local_vars_t;
 class asm_label_oprnd_t;
 
-typedef shared_ptr<asm_cmd_t> asm_cmd_ptr;
-typedef shared_ptr<asm_operand_t> asm_oprnd_ptr;
-typedef shared_ptr<asm_cmd_list_t> asm_cmd_list_ptr;
+class asm_oprnd_ptr;
 typedef shared_ptr<asm_gen_t> asm_gen_ptr;
 typedef shared_ptr<asm_local_vars_t> asm_local_vars_ptr;
 typedef shared_ptr<asm_label_oprnd_t> asm_label_ptr;

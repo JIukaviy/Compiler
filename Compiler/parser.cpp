@@ -822,6 +822,7 @@ void parser_t::print_asm_code(ostream& os) {
 		}
 		if (!main_block)
 			throw MainFuncNotFound();
+		gen->optimize();
 		gen->print(os);
 	}
 }

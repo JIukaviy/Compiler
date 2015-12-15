@@ -60,6 +60,9 @@
     <ClCompile Include="var.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="asm_code_optimnizer.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tokens.h">
@@ -138,6 +141,9 @@
       <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
     <ClInclude Include="register_reserved_function.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="asm_code_optimnizer.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

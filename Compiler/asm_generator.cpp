@@ -1,4 +1,5 @@
 #include "asm_generator.h"
+#include "asm_code_optimnizer.h"
 #include <assert.h>
 #include <map>
 
@@ -46,6 +47,8 @@ void asm_generator_init() {
 #define register_mem_type(mt_name) asm_aop_to_str[AOP_##mt_name##_PTR] = string(#mt_name) + " PTR";
 #include "asm_mem_type.h"
 #undef register_mem_type
+
+	init_asm_code_optimizer();
 }
 
 //------------------------------ASM_REGISTER_OPERAND-------------------------------------------
@@ -55,6 +58,14 @@ asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg, int reg_size) : reg(asm_gen_t
 
 asm_reg_oprnd_t::asm_reg_oprnd_t(ASM_REGISTER reg, ASM_MEM_TYPE reg_size) : reg(asm_gen_t::reg_by_mtype(reg, reg_size)) {}
 
+bool asm_reg_oprnd_t::operator==(ASM_OPERAND_TYPE op) {
+	return op == AOT_REG;
+}
+
+bool asm_reg_oprnd_t::operator==(ASM_REGISTER reg_) {
+	return reg = reg_;
+}
+
 void asm_reg_oprnd_t::print(ostream& os) {
 	os << asm_reg_to_str.at(reg);
 }
@@ -62,6 +73,10 @@ void asm_reg_oprnd_t::print(ostream& os) {
 //------------------------------ASM_IDENT_OPERAND-------------------------------------------
 
 asm_ident_operand_t::asm_ident_operand_t(string name) : name(name) {}
+
+bool asm_ident_operand_t::operator==(ASM_OPERAND_TYPE op) {
+	return op == AOT_IDENT;
+}
 
 void asm_ident_operand_t::print(ostream& os) {
 	os << name;
@@ -92,6 +107,10 @@ void asm_addr_reg_oprnd_t::print(ostream& os) {
 //------------------------------ASM_DEREFERENCE_OPERAND-------------------------------------------
 
 asm_deref_oprnd_t::asm_deref_oprnd_t(int offset, int scale) : offset(offset), scale(scale) {}
+
+bool asm_deref_oprnd_t::operator==(ASM_OPERAND_TYPE op) {
+	return op == AOT_DEREF;
+}
 
 asm_deref_reg_oprnd_t::asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset, ASM_REGISTER offset_reg, int scale) : 
 	asm_deref_oprnd_t(offset, scale), mtype(mtype), reg(reg), offset_reg(offset_reg) {
@@ -134,6 +153,10 @@ void asm_global_var_t::print_init(ostream& os) {
 
 asm_function_t::asm_function_t(string name, asm_cmd_list_ptr cmd_list) : name(name), cmd_list(cmd_list) {}
 
+void asm_function_t::optimize() {
+	asm_optimize_code(cmd_list);
+}
+
 void asm_function_t::print(ostream& os) {
 	os << name << " PROC" << endl;
 	cmd_list->print(os);
@@ -147,6 +170,10 @@ void asm_function_t::print(ostream& os) {
 
 asm_label_oprnd_t::asm_label_oprnd_t() {
 	id = global_id++;
+}
+
+bool asm_label_oprnd_t::operator==(ASM_OPERAND_TYPE op) {
+	return op == AOT_LABEL;
 }
 
 int asm_label_oprnd_t::global_id = 0;
@@ -171,6 +198,26 @@ asm_operator_t::asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand, asm_
 asm_operator_t::asm_operator_t(ASM_OPERATOR op, asm_oprnd_ptr left_operand) : op(op), left_operand(left_operand) {}
 
 asm_operator_t::asm_operator_t(ASM_OPERATOR op) : op(op) {}
+
+asm_oprnd_ptr asm_operator_t::get_left() {
+	return left_operand;
+}
+
+asm_oprnd_ptr asm_operator_t::get_right() {
+	return right_operand;
+}
+
+void asm_operator_t::set_left(asm_oprnd_ptr op) {
+	left_operand = op;
+}
+
+void asm_operator_t::set_right(asm_oprnd_ptr op) {
+	right_operand = op;
+}
+
+bool asm_operator_t::operator==(ASM_OPERATOR op_) {
+	return op == op_;
+}
 
 void asm_operator_t::print(ostream& os) {
 	os << asm_op_to_str.at(op);
@@ -432,6 +479,22 @@ void asm_cmd_list_t::_insert_label(asm_label_ptr label) {
 	commands.push_back(asm_cmd_ptr(new asm_label_oprtr_t(label)));
 }
 
+int asm_cmd_list_t::_size() {
+	return commands.size();
+}
+
+asm_cmd_ptr asm_cmd_list_t::operator[](int i) {
+	return commands.at(i);
+}
+
+void asm_cmd_list_t::_erase(int i) {
+	commands.erase(commands.begin() + i);
+}
+
+void asm_cmd_list_t::_erase(int from, int to) {
+	commands.erase(commands.begin() + from, commands.begin() + to);
+}
+
 void asm_cmd_list_t::_push_str(string str) {
 	commands.push_back(asm_cmd_ptr(new asm_str_cmd_t(str)));
 }
@@ -487,6 +550,12 @@ void asm_gen_t::set_main_cmd_list(asm_cmd_list_ptr cmd_list) {
 	main_cmd_list = cmd_list;
 }
 
+void asm_gen_t::optimize() {
+	asm_optimize_code(main_cmd_list);
+	for each (auto var in functions)
+		var->optimize();
+}
+
 void asm_gen_t::print(ostream& os) {
 	print_header(os);
 
@@ -535,4 +604,32 @@ int asm_gen_t::size_of(ASM_MEM_TYPE mtype) {
 
 ASM_MEM_TYPE asm_gen_t::mtype_by_size(int size) {
 	return mem_type_by_size.at(size);
+}
+
+bool asm_cmd_t::operator==(ASM_OPERATOR) {
+	return false;
+}
+
+bool asm_cmd_ptr::operator==(ASM_OPERATOR op) {
+	return get()->operator==(op);
+}
+
+asm_cmd_ptr asm_cmd_list_ptr::operator[](int i) {
+	return get()->operator[](i);
+}
+
+bool asm_operand_t::operator==(ASM_OPERAND_TYPE) {
+	return false;
+}
+
+bool asm_operand_t::operator==(ASM_REGISTER) {
+	return false;
+}
+
+bool asm_oprnd_ptr::operator==(ASM_OPERAND_TYPE op) {
+	return get() ? get()->operator==(op) : false;
+}
+
+bool asm_oprnd_ptr::operator==(ASM_REGISTER reg_) {
+	return get()->operator==(reg_);
 }
