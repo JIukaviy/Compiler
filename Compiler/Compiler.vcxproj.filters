@@ -137,5 +137,8 @@
     <ClInclude Include="asm_op.h">
       <Filter>Заголовочные файлы\asm</Filter>
     </ClInclude>
+    <ClInclude Include="register_reserved_function.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

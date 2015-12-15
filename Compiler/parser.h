@@ -54,13 +54,13 @@ class parser_t {
 	stack<shared_ptr<stmt_loop_t>> loop_stack;
 	stack<shared_ptr<sym_func_t>> func_stack;
 
-	sym_table_ptr  new_namespace();
+	sym_table_ptr new_namespace();
 	void exit_namespace();
 
 	expr_t* left_associated_bin_op(int priority);
 	expr_t* tern_op();
 	expr_t* right_associated_bin_op();
-	expr_t* printf_op();
+	expr_t* reserved_functions();
 	expr_t* prefix_un_op();
 	expr_t* postfix_op();
 	expr_t* factor();
@@ -87,9 +87,10 @@ class parser_t {
 	void parse_decl_stmt();
 	stmt_ptr parse_block_stmt();
 	void parse_top_level_stmt();
-	void parse_struct_decl_list(sym_table_ptr  sym_table);
+	void parse_struct_decl_list(sym_table_ptr sym_table);
 	stmt_ptr parse_if_stmt();
 	stmt_ptr parse_while_stmt();
+	stmt_ptr parse_do_while_stmt();
 	stmt_ptr parse_for_stmt();
 	stmt_ptr parse_break_continue_stmt();
 	stmt_ptr parse_return_stmt();

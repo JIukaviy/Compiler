@@ -297,6 +297,9 @@ public:
 		int required = func->get_arg_types().size();
 		err << op->get_pos() << "Too " << (actually < required ? "few " : "many ") << "arguments to function";
 	}
+	IncorrectNumberOfArguments(int actually, int required, pos_t pos) {
+		err << pos << "Too " << (actually < required ? "few " : "many ") << "arguments to function";
+	}
 };
 
 class StructHasNoMember : public SemanticError {

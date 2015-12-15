@@ -145,21 +145,15 @@ void asm_function_t::print(ostream& os) {
 
 //------------------------------ASM_LABEL-------------------------------------------
 
-asm_label_t::asm_label_t() {
+asm_label_oprnd_t::asm_label_oprnd_t() {
 	id = global_id++;
 }
 
-int asm_label_t::global_id = 0;
+int asm_label_oprnd_t::global_id = 0;
 
-void asm_label_t::print(ostream& os) {
-	print_go_to(os);
-	os << ':';
-}
-
-void asm_label_t::print_go_to(ostream & os) {
+void asm_label_oprnd_t::print(ostream& os) {
 	os << "LABEL_" << id;
 }
-
 
 //------------------------------ASM_STR_COMMAND-------------------------------------------
 
@@ -190,11 +184,22 @@ void asm_operator_t::print(ostream& os) {
 	}
 }
 
+//------------------------------ASM_LABEL_OPERATOR-------------------------------------------
+
+asm_label_oprtr_t::asm_label_oprtr_t(asm_label_ptr label) : label(label) {}
+
+void asm_label_oprtr_t::print(ostream& os) {
+	label->print(os);
+	os << ':';
+}
+
 //------------------------------ASM_COMANNDS_LIST-------------------------------------------
 
 #define register_asm_op(op_name, op_incode_name)\
 	void asm_cmd_list_t::op_incode_name() \
 	{_add_op(AO_##op_name);}\
+	void asm_cmd_list_t::op_incode_name(asm_oprnd_ptr operand)\
+	{_add_op(AO_##op_name, operand);}\
 	void asm_cmd_list_t::op_incode_name(ASM_REGISTER operand, int operand_size)\
 	{_add_op(AO_##op_name, operand, operand_size);}\
 	void asm_cmd_list_t::op_incode_name(var_ptr operand)\
@@ -414,17 +419,17 @@ void asm_cmd_list_t::_cast_char_to_int(ASM_REGISTER src_reg, ASM_REGISTER dst_re
 }
 
 asm_label_ptr asm_cmd_list_t::_new_label() {
-	return asm_label_ptr(new asm_label_t);
+	return asm_label_ptr(new asm_label_oprnd_t);
 }
 
-asm_label_ptr asm_cmd_list_t::_insert_new_nabel() {
+asm_label_ptr asm_cmd_list_t::_insert_new_label() {
 	asm_label_ptr res = _new_label();
 	_insert_label(res);
 	return res;
 }
 
 void asm_cmd_list_t::_insert_label(asm_label_ptr label) {
-	commands.push_back(label);
+	commands.push_back(asm_cmd_ptr(new asm_label_oprtr_t(label)));
 }
 
 void asm_cmd_list_t::_push_str(string str) {
@@ -442,7 +447,7 @@ void asm_cmd_list_t::print(ostream& os) {
 
 void asm_gen_t::print_header(ostream& os) {
 	os <<
-		".386" << endl <<
+		".686" << endl <<
 		".model flat, C" << endl <<
 		"option casemap : none" << endl <<
 		"include \\masm32\\include\\msvcrt.inc" << endl <<

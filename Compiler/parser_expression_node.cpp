@@ -50,10 +50,10 @@ void parser_expression_node_init() {
 	token_to_fp_op_map[T_OP_DIV_ASSIGN] = AO_FDIV;
 	token_to_fp_op_map[T_OP_EQ] = AO_SETE;
 	token_to_fp_op_map[T_OP_NEQ] = AO_SETNE;
-	token_to_fp_op_map[T_OP_L] = AO_SETGE;
-	token_to_fp_op_map[T_OP_LE] = AO_SETG;
-	token_to_fp_op_map[T_OP_G] = AO_SETLE;
-	token_to_fp_op_map[T_OP_GE] = AO_SETL;
+	token_to_fp_op_map[T_OP_L] = AO_SETA;
+	token_to_fp_op_map[T_OP_LE] = AO_SETAE;
+	token_to_fp_op_map[T_OP_G] = AO_SETB;
+	token_to_fp_op_map[T_OP_GE] = AO_SETBE;
 
 	token_to_fp_rev_op_map[T_OP_ADD] = AO_FADD;
 	token_to_fp_rev_op_map[T_OP_ADD_ASSIGN] = AO_FADD;
@@ -1059,9 +1059,8 @@ void expr_relational_bin_op_t::_asm_gen_code_int(asm_cmd_list_ptr cmd_list, bool
 }
 
 void expr_relational_bin_op_t::_asm_gen_code_fp(asm_cmd_list_ptr cmd_list, bool keep_val) {
-	cmd_list->fcompp();
-	cmd_list->fstsw(AR_AX);
-	cmd_list->sahf();
+	cmd_list->fcomip(AR_ST_0, AR_ST_1);
+	cmd_list->fdecstp();
 	cmd_list->_add_op(token_to_fp_op(op), AR_DL);
 	cmd_list->_cast_char_to_int(AR_EDX, AR_EAX);
 }
@@ -1415,26 +1414,29 @@ pos_t expr_func_t::get_pos() {
 	return brace->get_pos();
 }
 
-//-----------------------------------PRINTF_OPERATOR-----------------------------------
+//-----------------------------------RESERVED_FUNCTIONS-----------------------------------
 
-expr_printf_op_t::expr_printf_op_t(token_ptr op) : expr_func_t(op) {
-	asm_func_name = "crt_printf";
+expr_reserved_func_t::expr_reserved_func_t(token_ptr op, char* asm_name) : expr_func_t(op) {
+	asm_func_name = asm_name;
 }
 
-void expr_printf_op_t::set_operands(vector<expr_t*> args_) {
-	if (args_.empty())
-		throw SemanticError("Printf operator requires at least one parameter", get_pos());
-	if (args_[0]->get_type() != ST_PTR && args_[0]->get_type() != ST_ARRAY)
-		throw SemanticError("Printf operator requires pointer to char as first parameter", get_pos());
-	for (int i = 0; i < args_.size(); i++)
-		tc_uo_arr_func_to_ptr(&args_[i]);
-	args = args_;
-}
+#define CHECK_ARGS_FUNC_LIST
+#include "register_reserved_function.h"
+#undef CHECK_ARGS_FUNC_LIST
 
-type_ptr expr_printf_op_t::get_type() {
-	return parser_t::get_type(ST_VOID);
+#define reg_res_func(incode_name, name, asm_name, check_ops_func, res_type, ...) \
+expr_##name##_op_t::expr_##name##_op_t(token_ptr op) : expr_reserved_func_t(op, #asm_name) {}\
+void expr_##name##_op_t::set_operands(vector<expr_t*> args_) {\
+for (int i = 0; i < args_.size(); i++)\
+tc_uo_arr_func_to_ptr(&args_[i]);\
+args = args_;\
+check_ops_func(args, this, __VA_ARGS__);\
+}\
+type_ptr expr_##name##_op_t::get_type() {\
+	return parser_t::get_type(res_type);\
 }
-
+#include "register_reserved_function.h"
+#undef reg_res_func
 
 //-----------------------------------CAST_OPERATOR-----------------------------------
 
