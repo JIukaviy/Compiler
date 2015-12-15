@@ -48,17 +48,26 @@ enum ASM_OPERAND_TYPE {
 	AOT_LABEL
 };
 
+enum ASM_COMMAND_TYPE {
+	ACT_LABEL,
+	ACT_OPERATOR
+};
+
 class asm_oprnd_ptr : public shared_ptr<asm_operand_t> {
 public:
 	using shared_ptr<asm_operand_t>::shared_ptr;
 	bool operator==(ASM_OPERAND_TYPE);
+	bool operator!=(ASM_OPERAND_TYPE);
 	bool operator==(ASM_REGISTER);
+	bool operator==(asm_oprnd_ptr);
 };
 
 class asm_cmd_ptr : public shared_ptr<asm_cmd_t> {
 public:
 	using shared_ptr<asm_cmd_t>::shared_ptr;
 	bool operator==(ASM_OPERATOR);
+	bool operator!=(ASM_OPERATOR);
+	bool operator==(ASM_COMMAND_TYPE);
 };
 
 class asm_cmd_list_ptr : public shared_ptr<asm_cmd_list_t> {
@@ -75,6 +84,7 @@ public:
 class asm_cmd_t : public asm_t {
 public:
 	virtual bool operator==(ASM_OPERATOR);
+	virtual bool operator==(ASM_COMMAND_TYPE);
 };
 
 class asm_str_cmd_t : public asm_cmd_t {
@@ -96,7 +106,9 @@ public:
 	asm_oprnd_ptr get_right();
 	void set_left(asm_oprnd_ptr);
 	void set_right(asm_oprnd_ptr);
+	void set_op(ASM_OPERATOR);
 	bool operator==(ASM_OPERATOR) override;
+	bool operator==(ASM_COMMAND_TYPE) override;
 	void print(ostream& os) override;
 };
 
@@ -104,6 +116,7 @@ class asm_label_oprtr_t : public asm_cmd_t {
 	asm_label_ptr label;
 public:
 	asm_label_oprtr_t(asm_label_ptr label);
+	bool operator==(ASM_COMMAND_TYPE) override;
 	void print(ostream& os) override;
 };
 
@@ -111,6 +124,8 @@ class asm_operand_t : public asm_t {
 public:
 	virtual bool operator==(ASM_OPERAND_TYPE);
 	virtual bool operator==(ASM_REGISTER);
+	virtual bool operator==(asm_oprnd_ptr);
+	virtual bool like(asm_oprnd_ptr op);
 };
 
 class asm_label_oprnd_t : public asm_operand_t {
@@ -130,6 +145,10 @@ public:
 	asm_reg_oprnd_t(ASM_REGISTER reg, ASM_MEM_TYPE reg_size);
 	bool operator==(ASM_OPERAND_TYPE op); 
 	bool operator==(ASM_REGISTER reg);
+	bool operator==(asm_oprnd_ptr op);
+	bool like(ASM_REGISTER reg_);
+	bool like(asm_oprnd_ptr op);
+	int get_size();
 	void print(ostream& os) override;
 };
 
@@ -168,6 +187,9 @@ protected:
 	int scale;
 public:
 	asm_deref_oprnd_t(int offset, int scale);
+	void set_offset(int offset);
+	void add_offset(int offset);
+	int get_offset();
 	bool operator==(ASM_OPERAND_TYPE op);
 };
 
@@ -178,6 +200,12 @@ protected:
 	ASM_REGISTER offset_reg;
 public:
 	asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
+	ASM_REGISTER get_offset_reg();
+	void set_op_size(int size);
+	void set_op_size(ASM_MEM_TYPE mtype);
+	void set_op_size(asm_oprnd_ptr);
+	int get_op_size();
+	bool like(asm_oprnd_ptr) override;
 	void print(ostream& os);
 };
 
@@ -185,6 +213,8 @@ class asm_const_oprnd_t : public asm_operand_t {
 	var_ptr var;
 public:
 	asm_const_oprnd_t(var_ptr var);
+	var_ptr get_var();
+	bool operator==(ASM_OPERAND_TYPE op);
 	void print(ostream& os) override;
 };
 
@@ -299,6 +329,7 @@ public:
 
 	int _size();
 	asm_cmd_ptr operator[](int i);
+	shared_ptr<asm_operator_t> get_op(int i);
 
 	void _erase(int i);
 	void _erase(int from, int to);
