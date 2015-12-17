@@ -59,6 +59,7 @@ public:
 	bool operator==(ASM_OPERAND_TYPE);
 	bool operator!=(ASM_OPERAND_TYPE);
 	bool operator==(ASM_REGISTER);
+	bool operator!=(ASM_REGISTER);
 	bool operator==(asm_oprnd_ptr);
 };
 
@@ -126,6 +127,7 @@ public:
 	virtual bool operator==(ASM_REGISTER);
 	virtual bool operator==(asm_oprnd_ptr);
 	virtual bool like(asm_oprnd_ptr op);
+	virtual bool like(ASM_REGISTER);
 };
 
 class asm_label_oprnd_t : public asm_operand_t {
@@ -146,9 +148,11 @@ public:
 	bool operator==(ASM_OPERAND_TYPE op); 
 	bool operator==(ASM_REGISTER reg);
 	bool operator==(asm_oprnd_ptr op);
-	bool like(ASM_REGISTER reg_);
-	bool like(asm_oprnd_ptr op);
+	bool like(ASM_REGISTER reg_) override;
+	bool like(asm_oprnd_ptr op) override;
 	int get_size();
+	ASM_REGISTER get_reg();
+	void set_reg(ASM_REGISTER reg_);
 	void print(ostream& os) override;
 };
 
@@ -189,6 +193,8 @@ public:
 	asm_deref_oprnd_t(int offset, int scale);
 	void set_offset(int offset);
 	void add_offset(int offset);
+	void set_scale(int scale);
+	int get_scale();
 	int get_offset();
 	bool operator==(ASM_OPERAND_TYPE op);
 };
@@ -201,11 +207,16 @@ protected:
 public:
 	asm_deref_reg_oprnd_t(ASM_MEM_TYPE mtype, ASM_REGISTER reg, int offset = 0, ASM_REGISTER offset_reg = AR_NONE, int scale = 0);
 	ASM_REGISTER get_offset_reg();
+	ASM_REGISTER get_reg();
 	void set_op_size(int size);
 	void set_op_size(ASM_MEM_TYPE mtype);
 	void set_op_size(asm_oprnd_ptr);
+	void set_reg(ASM_REGISTER reg);
+	void set_offset_reg(ASM_REGISTER reg);
 	int get_op_size();
 	bool like(asm_oprnd_ptr) override;
+	bool like_reg(asm_oprnd_ptr);
+	bool like_offset_reg(asm_oprnd_ptr);
 	void print(ostream& os);
 };
 
@@ -359,4 +370,5 @@ public:
 	static int size_of(ASM_MEM_TYPE mtype);
 	static ASM_MEM_TYPE mtype_by_size(int size);
 	static ASM_MEM_TYPE mtype_by_reg(ASM_REGISTER);
+	static ASM_REGISTER parent_of(ASM_REGISTER);
 };

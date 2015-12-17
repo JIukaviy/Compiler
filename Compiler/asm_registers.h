@@ -14,6 +14,12 @@ register_register(edx, EDX, EDX, 4)
 register_register(dx, DX, EDX, 2)
 register_register(dl, DL, EDX, 1)
 
+register_register(esi, ESI, ESI, 4)
+register_register(si, SI, ESI, 2)
+
+register_register(edi, EDI, EDI, 4)
+register_register(di, DI, EDI, 2)
+
 register_register(ebp, EBP, EBP, 4)
 register_register(bp, BP, EBP, 2)
 

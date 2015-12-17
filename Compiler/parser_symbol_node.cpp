@@ -560,7 +560,7 @@ int sym_type_array_t::get_size() {
 }
 
 int sym_type_array_t::get_elem_size() {
-	return elem_type->get_size();
+	return asm_gen_t::alignment(elem_type->get_size());
 }
 
 int sym_type_array_t::get_len() {
@@ -731,7 +731,7 @@ void sym_func_t::asm_set_offset() {
 		if (var == ST_VAR) {
 			auto local_var = dynamic_pointer_cast<sym_local_var_t>(var);
 			local_var->asm_set_offset(offset, AR_EBP);
-			offset += asm_gen_t::alignment(local_var->get_type_size());
+			offset += max(4, asm_gen_t::alignment(local_var->get_type_size()));
 		}
 	}
 }

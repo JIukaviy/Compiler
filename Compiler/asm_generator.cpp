@@ -8,7 +8,7 @@
 
 map<ASM_REGISTER, string> asm_reg_to_str;
 map<ASM_REGISTER, int> size_of_reg;
-map<ASM_REGISTER, ASM_REGISTER> parent_of;
+map<ASM_REGISTER, ASM_REGISTER> parent_of_map;
 map<ASM_REGISTER, map<int, ASM_REGISTER>> child_by_size;
 map<ASM_OPERATOR, string> asm_op_to_str;
 map<ASM_MEM_TYPE, string> asm_mt_to_str;
@@ -37,13 +37,14 @@ void asm_generator_init() {
 #define register_register(reg_name, reg_incode_name, parent_reg_name, size) \
 	asm_reg_to_str[AR_##reg_incode_name] = #reg_name; \
 	size_of_reg[AR_##reg_incode_name] = size; \
-	parent_of[AR_##reg_incode_name] = AR_##parent_reg_name; \
+	parent_of_map[AR_##reg_incode_name] = AR_##parent_reg_name; \
 	child_by_size[AR_##parent_reg_name][size] = AR_##reg_incode_name;
 #include "asm_registers.h"
 #undef register_register
 
 	asm_aop_to_str[AOP_NONE] = "";
 	asm_aop_to_str[AOP_OFFSET] = "OFFSET";
+	parent_of_map[AR_NONE] = AR_NONE;
 #define register_mem_type(mt_name) asm_aop_to_str[AOP_##mt_name##_PTR] = string(#mt_name) + " PTR";
 #include "asm_mem_type.h"
 #undef register_mem_type
@@ -71,7 +72,7 @@ bool asm_reg_oprnd_t::operator==(asm_oprnd_ptr op) {
 }
 
 bool asm_reg_oprnd_t::like(ASM_REGISTER reg_) {
-	return parent_of.at(reg) == parent_of.at(reg_);
+	return parent_of_map.at(reg) == parent_of_map.at(reg_);
 }
 
 bool asm_reg_oprnd_t::like(asm_oprnd_ptr op) {
@@ -80,6 +81,14 @@ bool asm_reg_oprnd_t::like(asm_oprnd_ptr op) {
 
 int asm_reg_oprnd_t::get_size() {
 	return asm_gen_t::size_of(reg);
+}
+
+ASM_REGISTER asm_reg_oprnd_t::get_reg() {
+	return reg;
+}
+
+void asm_reg_oprnd_t::set_reg(ASM_REGISTER reg_) {
+	reg = reg_;
 }
 
 void asm_reg_oprnd_t::print(ostream& os) {
@@ -140,6 +149,14 @@ void asm_deref_oprnd_t::add_offset(int offset_) {
 	offset += offset_;
 }
 
+void asm_deref_oprnd_t::set_scale(int scale_) {
+	scale = scale_;
+}
+
+int asm_deref_oprnd_t::get_scale() {
+	return scale;
+}
+
 int asm_deref_oprnd_t::get_offset() {
 	return offset;
 }
@@ -157,6 +174,10 @@ ASM_REGISTER asm_deref_reg_oprnd_t::get_offset_reg() {
 	return offset_reg;
 }
 
+ASM_REGISTER asm_deref_reg_oprnd_t::get_reg() {
+	return reg;
+}
+
 void asm_deref_reg_oprnd_t::set_op_size(int size) {
 	mtype = asm_gen_t::mtype_by_size(size);
 }
@@ -165,12 +186,28 @@ void asm_deref_reg_oprnd_t::set_op_size(ASM_MEM_TYPE mtype_) {
 	mtype = mtype_;
 }
 
+void asm_deref_reg_oprnd_t::set_reg(ASM_REGISTER reg_) {
+	reg = reg_;
+}
+
+void asm_deref_reg_oprnd_t::set_offset_reg(ASM_REGISTER reg_) {
+	offset_reg = reg_;
+}
+
 int asm_deref_reg_oprnd_t::get_op_size() {
 	return asm_gen_t::size_of(mtype);
 }
 
 bool asm_deref_reg_oprnd_t::like(asm_oprnd_ptr op) {
+	return op->like(reg) || op->like(offset_reg);
+}
+
+bool asm_deref_reg_oprnd_t::like_reg(asm_oprnd_ptr op) {
 	return op == reg;
+}
+
+bool asm_deref_reg_oprnd_t::like_offset_reg(asm_oprnd_ptr op) {
+	return op == offset_reg;
 }
 
 void asm_deref_reg_oprnd_t::print(ostream& os) {
@@ -646,6 +683,8 @@ void asm_gen_t::print(ostream& os) {
 }
 
 int asm_gen_t::alignment(int size) {
+	if (size == 1)
+		return 1;
 	return size + (size_of(AMT_DWORD) - size % size_of(AMT_DWORD)) % size_of(AMT_DWORD);
 }
 
@@ -659,7 +698,7 @@ int asm_gen_t::align_size(int size) {
 }
 
 ASM_REGISTER asm_gen_t::reg_by_size(ASM_REGISTER reg, int size) {
-	return size ? child_by_size.at(parent_of.at(reg)).at(size) : reg;
+	return size ? child_by_size.at(parent_of_map.at(reg)).at(size) : reg;
 }
 
 ASM_REGISTER asm_gen_t::reg_by_mtype(ASM_REGISTER reg, ASM_MEM_TYPE mtype) {
@@ -676,6 +715,10 @@ int asm_gen_t::size_of(ASM_MEM_TYPE mtype) {
 
 ASM_MEM_TYPE asm_gen_t::mtype_by_size(int size) {
 	return mem_type_by_size.at(size);
+}
+
+ASM_REGISTER asm_gen_t::parent_of(ASM_REGISTER reg) {
+	return parent_of_map.at(reg);
 }
 
 bool asm_cmd_t::operator==(ASM_OPERATOR) {
@@ -718,6 +761,10 @@ bool asm_operand_t::like(asm_oprnd_ptr op) {
 	return false;
 }
 
+bool asm_operand_t::like(ASM_REGISTER reg) {
+	return false;
+}
+
 bool asm_oprnd_ptr::operator==(ASM_OPERAND_TYPE op) {
 	return get() ? get()->operator==(op) : false;
 }
@@ -728,6 +775,10 @@ bool asm_oprnd_ptr::operator!=(ASM_OPERAND_TYPE op) {
 
 bool asm_oprnd_ptr::operator==(ASM_REGISTER reg_) {
 	return get() ? get()->operator==(reg_) : false;
+}
+
+bool asm_oprnd_ptr::operator!=(ASM_REGISTER reg_) {
+	return !operator==(reg_);
 }
 
 bool asm_oprnd_ptr::operator==(asm_oprnd_ptr op) {
